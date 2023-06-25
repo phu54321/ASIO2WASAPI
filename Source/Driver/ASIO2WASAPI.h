@@ -32,6 +32,7 @@ struct IAudioRenderClient;
 #include "COMBaseClasses.h"
 #include "asiosys.h"
 #include "iasiodrv.h"
+#include "TrayOpener.hpp"
 
 extern CLSID CLSID_ASIO2WASAPI_DRIVER;
 const char * const szDescription = "ASIO2WASAPI";
@@ -86,6 +87,9 @@ public:
 	ASIOError controlPanel ();
 	ASIOError future (long selector, void *opt);
 	ASIOError outputReady ();
+
+private:
+    std::unique_ptr<TrayOpener> openerPtr;
 
 private:
 

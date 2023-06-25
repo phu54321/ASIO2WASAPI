@@ -1,6 +1,8 @@
 /*  ASIO2WASAPI Universal ASIO Driver
-    Copyright (C) Lev Minkovsky
-    
+
+    Copyright (C) 2017 Lev Minkovsky
+    Copyright (C) 2023 Hyunwoo Park (phu54321@naver.com) - modifications
+
     This file is part of ASIO2WASAPI.
 
     ASIO2WASAPI is free software; you can redistribute it and/or modify
@@ -347,11 +349,19 @@ void ASIO2WASAPI::clearState()
     m_samplePosition = 0;
 }
 
+extern HINSTANCE g_hinstDLL;
+
 ASIO2WASAPI::ASIO2WASAPI (LPUNKNOWN pUnk, HRESULT *phr)
 	: CUnknown("ASIO2WASAPI", pUnk, phr)
 {
     clearState();
-    readFromRegistry(); 
+    readFromRegistry();
+    openerPtr = std::make_unique<TrayOpener>(
+        g_hinstDLL,
+        LoadIcon(g_hinstDLL, MAKEINTRESOURCE(IDI_ICON1)),
+        [&]() { controlPanel(); },
+        TEXT("ASIO2WASAPI2: Open Configuration")
+    );
 }
 
 ASIO2WASAPI::~ASIO2WASAPI ()
