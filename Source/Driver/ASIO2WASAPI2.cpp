@@ -32,6 +32,10 @@
 #include "ASIO2WASAPI2.h"
 #include "resource.h"
 #include "logger.h"
+#include "json.hpp"
+
+using json = nlohmann::json;
+
 
 CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
@@ -318,9 +322,9 @@ ASIOSampleType ASIO2WASAPI2::getASIOSampleType() const
     }
 }
 
+const char *szJsonRegValName = "json";
 const char *szChannelRegValName = "Channels";
 const char *szSampRateRegValName = "Sample Rate";
-const wchar_t *szDeviceId = L"Device Id";
 
 void ASIO2WASAPI2::readFromRegistry()
 {
@@ -330,28 +334,30 @@ void ASIO2WASAPI2::readFromRegistry()
     LONG lResult = RegOpenKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, KEY_READ, &key);
     if (ERROR_SUCCESS == lResult)
     {
-        DWORD size = sizeof(m_nChannels);
-        RegGetValue(key, NULL, szChannelRegValName, RRF_RT_REG_DWORD, NULL, &m_nChannels, &size);
-        size = sizeof(m_nSampleRate);
-        RegGetValue(key, NULL, szSampRateRegValName, RRF_RT_REG_DWORD, NULL, &m_nSampleRate, &size);
-        RegGetValueW(key, NULL, szDeviceId, RRF_RT_REG_SZ, NULL, NULL, &size);
-        // registry stores BYTEs, we need to memcpy them
-        if (size)
-        {
-            std::vector<BYTE> bytes(size);
-            RegGetValueW(key, NULL, szDeviceId, RRF_RT_REG_SZ, NULL, bytes.data(), &size);
-            m_deviceId.assign(
-                reinterpret_cast<wchar_t *>(bytes.data()),
-                reinterpret_cast<wchar_t *>(bytes.data() + size));
-        }
-        else
-        {
-            m_deviceId = L"";
+        DWORD size;
+
+        RegGetValue(key, NULL, szJsonRegValName, RRF_RT_REG_SZ, NULL, NULL, &size);
+        if (size) {
+            std::vector<BYTE> v(size);
+            RegGetValue(key, NULL, szJsonRegValName, RRF_RT_REG_SZ, NULL, v.data(), &size);
+            try {
+                json j = json::parse(v.begin(), v.end());
+                int nSampleRate = j["nSampleRate"];
+                int nChannels = j["nChannels"];
+                std::wstring deviceId = j["deviceId"];
+
+                m_nSampleRate = nSampleRate;
+                m_nChannels = nChannels;
+                m_deviceId = deviceId;
+                Logger::debug(L" - m_nChannels: %d", m_nChannels);
+                Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
+                Logger::debug(L" - m_deviceId: %ws", m_deviceId.c_str());
+            }
+            catch (json::exception& e) {
+                Logger::error(L"JSON error: %s", e.what());
+            }
         }
         RegCloseKey(key);
-        Logger::debug(L" - m_nChannels: %d", m_nChannels);
-        Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
-        Logger::debug(L" - m_deviceId: %ws", m_deviceId.c_str());
     }
 }
 
@@ -362,12 +368,13 @@ void ASIO2WASAPI2::writeToRegistry()
     LONG lResult = RegCreateKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
     if (ERROR_SUCCESS == lResult)
     {
-        DWORD size = sizeof(m_nChannels);
-        RegSetValueEx(key, szChannelRegValName, NULL, REG_DWORD, (const BYTE *)&m_nChannels, size);
-        size = sizeof(m_nSampleRate);
-        RegSetValueEx(key, szSampRateRegValName, NULL, REG_DWORD, (const BYTE *)&m_nSampleRate, size);
-        size = (DWORD)(m_deviceId.size()) * sizeof(m_deviceId[0]);
-        RegSetValueExW(key, szDeviceId, NULL, REG_SZ, (const BYTE *)m_deviceId.data(), size);
+        json j = {
+            {"nChannels", m_nChannels},
+            {"nSampleRate", m_nSampleRate},
+            {"deviceId", m_deviceId}
+        };
+        auto jsonString = j.dump();
+        RegSetValueEx(key, szJsonRegValName, NULL, REG_SZ, (const BYTE*)jsonString.data(), jsonString.size());
         RegCloseKey(key);
         Logger::debug(L" - m_nChannels: %d", m_nChannels);
         Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
