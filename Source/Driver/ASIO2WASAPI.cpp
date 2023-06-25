@@ -1050,7 +1050,7 @@ ASIOError ASIO2WASAPI::canSampleRate (ASIOSampleRate sampleRate)
         return ASE_NotPresent;
 
 	int nSampleRate = static_cast<int>(sampleRate);
-    return (FindStreamFormat(m_pDevice,m_nChannels,nSampleRate) == S_OK)? ASE_OK : ASE_NoClock;
+    return FindStreamFormat(m_pDevice,m_nChannels,nSampleRate) ? ASE_OK : ASE_NoClock;
 }
 
 ASIOError ASIO2WASAPI::start()
