@@ -36,7 +36,6 @@
 
 using json = nlohmann::json;
 
-
 CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
@@ -337,10 +336,12 @@ void ASIO2WASAPI2::readFromRegistry()
         DWORD size;
 
         RegGetValue(key, NULL, szJsonRegValName, RRF_RT_REG_SZ, NULL, NULL, &size);
-        if (size) {
+        if (size)
+        {
             std::vector<BYTE> v(size);
             RegGetValue(key, NULL, szJsonRegValName, RRF_RT_REG_SZ, NULL, v.data(), &size);
-            try {
+            try
+            {
                 json j = json::parse(v.begin(), v.end());
                 int nSampleRate = j["nSampleRate"];
                 int nChannels = j["nChannels"];
@@ -353,7 +354,8 @@ void ASIO2WASAPI2::readFromRegistry()
                 Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
                 Logger::debug(L" - m_deviceId: %ws", m_deviceId.c_str());
             }
-            catch (json::exception& e) {
+            catch (json::exception &e)
+            {
                 Logger::error(L"JSON error: %s", e.what());
             }
         }
@@ -371,10 +373,9 @@ void ASIO2WASAPI2::writeToRegistry()
         json j = {
             {"nChannels", m_nChannels},
             {"nSampleRate", m_nSampleRate},
-            {"deviceId", m_deviceId}
-        };
+            {"deviceId", m_deviceId}};
         auto jsonString = j.dump();
-        RegSetValueEx(key, szJsonRegValName, NULL, REG_SZ, (const BYTE*)jsonString.data(), jsonString.size());
+        RegSetValueEx(key, szJsonRegValName, NULL, REG_SZ, (const BYTE *)jsonString.data(), (DWORD)jsonString.size());
         RegCloseKey(key);
         Logger::debug(L" - m_nChannels: %d", m_nChannels);
         Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
@@ -484,7 +485,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                     }
                 }
                 // get the selected device's index from the dialog
-                LRESULT lr = SendDlgItemMessage(hwndDlg, IDC_DEVICE, CB_GETCURSEL, 0, 0);
+                LRESULT lr = SendDlgItemMessage(hwndDlg, IDL_DEVICE, LB_GETCURSEL, 0, 0);
                 if (lr == CB_ERR || lr < 0 || (size_t)lr >= deviceStringIds.size())
                 {
                     MessageBox(hwndDlg, "No audio device selected", szDescription, MB_OK);
@@ -645,7 +646,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 return false;
             LRESULT lr = 0;
             if (var.vt != VT_LPWSTR ||
-                (lr = SendDlgItemMessageW(hwndDlg, IDC_DEVICE, CB_ADDSTRING, 0, (LPARAM)var.pwszVal)) == CB_ERR)
+                (lr = SendDlgItemMessageW(hwndDlg, IDL_DEVICE, LB_ADDSTRING, -1, (LPARAM)var.pwszVal)) == CB_ERR)
             {
                 PropVariantClear(&var);
                 return false;
@@ -665,7 +666,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                     break;
                 }
             }
-        SendDlgItemMessage(hwndDlg, IDC_DEVICE, CB_SETCURSEL, nDeviceIdIndex, 0);
+        SendDlgItemMessage(hwndDlg, IDL_DEVICE, LB_SETCURSEL, nDeviceIdIndex, 0);
         return TRUE;
     }
     break;
