@@ -113,7 +113,7 @@ private:
     int m_nChannels;
     int m_nSampleRate;
     char m_errorMessage[128];
-    vector<wchar_t> m_deviceId;
+    std::wstring m_deviceId;
 
     // fields filled by init()/cleaned by shutdown()
     bool m_active;

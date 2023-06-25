@@ -102,18 +102,14 @@ inline void getNanoSeconds(ASIOTimeStamp *ts)
     ts->lo = (unsigned long)(nanoSeconds - (ts->hi * twoRaisedTo32));
 }
 
-inline vector<wchar_t> getDeviceId(IMMDevice *pDevice)
+inline wstring getDeviceId(IMMDevice *pDevice)
 {
-    vector<wchar_t> id;
+    wstring id;
     LPWSTR pDeviceId = NULL;
     HRESULT hr = pDevice->GetId(&pDeviceId);
     if (FAILED(hr))
         return id;
-    size_t nDeviceIdLength = wcslen(pDeviceId);
-    if (nDeviceIdLength == 0)
-        return id;
-    id.resize(nDeviceIdLength + 1);
-    wcscpy_s(&id[0], nDeviceIdLength + 1, pDeviceId);
+    id = pDeviceId;
     CoTaskMemFree(pDeviceId);
     pDeviceId = NULL;
     return id;
@@ -339,15 +335,23 @@ void ASIO2WASAPI2::readFromRegistry()
         size = sizeof(m_nSampleRate);
         RegGetValue(key, NULL, szSampRateRegValName, RRF_RT_REG_DWORD, NULL, &m_nSampleRate, &size);
         RegGetValueW(key, NULL, szDeviceId, RRF_RT_REG_SZ, NULL, NULL, &size);
-        m_deviceId.resize(size / sizeof(m_deviceId[0]));
+        // registry stores BYTEs, we need to memcpy them
         if (size)
         {
-            RegGetValueW(key, NULL, szDeviceId, RRF_RT_REG_SZ, NULL, &m_deviceId[0], &size);
+            std::vector<BYTE> bytes(size);
+            RegGetValueW(key, NULL, szDeviceId, RRF_RT_REG_SZ, NULL, bytes.data(), &size);
+            m_deviceId.assign(
+                reinterpret_cast<wchar_t *>(bytes.data()),
+                reinterpret_cast<wchar_t *>(bytes.data() + size));
+        }
+        else
+        {
+            m_deviceId = L"";
         }
         RegCloseKey(key);
         Logger::debug(L" - m_nChannels: %d", m_nChannels);
         Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
-        Logger::debug(L" - m_deviceId: %ws", &m_deviceId[0]);
+        Logger::debug(L" - m_deviceId: %ws", m_deviceId.c_str());
     }
 }
 
@@ -363,7 +367,7 @@ void ASIO2WASAPI2::writeToRegistry()
         size = sizeof(m_nSampleRate);
         RegSetValueEx(key, szSampRateRegValName, NULL, REG_DWORD, (const BYTE *)&m_nSampleRate, size);
         size = (DWORD)(m_deviceId.size()) * sizeof(m_deviceId[0]);
-        RegSetValueExW(key, szDeviceId, NULL, REG_SZ, (const BYTE *)&m_deviceId[0], size);
+        RegSetValueExW(key, szDeviceId, NULL, REG_SZ, (const BYTE *)m_deviceId.data(), size);
         RegCloseKey(key);
         Logger::debug(L" - m_nChannels: %d", m_nChannels);
         Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
@@ -436,7 +440,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                                              UINT message, WPARAM wParam, LPARAM lParam)
 {
     static ASIO2WASAPI2 *pDriver = NULL;
-    static vector<vector<wchar_t>> deviceStringIds;
+    static vector<wstring> deviceStringIds;
     switch (message)
     {
     case WM_DESTROY:
@@ -480,7 +484,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                     MessageBox(hwndDlg, "No audio device selected", szDescription, MB_OK);
                     return 0;
                 }
-                vector<wchar_t> &selectedDeviceId = deviceStringIds[lr];
+                const auto &selectedDeviceId = deviceStringIds[lr];
                 // find this device
                 IMMDevice *pDevice = NULL;
                 {
@@ -511,10 +515,10 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                         if (FAILED(hr))
                             continue;
                         CReleaser r(pMMDevice);
-                        vector<wchar_t> deviceId = getDeviceId(pMMDevice);
+                        auto deviceId = getDeviceId(pMMDevice);
                         if (deviceId.size() == 0)
                             continue;
-                        if (wcscmp(&deviceId[0], &selectedDeviceId[0]) == 0)
+                        if (deviceId == selectedDeviceId)
                         {
                             pDevice = pMMDevice;
                             r.deactivate();
@@ -559,8 +563,8 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 // copy selected device/sample rate/channel combination into the driver
                 pDriver->m_nSampleRate = nSampleRate;
                 pDriver->m_nChannels = nChannels;
-                pDriver->m_deviceId.resize(selectedDeviceId.size());
-                wcscpy_s(&pDriver->m_deviceId[0], selectedDeviceId.size(), &selectedDeviceId.at(0));
+                pDriver->m_deviceId = selectedDeviceId;
+
                 // try to init the driver
                 if (pDriver->init(hAppWindowHandle) == ASIOFalse)
                 {
@@ -609,7 +613,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
         if (FAILED(hr))
             return false;
 
-        vector<vector<wchar_t>> deviceIds;
+        vector<wstring> deviceIds;
         for (UINT i = 0; i < nDevices; i++)
         {
             IMMDevice *pMMDevice = NULL;
@@ -618,7 +622,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 return false;
             CReleaser r(pMMDevice);
 
-            vector<wchar_t> deviceId = getDeviceId(pMMDevice);
+            auto deviceId = getDeviceId(pMMDevice);
             if (deviceId.size() == 0)
                 return false;
             deviceIds.push_back(deviceId);
@@ -649,7 +653,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
         if (pDriver->m_deviceId.size())
             for (unsigned i = 0; i < deviceStringIds.size(); i++)
             {
-                if (wcscmp(&deviceStringIds[i].at(0), &pDriver->m_deviceId[0]) == 0)
+                if (deviceStringIds[i] == pDriver->m_deviceId)
                 {
                     nDeviceIdIndex = i;
                     break;
@@ -907,9 +911,9 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef)
         }
         CReleaser r(pMMDevice);
 
-        vector<wchar_t> deviceId = getDeviceId(pMMDevice);
-        Logger::debug(L" - Device #%d: %ws", i, deviceId.data());
-        if (deviceId.size() && m_deviceId.size() && wcscmp(&deviceId[0], &m_deviceId[0]) == 0)
+        auto deviceId = getDeviceId(pMMDevice);
+        Logger::debug(L" - Device #%d: %ws", i, deviceId.c_str());
+        if (deviceId.size() && m_deviceId.size() && deviceId == m_deviceId)
         {
             Logger::info(L"Found the device");
             m_pDevice = pMMDevice;
@@ -921,7 +925,7 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef)
 
     if (!bDeviceFound)
     { // id not found
-        Logger::error(L"Target device not found: %ws", &m_deviceId[0]);
+        Logger::error(L"Target device not found: %ws", m_deviceId.c_str());
 
         hr = pEnumerator->GetDefaultAudioEndpoint(
             eRender, eConsole, &m_pDevice);
