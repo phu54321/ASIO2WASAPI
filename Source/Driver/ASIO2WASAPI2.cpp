@@ -381,7 +381,6 @@ void ASIO2WASAPI2::clearState()
     // fields valid before initialization
     m_nChannels = 2;
     m_nSampleRate = 48000;
-    memset(m_errorMessage, 0, sizeof(m_errorMessage));
     m_deviceId.clear();
     m_hStopPlayThreadEvent = NULL;
 
@@ -801,7 +800,8 @@ long ASIO2WASAPI2::getDriverVersion()
 
 void ASIO2WASAPI2::getErrorMessage(char *string)
 {
-    strcpy_s(string, sizeof(m_errorMessage), m_errorMessage);
+    // TODO: maybe add useful message
+    string[0] = 0;
 }
 
 ASIOError ASIO2WASAPI2::future(long selector, void *opt)

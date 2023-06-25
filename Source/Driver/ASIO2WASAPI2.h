@@ -112,7 +112,6 @@ private:
     // fields valid before initialization
     int m_nChannels;
     int m_nSampleRate;
-    char m_errorMessage[128];
     std::wstring m_deviceId;
 
     // fields filled by init()/cleaned by shutdown()
