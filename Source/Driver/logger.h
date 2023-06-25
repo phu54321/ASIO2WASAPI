@@ -35,3 +35,21 @@ private:
 	FILE* outputFile;
 	LogLevel level = LogLevel::info;
 };
+
+// From http://blog.redjini.com/188
+// Tool to convert __function__ to unicode
+#define WIDEN(x)           L ## x
+#define WIDEN2(x)         WIDEN(x)
+#define __WFUNCTION__ WIDEN2(__FUNCTION__)
+
+class FuncTraceHelper {
+public:
+	FuncTraceHelper(const wchar_t* funcname);
+	~FuncTraceHelper();
+
+private:
+	const wchar_t* funcname;
+};
+
+#define LOGGER_TRACE_FUNC \
+	FuncTraceHelper _fth(__WFUNCTION__)

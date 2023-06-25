@@ -119,3 +119,12 @@ void Logger::logV(LogLevel level, const wchar_t* format, va_list args) {
 		fputc('\n', outputFile);
 	}
 }
+
+
+FuncTraceHelper::FuncTraceHelper(const wchar_t* funcname): funcname(funcname) {
+	Logger::trace(L"entering %ws", funcname);
+}
+
+FuncTraceHelper::~FuncTraceHelper() {
+	Logger::trace(L"leaving %ws", funcname);
+}

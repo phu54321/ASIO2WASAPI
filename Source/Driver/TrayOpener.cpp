@@ -42,8 +42,9 @@ TrayOpener::TrayOpener(HINSTANCE hInst, HICON hIcon, std::function<void()> click
 
 TrayOpener::~TrayOpener()
 {
-    Logger::trace(L"TrayOpener::~TrayOpener");
-    NOTIFYICONDATA nid = {0};
+    LOGGER_TRACE_FUNC;
+
+    NOTIFYICONDATA nid = { 0 };
 
     nid.cbSize = sizeof(nid);
     nid.hWnd = NULL;
@@ -62,7 +63,8 @@ TrayOpener::~TrayOpener()
 
 HWND TrayOpener::createWindow(HINSTANCE hInst)
 {
-    Logger::trace(L"CreateWindow");
+    LOGGER_TRACE_FUNC;
+
     createWindowClass(hInst);
 
     return CreateWindow(
@@ -89,7 +91,7 @@ void TrayOpener::createWindowClass(HINSTANCE hInst)
     if (it != initMap.end())
         return;
 
-    Logger::trace(L"CreateWindowClass");
+    LOGGER_TRACE_FUNC;
 
     WNDCLASS wc;
 
@@ -112,7 +114,6 @@ LRESULT CALLBACK TrayOpener::TrayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 {
     if (msg == WM_TRAYICON_MSG)
     {
-        Logger::trace(L"TrayOpener:TrayWndProc");
         std::lock_guard<std::mutex> lock(trayIDOpenerMapMutex);
         auto it = trayIDOpenerMap.find(wParam);
         if (it != trayIDOpenerMap.end())
