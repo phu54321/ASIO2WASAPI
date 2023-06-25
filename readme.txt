@@ -1,5 +1,5 @@
 Documents enclosed:
-"ASIO2WASAPI.pdf" - installation and configuration instructions
+"ASIO2WASAPI2.pdf" - installation and configuration instructions
 gpl.txt - GNU Public License
 
 Change log:

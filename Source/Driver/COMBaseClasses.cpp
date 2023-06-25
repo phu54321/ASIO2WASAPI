@@ -1,20 +1,20 @@
-/*  ASIO2WASAPI Universal ASIO Driver
+/*  ASIO2WASAPI2 Universal ASIO Driver
     Copyright (C) Lev Minkovsky
-    
-    This file is part of ASIO2WASAPI.
 
-    ASIO2WASAPI is free software; you can redistribute it and/or modify
+    This file is part of ASIO2WASAPI2.
+
+    ASIO2WASAPI2 is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
 
-    ASIO2WASAPI is distributed in the hope that it will be useful,
+    ASIO2WASAPI2 is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with ASIO2WASAPI; if not, write to the Free Software
+    along with ASIO2WASAPI2; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
@@ -28,46 +28,53 @@ CBaseObject::CBaseObject(TCHAR *pName)
     InterlockedIncrement(&m_cObjects);
 }
 
-
 CBaseObject::~CBaseObject()
 {
     InterlockedDecrement(&m_cObjects);
 }
 
-#pragma warning( disable : 4355 ) 
+#pragma warning(disable : 4355)
 
-CUnknown::CUnknown(TCHAR *pName, IUnknown * pUnk, HRESULT *phr) 
-: CBaseObject(pName) , m_cRef(0), m_pUnknown (pUnk != 0 ? pUnk : reinterpret_cast<IUnknown *>( static_cast<INonDelegatingUnknown *>(this) ))
+CUnknown::CUnknown(TCHAR *pName, IUnknown *pUnk, HRESULT *phr)
+    : CBaseObject(pName), m_cRef(0), m_pUnknown(pUnk != 0 ? pUnk : reinterpret_cast<IUnknown *>(static_cast<INonDelegatingUnknown *>(this)))
 {
 }
 
-#pragma warning( default : 4355 ) 
+#pragma warning(default : 4355)
 
-STDMETHODIMP CUnknown::NonDelegatingQueryInterface(REFIID riid, void ** ppv)
+STDMETHODIMP CUnknown::NonDelegatingQueryInterface(REFIID riid, void **ppv)
 {
-    if (riid == IID_IUnknown) {
-        GetInterface((LPUNKNOWN) (PNDUNKNOWN) this, ppv);
+    if (riid == IID_IUnknown)
+    {
+        GetInterface((LPUNKNOWN)(PNDUNKNOWN)this, ppv);
         return NOERROR;
-    } else {
+    }
+    else
+    {
         *ppv = NULL;
         return E_NOINTERFACE;
     }
 }
 
-STDMETHODIMP_(ULONG) CUnknown::NonDelegatingAddRef()
+STDMETHODIMP_(ULONG)
+CUnknown::NonDelegatingAddRef()
 {
-    LONG lRef = InterlockedIncrement( &m_cRef );
+    LONG lRef = InterlockedIncrement(&m_cRef);
     return max(ULONG(lRef), 1ul);
 }
 
-STDMETHODIMP_(ULONG) CUnknown::NonDelegatingRelease()
+STDMETHODIMP_(ULONG)
+CUnknown::NonDelegatingRelease()
 {
-    LONG lRef = InterlockedDecrement( &m_cRef );
-    if (lRef == 0) {
+    LONG lRef = InterlockedDecrement(&m_cRef);
+    if (lRef == 0)
+    {
         m_cRef++;
         delete this;
         return ULONG(0);
-    } else {
+    }
+    else
+    {
         return max(ULONG(lRef), 1ul);
     }
 }
@@ -78,4 +85,3 @@ HRESULT CUnknown::GetInterface(LPUNKNOWN pUnk, void **ppv)
     pUnk->AddRef();
     return NOERROR;
 }
-

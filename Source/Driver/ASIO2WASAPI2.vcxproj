@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6653AA2B-E18E-4656-A1C9-E8377D54F897}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ASIO2WASAPI</RootNamespace>
+    <RootNamespace>ASIO2WASAPI2</RootNamespace>
     <SccProjectName>
     </SccProjectName>
     <SccAuxPath>
@@ -30,6 +30,7 @@
     </SccLocalPath>
     <SccProvider>
     </SccProvider>
+    <ProjectName>ASIO2WASAPI2</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -105,7 +106,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>ASIO2WASAPI.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>ASIO2WASAPI2.def</ModuleDefinitionFile>
       <AdditionalDependencies>Avrt.lib;WinMM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>true</RegisterOutput>
       <ProgramDatabaseFile>$(IntDir)$(TargetName).pdb</ProgramDatabaseFile>
@@ -123,7 +124,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>ASIO2WASAPI.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>ASIO2WASAPI2.def</ModuleDefinitionFile>
       <AdditionalDependencies>Avrt.lib;WinMM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>true</RegisterOutput>
       <ImportLibrary>$(IntDir)$(TargetName).lib</ImportLibrary>
@@ -144,7 +145,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ModuleDefinitionFile>ASIO2WASAPI.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>ASIO2WASAPI2.def</ModuleDefinitionFile>
       <AdditionalDependencies>Avrt.lib;WinMM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>true</RegisterOutput>
       <ProgramDatabaseFile>$(IntDir)$(TargetName).pdb</ProgramDatabaseFile>
@@ -165,7 +166,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ModuleDefinitionFile>ASIO2WASAPI.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>ASIO2WASAPI2.def</ModuleDefinitionFile>
       <AdditionalDependencies>Avrt.lib;WinMM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>true</RegisterOutput>
       <ImportLibrary>$(IntDir)$(TargetName).lib</ImportLibrary>
@@ -173,7 +174,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ASIO2WASAPI.h" />
+    <ClInclude Include="ASIO2WASAPI2.h" />
     <ClInclude Include="COMBaseClasses.h" />
     <ClInclude Include="logger.h" />
     <ClInclude Include="resource.h" />
@@ -182,7 +183,7 @@
     <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ASIO2WASAPI.cpp" />
+    <ClCompile Include="ASIO2WASAPI2.cpp" />
     <ClCompile Include="COMBaseClasses.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
@@ -209,10 +210,10 @@
     <ClCompile Include="TrayOpener.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ASIO2WASAPI.def" />
+    <None Include="ASIO2WASAPI2.def" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ASIO2WASAPI.rc" />
+    <ResourceCompile Include="ASIO2WASAPI2.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="icon.ico" />

@@ -18,7 +18,7 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ASIO2WASAPI.h">
+    <ClInclude Include="ASIO2WASAPI2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="COMBaseClasses.h">
@@ -41,7 +41,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ASIO2WASAPI.cpp">
+    <ClCompile Include="ASIO2WASAPI2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dllmain.cpp">
@@ -61,12 +61,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ASIO2WASAPI.def">
+    <None Include="ASIO2WASAPI2.def">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ASIO2WASAPI.rc">
+    <ResourceCompile Include="ASIO2WASAPI2.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
