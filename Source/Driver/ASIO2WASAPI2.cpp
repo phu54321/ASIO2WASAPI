@@ -118,6 +118,47 @@ inline wstring getDeviceId(IMMDevice *pDevice)
     return id;
 }
 
+
+
+bool iterateAudioEndPoints(std::function<bool(IMMDevice* pMMDevice)> cb)
+{
+    IMMDeviceEnumerator* pEnumerator = NULL;
+    DWORD flags = 0;
+
+    HRESULT hr = CoCreateInstance(
+        CLSID_MMDeviceEnumerator, NULL,
+        CLSCTX_ALL, IID_IMMDeviceEnumerator,
+        (void**)&pEnumerator);
+    if (FAILED(hr))
+        return false;
+    CReleaser r1(pEnumerator);
+
+    IMMDeviceCollection* pMMDeviceCollection = NULL;
+    hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection);
+    if (FAILED(hr))
+        return false;
+    CReleaser r2(pMMDeviceCollection);
+
+    UINT nDevices = 0;
+    hr = pMMDeviceCollection->GetCount(&nDevices);
+    if (FAILED(hr))
+        return false;
+
+    for (UINT i = 0; i < nDevices; i++)
+    {
+        IMMDevice* pMMDevice = NULL;
+        hr = pMMDeviceCollection->Item(i, &pMMDevice);
+        if (FAILED(hr))
+            return false;
+        CReleaser r(pMMDevice);
+
+        if (!cb(pMMDevice))
+            break;
+    }
+    return true;
+}
+
+
 IAudioClient *getAudioClient(IMMDevice *pDevice, WAVEFORMATEX *pWaveFormat)
 {
     if (!pDevice || !pWaveFormat)
@@ -495,43 +536,19 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 // find this device
                 IMMDevice *pDevice = NULL;
                 {
-                    IMMDeviceEnumerator *pEnumerator = NULL;
-                    HRESULT hr = CoCreateInstance(
-                        CLSID_MMDeviceEnumerator, NULL,
-                        CLSCTX_ALL, IID_IMMDeviceEnumerator,
-                        (void **)&pEnumerator);
-                    if (FAILED(hr))
-                        return 0;
-                    CReleaser r1(pEnumerator);
 
-                    IMMDeviceCollection *pMMDeviceCollection = NULL;
-                    hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection);
-                    if (FAILED(hr))
-                        return 0;
-                    CReleaser r2(pMMDeviceCollection);
-
-                    UINT nDevices = 0;
-                    hr = pMMDeviceCollection->GetCount(&nDevices);
-                    if (FAILED(hr))
-                        return 0;
-
-                    for (UINT i = 0; i < nDevices; i++)
-                    {
-                        IMMDevice *pMMDevice = NULL;
-                        hr = pMMDeviceCollection->Item(i, &pMMDevice);
-                        if (FAILED(hr))
-                            continue;
-                        CReleaser r(pMMDevice);
+                    iterateAudioEndPoints([&](IMMDevice* pMMDevice) {
                         auto deviceId = getDeviceId(pMMDevice);
                         if (deviceId.size() == 0)
-                            continue;
+                            return true;
                         if (deviceId == selectedDeviceId)
                         {
                             pDevice = pMMDevice;
-                            r.deactivate();
-                            break;
+                            pDevice->AddRef();
+                            return false;
                         }
-                    }
+                        return true;
+                        });
                 }
                 if (!pDevice)
                 {
@@ -597,45 +614,17 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
         SetDlgItemInt(hwndDlg, IDC_CHANNELS, (UINT)pDriver->m_nChannels, TRUE);
         SetDlgItemInt(hwndDlg, IDC_SAMPLE_RATE, (UINT)pDriver->m_nSampleRate, TRUE);
 
-        IMMDeviceEnumerator *pEnumerator = NULL;
-        DWORD flags = 0;
         CoInitialize(NULL);
 
-        HRESULT hr = CoCreateInstance(
-            CLSID_MMDeviceEnumerator, NULL,
-            CLSCTX_ALL, IID_IMMDeviceEnumerator,
-            (void **)&pEnumerator);
-        if (FAILED(hr))
-            return false;
-        CReleaser r1(pEnumerator);
-
-        IMMDeviceCollection *pMMDeviceCollection = NULL;
-        hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection);
-        if (FAILED(hr))
-            return false;
-        CReleaser r2(pMMDeviceCollection);
-
-        UINT nDevices = 0;
-        hr = pMMDeviceCollection->GetCount(&nDevices);
-        if (FAILED(hr))
-            return false;
-
         vector<wstring> deviceIds;
-        for (UINT i = 0; i < nDevices; i++)
-        {
-            IMMDevice *pMMDevice = NULL;
-            hr = pMMDeviceCollection->Item(i, &pMMDevice);
-            if (FAILED(hr))
-                return false;
-            CReleaser r(pMMDevice);
-
+        if (!iterateAudioEndPoints([&](IMMDevice* pMMDevice) {
             auto deviceId = getDeviceId(pMMDevice);
             if (deviceId.size() == 0)
                 return false;
             deviceIds.push_back(deviceId);
 
-            IPropertyStore *pPropertyStore;
-            hr = pMMDevice->OpenPropertyStore(STGM_READ, &pPropertyStore);
+            IPropertyStore* pPropertyStore;
+            HRESULT hr = pMMDevice->OpenPropertyStore(STGM_READ, &pPropertyStore);
             if (FAILED(hr))
                 return false;
             CReleaser r2(pPropertyStore);
@@ -652,7 +641,11 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 return false;
             }
             PropVariantClear(&var);
+            return true;
+            })) {
+            return false;
         }
+
         deviceStringIds = deviceIds;
 
         // find current device id
@@ -871,78 +864,32 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef)
     m_hAppWindowHandle = (HWND)sysRef;
 
     HRESULT hr = S_OK;
-    IMMDeviceEnumerator *pEnumerator = NULL;
-    DWORD flags = 0;
-
     Logger::info(L"ASIO2WASAPI2 initializing");
 
     CoInitialize(NULL);
 
-    hr = CoCreateInstance(
-        CLSID_MMDeviceEnumerator, NULL,
-        CLSCTX_ALL, IID_IMMDeviceEnumerator,
-        (void **)&pEnumerator);
-    if (FAILED(hr))
-    {
-        Logger::error(L"CoCreateInstance(CLSID_MMDeviceEnumerator) failed");
-        return false;
-    }
-    CReleaser r1(pEnumerator);
-
-    IMMDeviceCollection *pMMDeviceCollection = NULL;
-    hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection);
-    if (FAILED(hr))
-    {
-        Logger::error(L"EnumAudioEndpoints failed");
-        return false;
-    }
-    CReleaser r2(pMMDeviceCollection);
-
-    UINT nDevices = 0;
-    hr = pMMDeviceCollection->GetCount(&nDevices);
-    if (FAILED(hr))
-    {
-        Logger::error(L"pMMDeviceCollection->GetCount failed");
-        return false;
-    }
-    Logger::debug(L"Found %d available devices, finding %ws", nDevices, m_deviceId.data());
-
     bool bDeviceFound = false;
-    for (UINT i = 0; i < nDevices; i++)
-    {
-        IMMDevice *pMMDevice = NULL;
-        hr = pMMDeviceCollection->Item(i, &pMMDevice);
-        if (FAILED(hr))
-        {
-            Logger::error(L"Couldn't get device[%d] info (total %d)", i, nDevices);
-            return false;
-        }
-        CReleaser r(pMMDevice);
-
+    int deviceIndex = 0;
+    iterateAudioEndPoints([&](IMMDevice* pMMDevice) {
         auto deviceId = getDeviceId(pMMDevice);
-        Logger::debug(L" - Device #%d: %ws", i, deviceId.c_str());
+        Logger::debug(L" - Device #%d: %ws", deviceIndex++, deviceId.c_str());
         if (deviceId.size() && m_deviceId.size() && deviceId == m_deviceId)
         {
             Logger::info(L"Found the device");
             m_pDevice = pMMDevice;
             m_pDevice->AddRef();
             bDeviceFound = true;
-            break;
+            return false;
         }
-    }
+        return true;
+        });
+
 
     if (!bDeviceFound)
     { // id not found
         Logger::error(L"Target device not found: %ws", m_deviceId.c_str());
+        return false;
 
-        hr = pEnumerator->GetDefaultAudioEndpoint(
-            eRender, eConsole, &m_pDevice);
-        if (FAILED(hr))
-        {
-            Logger::info(L"Failed to get default(fallback) audio endpoint");
-            return false;
-        }
-        setMostReliableFormat();
     }
 
     m_deviceId = getDeviceId(m_pDevice);
@@ -953,37 +900,8 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef)
     if (!rc)
     { // go through all devices and try to find the one that works for 16/48K
         Logger::error(L"Specified device doesn't support specified stream format");
-        SAFE_RELEASE(m_pDevice)
-        setMostReliableFormat();
-
-        IMMDeviceCollection *pMMDeviceCollection = NULL;
-        hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection);
-        if (FAILED(hr))
-            return false;
-        CReleaser r2(pMMDeviceCollection);
-
-        UINT nDevices = 0;
-        hr = pMMDeviceCollection->GetCount(&nDevices);
-        if (FAILED(hr))
-            return false;
-
-        for (UINT i = 0; i < nDevices; i++)
-        {
-            IMMDevice *pMMDevice = NULL;
-            hr = pMMDeviceCollection->Item(i, &pMMDevice);
-            if (FAILED(hr))
-                continue;
-            CReleaser r(pMMDevice);
-            rc = FindStreamFormat(pMMDevice, m_nChannels, m_nSampleRate, &m_waveFormat, &m_pAudioClient);
-            if (rc)
-            {
-                m_pDevice = pMMDevice;
-                r.deactivate();
-                break;
-            }
-        }
-        if (!m_pAudioClient)
-            return false; // suitable device not found
+        SAFE_RELEASE(m_pDevice);
+        return false;
     }
 
     UINT32 bufferSize = 0;
