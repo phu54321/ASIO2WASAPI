@@ -76,7 +76,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir)\..\ASIOSDK\common;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)\..\ASIOSDK\common</IncludePath>
     <IntDir>$(Configuration)\$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)..\$(Configuration)\$(Platform)\</OutDir>
     <TargetName>$(ProjectName)64</TargetName>
@@ -89,7 +89,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)\..\ASIOSDK\common;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)\..\ASIOSDK\common</IncludePath>
     <IntDir>$(Configuration)\$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)..\$(Configuration)\$(Platform)\</OutDir>
     <TargetName>$(ProjectName)64</TargetName>
@@ -175,6 +175,7 @@
   <ItemGroup>
     <ClInclude Include="ASIO2WASAPI.h" />
     <ClInclude Include="COMBaseClasses.h" />
+    <ClInclude Include="logger.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TrayOpener.hpp" />
@@ -198,6 +199,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="register.cpp" />
+    <ClCompile Include="logger.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -1,6 +1,8 @@
 /*  ASIO2WASAPI Universal ASIO Driver
-    Copyright (C) Lev Minkovsky
-    
+
+    Copyright (C) 2017 Lev Minkovsky
+    Copyright (C) 2023 Hyunwoo Park (phu54321@naver.com) - modifications
+
     This file is part of ASIO2WASAPI.
 
     ASIO2WASAPI is free software; you can redistribute it and/or modify
@@ -21,6 +23,7 @@
 #include "stdafx.h"
 #include "COMBaseClasses.h"
 #include "ASIO2WASAPI.h"
+#include "logger.h"
 
 LONG UnregisterAsioDriver (CLSID clsid,const char *szDllPathName,const char *szregname);
 LONG RegisterAsioDriver (CLSID clsid,const char *szDllPathName,const char *szregname,const char *szasiodesc,const char *szthreadmodel);
@@ -83,6 +86,7 @@ BOOL WINAPI DllMain(
 	switch (fdwReason) {
 	
 		case DLL_PROCESS_ATTACH:
+            Logger::setOutputLevel(LogLevel::trace);
 			g_hinstDLL = hinstDLL;
             DisableThreadLibraryCalls(hinstDLL);
 			hinstance = hinstDLL;

@@ -31,6 +31,7 @@
 #include <Functiondiscoverykeys_devpkey.h>
 #include "ASIO2WASAPI.h"
 #include "resource.h"
+#include "logger.h"
 
 CLSID CLSID_ASIO2WASAPI_DRIVER = { 0x3981c4c8, 0xfe12, 0x4b0f, { 0x98, 0xa0, 0xd1, 0xb6, 0x67, 0xbd, 0xa6, 0x15 } };
 
@@ -287,6 +288,7 @@ const wchar_t * szDeviceId = L"Device Id";
 
 void ASIO2WASAPI::readFromRegistry()
 {
+    Logger::trace(L"ASIO2WASAPI::readFromRegistery");
     HKEY key = 0;
     LONG lResult = RegOpenKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, KEY_READ,&key);
     if (ERROR_SUCCESS == lResult)
@@ -297,9 +299,13 @@ void ASIO2WASAPI::readFromRegistry()
         RegGetValue(key,NULL,szSampRateRegValName,RRF_RT_REG_DWORD,NULL,&m_nSampleRate,&size);
         RegGetValueW(key,NULL,szDeviceId,RRF_RT_REG_SZ,NULL,NULL,&size);
         m_deviceId.resize(size/sizeof(m_deviceId[0]));
-        if (size)
-            RegGetValueW(key,NULL,szDeviceId,RRF_RT_REG_SZ,NULL,&m_deviceId[0],&size);
+        if (size) {
+            RegGetValueW(key, NULL, szDeviceId, RRF_RT_REG_SZ, NULL, &m_deviceId[0], &size);
+        }
         RegCloseKey(key);
+        Logger::trace(L" - m_nChannels: %d", m_nChannels);
+        Logger::trace(L" - m_nSampleRate: %d", m_nSampleRate);
+        Logger::trace(L" - m_deviceId: %ws", &m_deviceId[0]);
     }
 }
 
