@@ -64,13 +64,12 @@ HWND TrayOpener::createWindow(HINSTANCE hInst) {
 
     return CreateWindow(
             g_windowClassName,   // Window class
-            TEXT(""),            // Window text
-            WS_OVERLAPPEDWINDOW, // Window style
+            NULL,            // Window text
+            0, // Window style
 
     // Size and position
-            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-
-            NULL,  // Parent window
+            0, 0, 0, 0,
+            HWND_MESSAGE,  // Parent window
             NULL,  // Menu
             hInst, // Instance handle
             NULL);
