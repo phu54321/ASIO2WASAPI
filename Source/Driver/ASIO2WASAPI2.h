@@ -35,7 +35,7 @@ struct IAudioRenderClient;
 #include "TrayOpener.hpp"
 
 extern CLSID CLSID_ASIO2WASAPI2_DRIVER;
-const char *const szDescription = "ASIO2WASAPI2";
+const TCHAR *const szDescription = TEXT("ASIO2WASAPI2");
 
 class ASIO2WASAPI2 : public IASIO, public CUnknown
 {
@@ -99,7 +99,7 @@ private:
     static DWORD WINAPI PlayThreadProc(LPVOID pThis);
     static BOOL CALLBACK ControlPanelProc(HWND hwndDlg,
                                           UINT message, WPARAM wParam, LPARAM lParam);
-    HRESULT LoadData(IAudioRenderClient *pRenderClient);
+    HRESULT LoadData(shared_ptr<IAudioRenderClient> pRenderClient);
     long refTimeToBufferSize(LONGLONG time) const;
     LONGLONG bufferSizeToRefTime(long bufferSize) const;
     void readFromRegistry();
@@ -116,8 +116,8 @@ private:
 
     // fields filled by init()/cleaned by shutdown()
     bool m_active;
-    IMMDevice *m_pDevice;
-    IAudioClient *m_pAudioClient;
+    shared_ptr<IMMDevice> m_pDevice;
+    shared_ptr<IAudioClient> m_pAudioClient;
     WAVEFORMATEXTENSIBLE m_waveFormat;
     int m_bufferSize; // in audio frames
     HWND m_hAppWindowHandle;

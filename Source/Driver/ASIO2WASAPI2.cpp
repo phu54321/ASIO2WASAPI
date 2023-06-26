@@ -27,6 +27,8 @@
 #include <string.h>
 #include <Mmdeviceapi.h>
 #include <Audioclient.h>
+#include <codecvt> // codecvt_utf8
+#include <locale>  // wstring_convert
 #include "Avrt.h" //used for AvSetMmThreadCharacteristics
 #include <Functiondiscoverykeys_devpkey.h>
 #include "ASIO2WASAPI2.h"
@@ -43,45 +45,23 @@ const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 const IID IID_IAudioClient = __uuidof(IAudioClient);
 const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
 
-const char *szPrefsRegKey = "Software\\ASIO2WASAPI2";
+const TCHAR *szPrefsRegKey = TEXT("Software\\ASIO2WASAPI2");
 
-#define SAFE_RELEASE(punk) \
-    if ((punk) != NULL)    \
-    {                      \
-        (punk)->Release(); \
-        (punk) = NULL;     \
-    }
-
-class CReleaser
+template <typename T>
+auto make_autorelease(T *ptr)
 {
-    IUnknown *m_pUnknown;
+    return shared_ptr<T>(ptr, [](T *p)
+                          {
+        if (p) p->Release(); });
+}
 
-public:
-    CReleaser(IUnknown *pUnk) : m_pUnknown(pUnk) {}
-    void deactivate() { m_pUnknown = NULL; }
-    void reset(IUnknown *pUnk)
-    {
-        SAFE_RELEASE(m_pUnknown)
-        m_pUnknown = pUnk;
-    }
-    ~CReleaser()
-    {
-        SAFE_RELEASE(m_pUnknown)
-    }
-};
-
-class CHandleCloser
+template <typename T>
+auto make_autoclose(T *h)
 {
-    HANDLE m_h;
-
-public:
-    CHandleCloser(HANDLE h) : m_h(h) {}
-    ~CHandleCloser()
-    {
-        if (m_h != NULL)
-            CloseHandle(m_h);
-    }
-};
+    return shared_ptr<T>(h, [](T *h)
+                          {
+        if (h) CloseHandle(h); });
+}
 
 inline long ASIO2WASAPI2::refTimeToBufferSize(REFERENCE_TIME time) const
 {
@@ -105,7 +85,7 @@ inline void getNanoSeconds(ASIOTimeStamp *ts)
     ts->lo = (unsigned long)(nanoSeconds - (ts->hi * twoRaisedTo32));
 }
 
-inline wstring getDeviceId(IMMDevice *pDevice)
+inline wstring getDeviceId(shared_ptr<IMMDevice> pDevice)
 {
     wstring id;
     LPWSTR pDeviceId = NULL;
@@ -118,26 +98,25 @@ inline wstring getDeviceId(IMMDevice *pDevice)
     return id;
 }
 
-
-
-bool iterateAudioEndPoints(std::function<bool(IMMDevice* pMMDevice)> cb)
+bool iterateAudioEndPoints(std::function<bool(shared_ptr<IMMDevice> pMMDevice)> cb)
 {
-    IMMDeviceEnumerator* pEnumerator = NULL;
+    IMMDeviceEnumerator *pEnumerator_ = NULL;
     DWORD flags = 0;
 
     HRESULT hr = CoCreateInstance(
         CLSID_MMDeviceEnumerator, NULL,
         CLSCTX_ALL, IID_IMMDeviceEnumerator,
-        (void**)&pEnumerator);
+        (void **)&pEnumerator_);
     if (FAILED(hr))
         return false;
-    CReleaser r1(pEnumerator);
 
-    IMMDeviceCollection* pMMDeviceCollection = NULL;
-    hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection);
+    auto pEnumerator = make_autorelease(pEnumerator_);
+
+    IMMDeviceCollection *pMMDeviceCollection_ = NULL;
+    hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection_);
     if (FAILED(hr))
         return false;
-    CReleaser r2(pMMDeviceCollection);
+    auto pMMDeviceCollection = make_autorelease(pMMDeviceCollection_);
 
     UINT nDevices = 0;
     hr = pMMDeviceCollection->GetCount(&nDevices);
@@ -146,11 +125,11 @@ bool iterateAudioEndPoints(std::function<bool(IMMDevice* pMMDevice)> cb)
 
     for (UINT i = 0; i < nDevices; i++)
     {
-        IMMDevice* pMMDevice = NULL;
-        hr = pMMDeviceCollection->Item(i, &pMMDevice);
+        IMMDevice *pMMDevice_ = NULL;
+        hr = pMMDeviceCollection->Item(i, &pMMDevice_);
         if (FAILED(hr))
             return false;
-        CReleaser r(pMMDevice);
+        auto pMMDevice = make_autorelease(pMMDevice_);
 
         if (!cb(pMMDevice))
             break;
@@ -158,19 +137,18 @@ bool iterateAudioEndPoints(std::function<bool(IMMDevice* pMMDevice)> cb)
     return true;
 }
 
-
-IAudioClient *getAudioClient(IMMDevice *pDevice, WAVEFORMATEX *pWaveFormat)
+shared_ptr<IAudioClient> getAudioClient(shared_ptr<IMMDevice> pDevice, WAVEFORMATEX *pWaveFormat)
 {
     if (!pDevice || !pWaveFormat)
         return NULL;
 
-    IAudioClient *pAudioClient = NULL;
+    IAudioClient *pAudioClient_ = NULL;
     HRESULT hr = pDevice->Activate(
         IID_IAudioClient, CLSCTX_ALL,
-        NULL, (void **)&pAudioClient);
-    if (FAILED(hr) || !pAudioClient)
+        NULL, (void **)&pAudioClient_);
+    if (FAILED(hr) || !pAudioClient_)
         return NULL;
-    CReleaser r(pAudioClient);
+    auto pAudioClient = make_autorelease(pAudioClient_);
 
     hr = pAudioClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, pWaveFormat, NULL);
     if (FAILED(hr))
@@ -204,12 +182,11 @@ IAudioClient *getAudioClient(IMMDevice *pDevice, WAVEFORMATEX *pWaveFormat)
 
         const double REFTIME_UNITS_PER_SECOND = 10000000.;
         REFERENCE_TIME hnsAlignedDuration = static_cast<REFERENCE_TIME>(ceil(bufferSize / (pWaveFormat->nSamplesPerSec / REFTIME_UNITS_PER_SECOND)));
-        r.deactivate();
-        SAFE_RELEASE(pAudioClient);
-        hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void **)&pAudioClient);
-        if (FAILED(hr) || !pAudioClient)
+        hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void **)&pAudioClient_);
+        if (FAILED(hr) || !pAudioClient_)
             return false;
-        r.reset(pAudioClient);
+        pAudioClient.reset(pAudioClient_);
+
         hr = pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_EXCLUSIVE,
             AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
@@ -220,18 +197,15 @@ IAudioClient *getAudioClient(IMMDevice *pDevice, WAVEFORMATEX *pWaveFormat)
     }
     if (FAILED(hr))
         return NULL;
-    r.deactivate();
     return pAudioClient;
 }
 
-BOOL FindStreamFormat(IMMDevice *pDevice, int nChannels, int nSampleRate, WAVEFORMATEXTENSIBLE *pwfxt = NULL, IAudioClient **ppAudioClient = NULL)
+BOOL FindStreamFormat(shared_ptr<IMMDevice> pDevice, int nChannels, int nSampleRate, WAVEFORMATEXTENSIBLE *pwfxt = NULL, shared_ptr<IAudioClient> *ppAudioClient = NULL)
 {
     LOGGER_TRACE_FUNC;
 
     if (!pDevice)
         return FALSE;
-
-    IAudioClient *pAudioClient = NULL;
 
     // create a reasonable channel mask
     DWORD dwChannelMask = 0;
@@ -257,7 +231,7 @@ BOOL FindStreamFormat(IMMDevice *pDevice, int nChannels, int nSampleRate, WAVEFO
     waveFormat.dwChannelMask = dwChannelMask;
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-    pAudioClient = getAudioClient(pDevice, (WAVEFORMATEX *)&waveFormat);
+    auto pAudioClient = getAudioClient(pDevice, (WAVEFORMATEX *)&waveFormat);
 
     if (pAudioClient)
     {
@@ -316,8 +290,6 @@ Finish:
             memcpy_s(pwfxt, sizeof(WAVEFORMATEXTENSIBLE), &waveFormat, sizeof(WAVEFORMATEXTENSIBLE));
         if (ppAudioClient)
             *ppAudioClient = pAudioClient;
-        else
-            SAFE_RELEASE(pAudioClient)
     }
     return bSuccess;
 }
@@ -362,9 +334,21 @@ ASIOSampleType ASIO2WASAPI2::getASIOSampleType() const
     }
 }
 
-const char *szJsonRegValName = "json";
-const char *szChannelRegValName = "Channels";
-const char *szSampRateRegValName = "Sample Rate";
+const TCHAR *szJsonRegValName = TEXT("json");
+
+// convert UTF-8 string to wstring
+std::wstring utf8_to_wstring(const std::string& str)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+    return myconv.from_bytes(str);
+}
+
+// convert wstring to UTF-8 string
+std::string wstring_to_utf8(const std::wstring& str)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+    return myconv.to_bytes(str);
+}
 
 void ASIO2WASAPI2::readFromRegistry()
 {
@@ -386,7 +370,7 @@ void ASIO2WASAPI2::readFromRegistry()
                 json j = json::parse(v.begin(), v.end());
                 int nSampleRate = j["nSampleRate"];
                 int nChannels = j["nChannels"];
-                std::wstring deviceId = j["deviceId"];
+                std::wstring deviceId = utf8_to_wstring(j["deviceId"]);
 
                 m_nSampleRate = nSampleRate;
                 m_nChannels = nChannels;
@@ -414,7 +398,7 @@ void ASIO2WASAPI2::writeToRegistry()
         json j = {
             {"nChannels", m_nChannels},
             {"nSampleRate", m_nSampleRate},
-            {"deviceId", m_deviceId}};
+            {"deviceId", wstring_to_utf8(m_deviceId)}};
         auto jsonString = j.dump();
         RegSetValueEx(key, szJsonRegValName, NULL, REG_SZ, (const BYTE *)jsonString.data(), (DWORD)jsonString.size());
         RegCloseKey(key);
@@ -457,7 +441,7 @@ void ASIO2WASAPI2::clearState()
 extern HINSTANCE g_hinstDLL;
 
 ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
-    : CUnknown("ASIO2WASAPI2", pUnk, phr)
+    : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr)
 {
     clearState();
     readFromRegistry();
@@ -479,8 +463,6 @@ void ASIO2WASAPI2::shutdown()
 {
     stop();
     disposeBuffers();
-    SAFE_RELEASE(m_pAudioClient)
-    SAFE_RELEASE(m_pDevice)
     clearState();
 }
 
@@ -513,7 +495,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                         nChannels = tmp;
                     else
                     {
-                        MessageBox(hwndDlg, "Invalid number of channels", szDescription, MB_OK);
+                        MessageBox(hwndDlg, TEXT("Invalid number of channels"), szDescription, MB_OK);
                         return 0;
                     }
                     tmp = (int)GetDlgItemInt(hwndDlg, IDC_SAMPLE_RATE, &bSuccess, TRUE);
@@ -521,7 +503,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                         nSampleRate = tmp;
                     else
                     {
-                        MessageBox(hwndDlg, "Invalid sample rate", szDescription, MB_OK);
+                        MessageBox(hwndDlg, TEXT("Invalid sample rate"), szDescription, MB_OK);
                         return 0;
                     }
                 }
@@ -529,34 +511,31 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 LRESULT lr = SendDlgItemMessage(hwndDlg, IDL_DEVICE, LB_GETCURSEL, 0, 0);
                 if (lr == CB_ERR || lr < 0 || (size_t)lr >= deviceStringIds.size())
                 {
-                    MessageBox(hwndDlg, "No audio device selected", szDescription, MB_OK);
+                    MessageBox(hwndDlg, TEXT("No audio device selected"), szDescription, MB_OK);
                     return 0;
                 }
                 const auto &selectedDeviceId = deviceStringIds[lr];
                 // find this device
-                IMMDevice *pDevice = NULL;
+                shared_ptr<IMMDevice> pDevice = NULL;
                 {
 
-                    iterateAudioEndPoints([&](IMMDevice* pMMDevice) {
+                    iterateAudioEndPoints([&](shared_ptr<IMMDevice> pMMDevice)
+                                          {
                         auto deviceId = getDeviceId(pMMDevice);
                         if (deviceId.size() == 0)
                             return true;
                         if (deviceId == selectedDeviceId)
                         {
                             pDevice = pMMDevice;
-                            pDevice->AddRef();
                             return false;
                         }
-                        return true;
-                        });
+                        return true; });
                 }
                 if (!pDevice)
                 {
-                    MessageBox(hwndDlg, "Invalid audio device", szDescription, MB_OK);
+                    MessageBox(hwndDlg, TEXT("Invalid audio device"), szDescription, MB_OK);
                     return 0;
                 }
-
-                CReleaser r2(pDevice);
 
                 // make sure the reset request is issued no matter how we proceed
                 class CCallbackCaller
@@ -580,7 +559,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 BOOL rc = FindStreamFormat(pDevice, nChannels, nSampleRate);
                 if (!rc)
                 {
-                    MessageBox(hwndDlg, "Sample rate is not supported in WASAPI exclusive mode", szDescription, MB_OK);
+                    MessageBox(hwndDlg, TEXT("Sample rate is not supported in WASAPI exclusive mode"), szDescription, MB_OK);
                     return 0;
                 }
 
@@ -592,7 +571,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 // try to init the driver
                 if (pDriver->init(hAppWindowHandle) == ASIOFalse)
                 {
-                    MessageBox(hwndDlg, "ASIO driver failed to initialize", szDescription, MB_OK);
+                    MessageBox(hwndDlg, TEXT("ASIO driver failed to initialize"), szDescription, MB_OK);
                     return 0;
                 }
                 pDriver->writeToRegistry();
@@ -617,17 +596,19 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
         CoInitialize(NULL);
 
         vector<wstring> deviceIds;
-        if (!iterateAudioEndPoints([&](IMMDevice* pMMDevice) {
+        if (!iterateAudioEndPoints([&](auto &pMMDevice)
+                                   {
             auto deviceId = getDeviceId(pMMDevice);
             if (deviceId.size() == 0)
                 return false;
             deviceIds.push_back(deviceId);
 
-            IPropertyStore* pPropertyStore;
-            HRESULT hr = pMMDevice->OpenPropertyStore(STGM_READ, &pPropertyStore);
+            IPropertyStore* pPropertyStore_;
+            HRESULT hr = pMMDevice->OpenPropertyStore(STGM_READ, &pPropertyStore_);
             if (FAILED(hr))
                 return false;
-            CReleaser r2(pPropertyStore);
+            auto pPropertyStore = make_autorelease(pPropertyStore_);
+
             PROPVARIANT var;
             PropVariantInit(&var);
             hr = pPropertyStore->GetValue(PKEY_Device_FriendlyName, &var);
@@ -641,8 +622,8 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                 return false;
             }
             PropVariantClear(&var);
-            return true;
-            })) {
+            return true; }))
+        {
             return false;
         }
 
@@ -691,8 +672,7 @@ DWORD WINAPI ASIO2WASAPI2::PlayThreadProc(LPVOID pThis)
 
     HRESULT hr = S_OK;
 
-    IAudioClient *pAudioClient = pDriver->m_pAudioClient;
-    IAudioRenderClient *pRenderClient = NULL;
+    auto pAudioClient = pDriver->m_pAudioClient;
     BYTE *pData = NULL;
 
     hr = CoInitialize(NULL);
@@ -700,18 +680,18 @@ DWORD WINAPI ASIO2WASAPI2::PlayThreadProc(LPVOID pThis)
 
     // Create an event handle and register it for
     // buffer-event notifications.
-    HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    CHandleCloser cl(hEvent);
+    HANDLE hEvent_ = CreateEvent(NULL, FALSE, FALSE, NULL);
+    auto hEvent = make_autoclose(hEvent_);
 
-    hr = pAudioClient->SetEventHandle(hEvent);
+    hr = pAudioClient->SetEventHandle(hEvent.get());
     RETURN_ON_ERROR(hr)
 
+    IAudioRenderClient *pRenderClient_ = NULL;
     hr = pAudioClient->GetService(
         IID_IAudioRenderClient,
-        (void **)&pRenderClient);
-
+        (void **)&pRenderClient_);
     RETURN_ON_ERROR(hr)
-    CReleaser r(pRenderClient);
+    auto pRenderClient = make_autorelease(pRenderClient_);
 
     // Ask MMCSS to temporarily boost the thread priority
     // to reduce the possibility of glitches while we play.
@@ -733,7 +713,7 @@ DWORD WINAPI ASIO2WASAPI2::PlayThreadProc(LPVOID pThis)
         pDriver->m_callbacks->bufferSwitch(1 - pDriver->m_bufferIndex, ASIOTrue);
 
     DWORD retval = 0;
-    HANDLE events[2] = {pDriver->m_hStopPlayThreadEvent, hEvent};
+    HANDLE events[2] = {pDriver->m_hStopPlayThreadEvent, hEvent.get()};
     while ((retval = WaitForMultipleObjects(2, events, FALSE, INFINITE)) == (WAIT_OBJECT_0 + 1))
     { // the hEvent is signalled and m_hStopPlayThreadEvent is not
         // Grab the next empty buffer from the audio device.
@@ -753,7 +733,7 @@ DWORD WINAPI ASIO2WASAPI2::PlayThreadProc(LPVOID pThis)
 
 #undef RETURN_ON_ERROR
 
-HRESULT ASIO2WASAPI2::LoadData(IAudioRenderClient *pRenderClient)
+HRESULT ASIO2WASAPI2::LoadData(shared_ptr<IAudioRenderClient> pRenderClient)
 {
     if (!pRenderClient)
         return E_INVALIDARG;
@@ -870,7 +850,8 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef)
 
     bool bDeviceFound = false;
     int deviceIndex = 0;
-    iterateAudioEndPoints([&](IMMDevice* pMMDevice) {
+    iterateAudioEndPoints([&](auto pMMDevice)
+                          {
         auto deviceId = getDeviceId(pMMDevice);
         Logger::debug(L" - Device #%d: %ws", deviceIndex++, deviceId.c_str());
         if (deviceId.size() && m_deviceId.size() && deviceId == m_deviceId)
@@ -881,15 +862,12 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef)
             bDeviceFound = true;
             return false;
         }
-        return true;
-        });
-
+        return true; });
 
     if (!bDeviceFound)
     { // id not found
         Logger::error(L"Target device not found: %ws", m_deviceId.c_str());
         return false;
-
     }
 
     m_deviceId = getDeviceId(m_pDevice);
@@ -900,7 +878,6 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef)
     if (!rc)
     { // go through all devices and try to find the one that works for 16/48K
         Logger::error(L"Specified device doesn't support specified stream format");
-        SAFE_RELEASE(m_pDevice);
         return false;
     }
 
