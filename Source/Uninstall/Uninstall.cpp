@@ -18,7 +18,9 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "stdafx.h"
+#include <Windows.h>
+#include <shellapi.h>
+#include <string>
 
 using namespace std;
 

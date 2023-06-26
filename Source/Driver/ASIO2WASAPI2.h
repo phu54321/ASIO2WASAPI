@@ -21,6 +21,8 @@
 #pragma once
 
 #include <vector>
+#include <memory>
+
 using namespace std;
 #ifndef _INC_MMREG
 #include <MMReg.h> // needed for WAVEFORMATEXTENSIBLE
@@ -99,7 +101,7 @@ private:
     static DWORD WINAPI PlayThreadProc(LPVOID pThis);
     static BOOL CALLBACK ControlPanelProc(HWND hwndDlg,
                                           UINT message, WPARAM wParam, LPARAM lParam);
-    HRESULT LoadData(shared_ptr<IAudioRenderClient> pRenderClient);
+    HRESULT LoadData(std::shared_ptr<IAudioRenderClient> pRenderClient);
     long refTimeToBufferSize(LONGLONG time) const;
     LONGLONG bufferSizeToRefTime(long bufferSize) const;
     void readFromRegistry();
@@ -116,8 +118,8 @@ private:
 
     // fields filled by init()/cleaned by shutdown()
     bool m_active;
-    shared_ptr<IMMDevice> m_pDevice;
-    shared_ptr<IAudioClient> m_pAudioClient;
+    std::shared_ptr<IMMDevice> m_pDevice;
+    std::shared_ptr<IAudioClient> m_pAudioClient;
     WAVEFORMATEXTENSIBLE m_waveFormat;
     int m_bufferSize; // in audio frames
     HWND m_hAppWindowHandle;

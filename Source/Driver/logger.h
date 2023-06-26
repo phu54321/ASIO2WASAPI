@@ -36,20 +36,14 @@ private:
 	LogLevel level = LogLevel::info;
 };
 
-// From http://blog.redjini.com/188
-// Tool to convert __function__ to unicode
-#define WIDEN(x)           L ## x
-#define WIDEN2(x)         WIDEN(x)
-#define __WFUNCTION__ WIDEN2(__FUNCTION__)
-
 class FuncTraceHelper {
 public:
-	FuncTraceHelper(const wchar_t* funcname);
+	FuncTraceHelper(const char* funcname);
 	~FuncTraceHelper();
 
 private:
-	const wchar_t* funcname;
+	const char* funcname;
 };
 
 #define LOGGER_TRACE_FUNC \
-	FuncTraceHelper _fth(__WFUNCTION__)
+	FuncTraceHelper _fth(__FUNCTION__)

@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include <windows.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -22,6 +20,7 @@ String getHomeDir() {
 	if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, 0, path))) {
 		return path;
 	}
+    return TEXT("");
 }
 
 void AddTrailingSeparator(String& str)
@@ -121,10 +120,10 @@ void Logger::logV(LogLevel level, const wchar_t* format, va_list args) {
 }
 
 
-FuncTraceHelper::FuncTraceHelper(const wchar_t* funcname): funcname(funcname) {
-	Logger::trace(L"entering %ws", funcname);
+FuncTraceHelper::FuncTraceHelper(const char* funcname): funcname(funcname) {
+	Logger::trace(L"entering %s", funcname);
 }
 
 FuncTraceHelper::~FuncTraceHelper() {
-	Logger::trace(L"leaving %ws", funcname);
+	Logger::trace(L"leaving %s", funcname);
 }

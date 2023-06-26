@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include "TrayOpener.hpp"
 #include "logger.h"
 #include <shellapi.h>
