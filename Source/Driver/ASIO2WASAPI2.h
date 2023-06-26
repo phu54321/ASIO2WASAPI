@@ -23,7 +23,6 @@
 #include <vector>
 #include <memory>
 
-using namespace std;
 #ifndef _INC_MMREG
 #include <MMReg.h> // needed for WAVEFORMATEXTENSIBLE
 #endif
@@ -148,7 +147,7 @@ private:
     HWND m_hAppWindowHandle;
 
     // fields filled by createBuffers()/cleaned by disposeBuffers()
-    vector<vector<BYTE>> m_buffers[2];
+    std::vector<std::vector<BYTE>> m_buffers[2];
     ASIOCallbacks *m_callbacks;
 
     // fields filled by start()/cleaned by stop()

@@ -50,14 +50,14 @@ const TCHAR *szPrefsRegKey = TEXT("Software\\ASIO2WASAPI2");
 
 template<typename T>
 auto make_autorelease(T *ptr) {
-    return shared_ptr<T>(ptr, [](T *p) {
+    return std::shared_ptr<T>(ptr, [](T *p) {
         if (p) p->Release();
     });
 }
 
 template<typename T>
 auto make_autoclose(T *h) {
-    return shared_ptr<T>(h, [](T *h) {
+    return std::shared_ptr<T>(h, [](T *h) {
         if (h) CloseHandle(h);
     });
 }
@@ -81,8 +81,8 @@ inline void getNanoSeconds(ASIOTimeStamp *ts) {
     ts->lo = (unsigned long) (nanoSeconds - (ts->hi * twoRaisedTo32));
 }
 
-inline wstring getDeviceId(shared_ptr<IMMDevice> pDevice) {
-    wstring id;
+inline std::wstring getDeviceId(std::shared_ptr<IMMDevice> pDevice) {
+    std::wstring id;
     LPWSTR pDeviceId = NULL;
     HRESULT hr = pDevice->GetId(&pDeviceId);
     if (FAILED(hr))
@@ -93,7 +93,7 @@ inline wstring getDeviceId(shared_ptr<IMMDevice> pDevice) {
     return id;
 }
 
-bool iterateAudioEndPoints(std::function<bool(shared_ptr<IMMDevice> pMMDevice)> cb) {
+bool iterateAudioEndPoints(std::function<bool(std::shared_ptr<IMMDevice> pMMDevice)> cb) {
     IMMDeviceEnumerator *pEnumerator_ = NULL;
     DWORD flags = 0;
 
@@ -130,7 +130,7 @@ bool iterateAudioEndPoints(std::function<bool(shared_ptr<IMMDevice> pMMDevice)> 
     return true;
 }
 
-shared_ptr<IAudioClient> getAudioClient(shared_ptr<IMMDevice> pDevice, WAVEFORMATEX *pWaveFormat) {
+std::shared_ptr<IAudioClient> getAudioClient(std::shared_ptr<IMMDevice> pDevice, WAVEFORMATEX *pWaveFormat) {
     if (!pDevice || !pWaveFormat)
         return NULL;
 
@@ -189,8 +189,9 @@ shared_ptr<IAudioClient> getAudioClient(shared_ptr<IMMDevice> pDevice, WAVEFORMA
     return pAudioClient;
 }
 
-BOOL FindStreamFormat(shared_ptr<IMMDevice> pDevice, int nChannels, int nSampleRate, WAVEFORMATEXTENSIBLE *pwfxt = NULL,
-                      shared_ptr<IAudioClient> *ppAudioClient = NULL) {
+BOOL
+FindStreamFormat(std::shared_ptr<IMMDevice> pDevice, int nChannels, int nSampleRate, WAVEFORMATEXTENSIBLE *pwfxt = NULL,
+                 std::shared_ptr<IAudioClient> *ppAudioClient = NULL) {
     LOGGER_TRACE_FUNC;
 
     if (!pDevice)
@@ -313,13 +314,13 @@ ASIOSampleType ASIO2WASAPI2::getASIOSampleType() const {
 
 const TCHAR *szJsonRegValName = TEXT("json");
 
-// convert UTF-8 string to wstring
+// convert UTF-8 string to std::wstring
 std::wstring utf8_to_wstring(const std::string &str) {
     std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
     return myconv.from_bytes(str);
 }
 
-// convert wstring to UTF-8 string
+// convert std::wstring to UTF-8 string
 std::string wstring_to_utf8(const std::wstring &str) {
     std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
     return myconv.to_bytes(str);
@@ -432,7 +433,7 @@ void ASIO2WASAPI2::shutdown() {
 BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                                              UINT message, WPARAM wParam, LPARAM lParam) {
     static ASIO2WASAPI2 *pDriver = NULL;
-    static vector<wstring> deviceStringIds;
+    static std::vector<std::wstring> deviceStringIds;
     switch (message) {
         case WM_DESTROY:
             pDriver = NULL;
@@ -471,10 +472,10 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                         }
                         const auto &selectedDeviceId = deviceStringIds[lr];
                         // find this device
-                        shared_ptr<IMMDevice> pDevice = NULL;
+                        std::shared_ptr<IMMDevice> pDevice = NULL;
                         {
 
-                            iterateAudioEndPoints([&](shared_ptr<IMMDevice> pMMDevice) {
+                            iterateAudioEndPoints([&](std::shared_ptr<IMMDevice> pMMDevice) {
                                 auto deviceId = getDeviceId(pMMDevice);
                                 if (deviceId.size() == 0)
                                     return true;
@@ -545,7 +546,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
 
             CoInitialize(NULL);
 
-            vector<wstring> deviceIds;
+            std::vector<std::wstring> deviceIds;
             if (!iterateAudioEndPoints([&](auto &pMMDevice) {
                 auto deviceId = getDeviceId(pMMDevice);
                 if (deviceId.size() == 0)
@@ -677,7 +678,7 @@ DWORD WINAPI ASIO2WASAPI2::PlayThreadProc(LPVOID pThis) {
 
 #undef RETURN_ON_ERROR
 
-HRESULT ASIO2WASAPI2::LoadData(shared_ptr<IAudioRenderClient> pRenderClient) {
+HRESULT ASIO2WASAPI2::LoadData(std::shared_ptr<IAudioRenderClient> pRenderClient) {
     if (!pRenderClient)
         return E_INVALIDARG;
 
@@ -689,7 +690,7 @@ HRESULT ASIO2WASAPI2::LoadData(shared_ptr<IAudioRenderClient> pRenderClient) {
 
     // switch buffer
     m_bufferIndex = 1 - m_bufferIndex;
-    vector<vector<BYTE>> &buffer = m_buffers[m_bufferIndex];
+    std::vector<std::vector<BYTE>> &buffer = m_buffers[m_bufferIndex];
     unsigned sampleOffset = 0;
     unsigned nextSampleOffset = sampleSize;
     for (int i = 0; i < m_bufferSize; i++, sampleOffset = nextSampleOffset, nextSampleOffset += sampleSize) {
@@ -718,9 +719,9 @@ long ASIO2WASAPI2::getDriverVersion() {
     return 1;
 }
 
-void ASIO2WASAPI2::getErrorMessage(char *string) {
+void ASIO2WASAPI2::getErrorMessage(char *s) {
     // TODO: maybe add useful message
-    string[0] = 0;
+    s[0] = 0;
 }
 
 ASIOError ASIO2WASAPI2::future(long selector, void *opt) {
