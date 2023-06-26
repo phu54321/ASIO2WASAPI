@@ -817,6 +817,7 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
         return false;
 
     m_bufferSize = bufferSize;
+    Logger::info(L"Buffer size: %d", m_bufferSize);
     m_active = true;
 
     return true;
@@ -835,7 +836,7 @@ ASIOError ASIO2WASAPI2::getSampleRate(ASIOSampleRate *sampleRate) {
 ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
     LOGGER_TRACE_FUNC;
 
-    Logger::debug(L"setSampleRate: %lf", sampleRate);
+    Logger::debug(L"setSampleRate: %f", sampleRate);
 
     if (!m_active)
         return ASE_NotPresent;
@@ -844,7 +845,7 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
         return ASE_OK;
 
     ASIOError err = canSampleRate(sampleRate);
-    Logger::debug(L"canSampleRate: %ld", err);
+    Logger::debug(L"canSampleRate: %d", err);
     if (err != ASE_OK)
         return err;
 

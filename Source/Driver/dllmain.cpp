@@ -86,6 +86,7 @@ BOOL WINAPI DllMain(
 
         case DLL_PROCESS_ATTACH:
             Logger::setOutputLevel(LogLevel::debug);
+            Logger::info(L"ASIO2WASAPI attached");
             g_hinstDLL = hinstDLL;
             DisableThreadLibraryCalls(hinstDLL);
             hinstance = hinstDLL;
@@ -95,6 +96,7 @@ BOOL WINAPI DllMain(
 
         case DLL_PROCESS_DETACH:
             InitClasses(FALSE);
+            Logger::info(L"ASIO2WASAPI detaching");
             break;
     }
     return TRUE;
