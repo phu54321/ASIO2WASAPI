@@ -20,30 +20,34 @@
 
 #pragma once
 #ifndef _INC_WINDOWS
+
 #include <windows.h>
+
 #endif
 #ifndef __OBJBASE_H__
+
 #include "objbase.h"
+
 #endif
 
 extern HINSTANCE g_hInst;
 
 extern OSVERSIONINFO g_osInfo; // Filled in by GetVersionEx
 
-DECLARE_INTERFACE(INonDelegatingUnknown)
-{
+DECLARE_INTERFACE(INonDelegatingUnknown) {
     STDMETHOD(NonDelegatingQueryInterface)
     (THIS_ REFIID, LPVOID *) PURE;
+
     STDMETHOD_(ULONG, NonDelegatingAddRef)
     (THIS) PURE;
+
     STDMETHOD_(ULONG, NonDelegatingRelease)
     (THIS) PURE;
 };
 
 typedef INonDelegatingUnknown *PNDUNKNOWN;
 
-class CBaseObject
-{
+class CBaseObject {
     // Disable the copy constructor and assignment by default so you will get
     //   compiler errors instead of unexpected behaviour if you pass objects
     //   by value or assign objects.
@@ -54,17 +58,16 @@ class CBaseObject
 
 public:
     CBaseObject(TCHAR *pName);
+
     ~CBaseObject();
 
-    static LONG ObjectsActive()
-    {
+    static LONG ObjectsActive() {
         return m_cObjects;
     };
 };
 
 class CUnknown : public INonDelegatingUnknown,
-                 public CBaseObject
-{
+                 public CBaseObject {
 
 private:
     IUnknown *const m_pUnknown; /* Owner of this object */
@@ -74,18 +77,20 @@ protected:                /* So we can override NonDelegatingRelease() */
 
 public:
     CUnknown(TCHAR *pName, IUnknown *pUnk, HRESULT *phr);
-    virtual ~CUnknown(){};
 
-    IUnknown *GetOwner() const
-    {
+    virtual ~CUnknown() {};
+
+    IUnknown *GetOwner() const {
         return m_pUnknown;
     };
 
     /* Non delegating unknown implementation */
 
     STDMETHODIMP NonDelegatingQueryInterface(REFIID, void **);
+
     STDMETHODIMP_(ULONG)
     NonDelegatingAddRef();
+
     STDMETHODIMP_(ULONG)
     NonDelegatingRelease();
 
@@ -96,13 +101,13 @@ public:
 };
 
 typedef CUnknown *(*LPFNNewCOMObject)(IUnknown *pUnkOuter, HRESULT *phr);
+
 typedef void (*LPFNInitRoutine)(BOOL bLoading, const CLSID *rclsid);
 
 /* Create one of these per object class in an array so that
    the default class factory code can create new instances */
 
-class CFactoryTemplate
-{
+class CFactoryTemplate {
 
 public:
     const WCHAR *m_Name;
@@ -110,13 +115,11 @@ public:
     LPFNNewCOMObject m_lpfnNew;
     LPFNInitRoutine m_lpfnInit;
 
-    BOOL IsClassID(REFCLSID rclsid) const
-    {
+    BOOL IsClassID(REFCLSID rclsid) const {
         return (IsEqualCLSID(*m_ClsID, rclsid));
     };
 
-    CUnknown *CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) const
-    {
+    CUnknown *CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) const {
         return m_lpfnNew(pUnk, phr);
     };
 };

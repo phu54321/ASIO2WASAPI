@@ -22,64 +22,52 @@
 
 LONG CBaseObject::m_cObjects = 0;
 
-CBaseObject::CBaseObject(TCHAR *pName)
-{
+CBaseObject::CBaseObject(TCHAR *pName) {
     InterlockedIncrement(&m_cObjects);
 }
 
-CBaseObject::~CBaseObject()
-{
+CBaseObject::~CBaseObject() {
     InterlockedDecrement(&m_cObjects);
 }
 
 #pragma warning(disable : 4355)
 
 CUnknown::CUnknown(TCHAR *pName, IUnknown *pUnk, HRESULT *phr)
-    : CBaseObject(pName), m_cRef(0), m_pUnknown(pUnk != 0 ? pUnk : reinterpret_cast<IUnknown *>(static_cast<INonDelegatingUnknown *>(this)))
-{
+        : CBaseObject(pName), m_cRef(0),
+          m_pUnknown(pUnk != 0 ? pUnk : reinterpret_cast<IUnknown *>(static_cast<INonDelegatingUnknown *>(this))) {
 }
 
 #pragma warning(default : 4355)
 
-STDMETHODIMP CUnknown::NonDelegatingQueryInterface(REFIID riid, void **ppv)
-{
-    if (riid == IID_IUnknown)
-    {
-        GetInterface((LPUNKNOWN)(PNDUNKNOWN)this, ppv);
+STDMETHODIMP CUnknown::NonDelegatingQueryInterface(REFIID riid, void **ppv) {
+    if (riid == IID_IUnknown) {
+        GetInterface((LPUNKNOWN) (PNDUNKNOWN) this, ppv);
         return NOERROR;
-    }
-    else
-    {
+    } else {
         *ppv = NULL;
         return E_NOINTERFACE;
     }
 }
 
 STDMETHODIMP_(ULONG)
-CUnknown::NonDelegatingAddRef()
-{
+CUnknown::NonDelegatingAddRef() {
     LONG lRef = InterlockedIncrement(&m_cRef);
     return max(ULONG(lRef), 1ul);
 }
 
 STDMETHODIMP_(ULONG)
-CUnknown::NonDelegatingRelease()
-{
+CUnknown::NonDelegatingRelease() {
     LONG lRef = InterlockedDecrement(&m_cRef);
-    if (lRef == 0)
-    {
+    if (lRef == 0) {
         m_cRef++;
         delete this;
         return ULONG(0);
-    }
-    else
-    {
+    } else {
         return max(ULONG(lRef), 1ul);
     }
 }
 
-HRESULT CUnknown::GetInterface(LPUNKNOWN pUnk, void **ppv)
-{
+HRESULT CUnknown::GetInterface(LPUNKNOWN pUnk, void **ppv) {
     *ppv = pUnk;
     pUnk->AddRef();
     return NOERROR;

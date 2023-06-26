@@ -29,148 +29,138 @@
 using namespace std;
 
 // The install is a 32-bit executable. This function returns true if we run on 64-bit Windows
-BOOL IsWow64()
-{
-   typedef BOOL(WINAPI * LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
+BOOL IsWow64() {
+    typedef BOOL(WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
 
-   LPFN_ISWOW64PROCESS fnIsWow64Process;
+    LPFN_ISWOW64PROCESS fnIsWow64Process;
 
-   BOOL bIsWow64 = FALSE;
+    BOOL bIsWow64 = FALSE;
 
-   fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(
-       GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+    fnIsWow64Process = (LPFN_ISWOW64PROCESS) GetProcAddress(
+            GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
 
-   if (NULL != fnIsWow64Process)
-   {
-      fnIsWow64Process(GetCurrentProcess(), &bIsWow64);
-   }
-   return bIsWow64;
+    if (NULL != fnIsWow64Process) {
+        fnIsWow64Process(GetCurrentProcess(), &bIsWow64);
+    }
+    return bIsWow64;
 }
 
-void AddTrailingSeparator(string &str)
-{
-   if (str.length() == 0 || str[str.length() - 1] != '\\')
-      str += "\\";
+void AddTrailingSeparator(string &str) {
+    if (str.length() == 0 || str[str.length() - 1] != '\\')
+        str += "\\";
 }
 
-int CopyFiles(string installFolder, const char **names, int nNumberOfNames)
-{
-   AddTrailingSeparator(installFolder);
+int CopyFiles(string installFolder, const char **names, int nNumberOfNames) {
+    AddTrailingSeparator(installFolder);
 
-   for (int i = 0; i < nNumberOfNames; i++)
-   {
-      DWORD attr = 0;
-      string fileName = installFolder + names[i];
-      if (!CopyFile(names[i], fileName.c_str(), FALSE) || (attr = GetFileAttributes(fileName.c_str()) == INVALID_FILE_ATTRIBUTES) || !SetFileAttributes(fileName.c_str(), attr & ~FILE_ATTRIBUTE_READONLY))
-      {
-         MessageBox(NULL, (string("Copy operation failed for ") + names[i]).c_str(), NULL, MB_OK);
-         return -1;
-      }
-   }
-   return 0;
+    for (int i = 0; i < nNumberOfNames; i++) {
+        DWORD attr = 0;
+        string fileName = installFolder + names[i];
+        if (!CopyFile(names[i], fileName.c_str(), FALSE) ||
+            (attr = GetFileAttributes(fileName.c_str()) == INVALID_FILE_ATTRIBUTES) ||
+            !SetFileAttributes(fileName.c_str(), attr & ~FILE_ATTRIBUTE_READONLY)) {
+            MessageBox(NULL, (string("Copy operation failed for ") + names[i]).c_str(), NULL, MB_OK);
+            return -1;
+        }
+    }
+    return 0;
 }
 
-int RegisterDLLs(string installFolder, const char **names, int nNumberOfDlls)
-{
-   AddTrailingSeparator(installFolder);
-   for (int index = 0; index < nNumberOfDlls; index++)
-   {
-      string dllName = installFolder + names[index];
-      string commandLine = " /s \"" + dllName + "\"";
-      ShellExecute(NULL, NULL, "regsvr32.exe", commandLine.c_str(), NULL, SW_HIDE);
-   }
-   return 0;
+int RegisterDLLs(string installFolder, const char **names, int nNumberOfDlls) {
+    AddTrailingSeparator(installFolder);
+    for (int index = 0; index < nNumberOfDlls; index++) {
+        string dllName = installFolder + names[index];
+        string commandLine = " /s \"" + dllName + "\"";
+        ShellExecute(NULL, NULL, "regsvr32.exe", commandLine.c_str(), NULL, SW_HIDE);
+    }
+    return 0;
 }
 
 // set current directory to the location of the install executable
-void SetFileDirectory()
-{
-   char image_dir[MAX_PATH] = {0};
-   GetModuleFileName(NULL, image_dir, MAX_PATH);
-   string imageDir(image_dir);
-   int nPos = imageDir.find_last_of('\\');
-   if (nPos < 0)
-      return; // should not happen
-   imageDir = imageDir.substr(0, nPos + 1);
-   SetCurrentDirectory(imageDir.c_str());
+void SetFileDirectory() {
+    char image_dir[MAX_PATH] = {0};
+    GetModuleFileName(NULL, image_dir, MAX_PATH);
+    string imageDir(image_dir);
+    int nPos = imageDir.find_last_of('\\');
+    if (nPos < 0)
+        return; // should not happen
+    imageDir = imageDir.substr(0, nPos + 1);
+    SetCurrentDirectory(imageDir.c_str());
 }
 
-void GetEnvVar(const char *varName, string &var)
-{
-   const int BUF_LEN = 32767;
-   char buf[BUF_LEN] = {0};
-   GetEnvironmentVariable(varName, buf, BUF_LEN);
-   var = buf;
+void GetEnvVar(const char *varName, string &var) {
+    const int BUF_LEN = 32767;
+    char buf[BUF_LEN] = {0};
+    GetEnvironmentVariable(varName, buf, BUF_LEN);
+    var = buf;
 }
 
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
-{
-   if (!IsWindowsVistaOrGreater())
-   {
-      MessageBox(NULL, "ASIO2WASAPI2 required Windows Vista or later", "ASIO2WASAPI2 Installer", MB_OK);
-      return -1;
-   }
-   // set current directory to be the one of install.exe
-   // this is needed because CopyFiles assumes the files are in the current directory
-   SetFileDirectory();
-   string programFiles;
-   GetEnvVar("ProgramFiles", programFiles);
-   AddTrailingSeparator(programFiles);
-   string installFolder = programFiles + "ASIO2WASAPI2";
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+    if (!IsWindowsVistaOrGreater()) {
+        MessageBox(NULL, "ASIO2WASAPI2 required Windows Vista or later", "ASIO2WASAPI2 Installer", MB_OK);
+        return -1;
+    }
+    // set current directory to be the one of install.exe
+    // this is needed because CopyFiles assumes the files are in the current directory
+    SetFileDirectory();
+    string programFiles;
+    GetEnvVar("ProgramFiles", programFiles);
+    AddTrailingSeparator(programFiles);
+    string installFolder = programFiles + "ASIO2WASAPI2";
 
-   CreateDirectory(installFolder.c_str(), NULL);
+    CreateDirectory(installFolder.c_str(), NULL);
 
-   const char *fileNames[] = {
-       "ASIO2WASAPI2.dll",
-       "UnInstall.exe",
-   };
+    const char *fileNames[] = {
+            "ASIO2WASAPI2.dll",
+            "UnInstall.exe",
+    };
 
-   const char *dllNames[] = {
-       "ASIO2WASAPI2.dll",
-   };
+    const char *dllNames[] = {
+            "ASIO2WASAPI2.dll",
+    };
 
-   if (CopyFiles(installFolder, fileNames, sizeof(fileNames) / sizeof(fileNames[0])) != 0 ||
-       RegisterDLLs(installFolder, dllNames, sizeof(dllNames) / sizeof(dllNames[0])) != 0)
-      return -1;
+    if (CopyFiles(installFolder, fileNames, sizeof(fileNames) / sizeof(fileNames[0])) != 0 ||
+        RegisterDLLs(installFolder, dllNames, sizeof(dllNames) / sizeof(dllNames[0])) != 0)
+        return -1;
 
-   if (IsWow64())
-   {
-      SetCurrentDirectory("x64");
-      string programFiles64;
-      GetEnvVar("ProgramW6432", programFiles64);
-      AddTrailingSeparator(programFiles64);
-      string installFolder64 = programFiles64 + "ASIO2WASAPI2";
+    if (IsWow64()) {
+        SetCurrentDirectory("x64");
+        string programFiles64;
+        GetEnvVar("ProgramW6432", programFiles64);
+        AddTrailingSeparator(programFiles64);
+        string installFolder64 = programFiles64 + "ASIO2WASAPI2";
 
-      CreateDirectory(installFolder64.c_str(), NULL);
-      const char *names[] = {
-          "ASIO2WASAPI264.dll",
-      };
-      if (CopyFiles(installFolder64, names, sizeof(names) / sizeof(names[0])) != 0 ||
-          RegisterDLLs(installFolder64, names, sizeof(names) / sizeof(names[0])))
-         return -1;
-   }
+        CreateDirectory(installFolder64.c_str(), NULL);
+        const char *names[] = {
+                "ASIO2WASAPI264.dll",
+        };
+        if (CopyFiles(installFolder64, names, sizeof(names) / sizeof(names[0])) != 0 ||
+            RegisterDLLs(installFolder64, names, sizeof(names) / sizeof(names[0])))
+            return -1;
+    }
 
-   HKEY key = NULL;
-   RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ASIO2WASAPI2", 0, 0, 0, KEY_ALL_ACCESS, 0, &key, NULL);
-   string uninstallString = installFolder;
-   AddTrailingSeparator(uninstallString);
-   uninstallString += "Uninstall.exe";
-   struct
-   {
-      const char *pValueName;
-      const char *pValueData;
-   } values[] =
-       {
-           {"DisplayName", "ASIO2WASAPI2"},
-           {"DisplayVersion", SPRODUCT_VERSION},
-           {"Publisher", "Lev Minkovsky"},
-           {"HelpLink", "http://asio2wasapi.sourceforge.net"},
-           {"InstallLocation", installFolder.c_str()},
-           {"Comments", "Universal ASIO driver"},
-           {"UninstallString", uninstallString.c_str()},
-       };
-   for (int i = 0; i < sizeof(values) / sizeof(values[0]); i++)
-      RegSetValueEx(key, values[i].pValueName, 0, REG_SZ, (const BYTE *)values[i].pValueData, strlen(values[i].pValueData) + 1);
-   MessageBox(NULL, "ASIO2WASAPI2 is successfully installed", "ASIO2WASAPI2 Installer", MB_OK);
-   return 0;
+    HKEY key = NULL;
+    RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ASIO2WASAPI2", 0, 0, 0,
+                   KEY_ALL_ACCESS, 0, &key, NULL);
+    string uninstallString = installFolder;
+    AddTrailingSeparator(uninstallString);
+    uninstallString += "Uninstall.exe";
+    struct {
+        const char *pValueName;
+        const char *pValueData;
+    } values[] =
+            {
+                    {"DisplayName",     "ASIO2WASAPI2"},
+                    {"DisplayVersion", SPRODUCT_VERSION},
+                    {"Publisher",       "Lev Minkovsky"},
+                    {"HelpLink",        "http://asio2wasapi.sourceforge.net"},
+                    {"InstallLocation", installFolder.c_str()},
+                    {"Comments",        "Universal ASIO driver"},
+                    {"UninstallString", uninstallString.c_str()},
+            };
+    for (int i = 0; i < sizeof(values) / sizeof(values[0]); i++)
+        RegSetValueEx(key, values[i].pValueName, 0, REG_SZ, (const BYTE *) values[i].pValueData,
+                      strlen(values[i].pValueData) + 1);
+    MessageBox(NULL, "ASIO2WASAPI2 is successfully installed", "ASIO2WASAPI2 Installer", MB_OK);
+    return 0;
 }

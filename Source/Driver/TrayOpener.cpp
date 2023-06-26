@@ -13,11 +13,10 @@ static std::mutex windowClassMutex;
 static std::mutex trayIDOpenerMapMutex;
 static std::map<WPARAM, TrayOpener *> trayIDOpenerMap;
 
-TrayOpener::TrayOpener(HINSTANCE hInst, HICON hIcon, std::function<void()> clickCb, const TCHAR* szTip)
-    : hWnd(createWindow(hInst)),
-      clickCallback(clickCb),
-      trayIconID(lastTrayIconID++)
-{
+TrayOpener::TrayOpener(HINSTANCE hInst, HICON hIcon, std::function<void()> clickCb, const TCHAR *szTip)
+        : hWnd(createWindow(hInst)),
+          clickCallback(clickCb),
+          trayIconID(lastTrayIconID++) {
     Logger::info(L"TrayOpener::TrayOpener");
     {
         std::lock_guard<std::mutex> lock(trayIDOpenerMapMutex);
@@ -38,11 +37,10 @@ TrayOpener::TrayOpener(HINSTANCE hInst, HICON hIcon, std::function<void()> click
     Shell_NotifyIcon(NIM_ADD, &nid);
 }
 
-TrayOpener::~TrayOpener()
-{
+TrayOpener::~TrayOpener() {
     LOGGER_TRACE_FUNC;
 
-    NOTIFYICONDATA nid = { 0 };
+    NOTIFYICONDATA nid = {0};
 
     nid.cbSize = sizeof(nid);
     nid.hWnd = NULL;
@@ -59,28 +57,26 @@ TrayOpener::~TrayOpener()
     }
 }
 
-HWND TrayOpener::createWindow(HINSTANCE hInst)
-{
+HWND TrayOpener::createWindow(HINSTANCE hInst) {
     LOGGER_TRACE_FUNC;
 
     createWindowClass(hInst);
 
     return CreateWindow(
-        g_windowClassName,   // Window class
-        TEXT(""),            // Window text
-        WS_OVERLAPPEDWINDOW, // Window style
+            g_windowClassName,   // Window class
+            TEXT(""),            // Window text
+            WS_OVERLAPPEDWINDOW, // Window style
 
-        // Size and position
-        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+    // Size and position
+            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
 
-        NULL,  // Parent window
-        NULL,  // Menu
-        hInst, // Instance handle
-        NULL);
+            NULL,  // Parent window
+            NULL,  // Menu
+            hInst, // Instance handle
+            NULL);
 }
 
-void TrayOpener::createWindowClass(HINSTANCE hInst)
-{
+void TrayOpener::createWindowClass(HINSTANCE hInst) {
     std::lock_guard<std::mutex> guard(windowClassMutex);
 
     static std::set<HINSTANCE> initMap;
@@ -95,11 +91,11 @@ void TrayOpener::createWindowClass(HINSTANCE hInst)
 
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.hbrBackground = (HBRUSH) (COLOR_WINDOW + 1);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wc.hInstance = hInst;
-    wc.lpfnWndProc = (WNDPROC)TrayWndProc;
+    wc.lpfnWndProc = (WNDPROC) TrayWndProc;
     wc.lpszClassName = g_windowClassName;
     wc.lpszMenuName = NULL;
     wc.style = 0;
@@ -108,19 +104,15 @@ void TrayOpener::createWindowClass(HINSTANCE hInst)
     initMap.insert(hInst);
 }
 
-LRESULT CALLBACK TrayOpener::TrayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    if (msg == WM_TRAYICON_MSG)
-    {
+LRESULT CALLBACK TrayOpener::TrayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_TRAYICON_MSG) {
         std::lock_guard<std::mutex> lock(trayIDOpenerMapMutex);
         auto it = trayIDOpenerMap.find(wParam);
-        if (it != trayIDOpenerMap.end())
-        {
-            switch (lParam)
-            {
-            case WM_LBUTTONUP:
-                it->second->clickCallback();
-                break;
+        if (it != trayIDOpenerMap.end()) {
+            switch (lParam) {
+                case WM_LBUTTONUP:
+                    it->second->clickCallback();
+                    break;
             }
         }
     }

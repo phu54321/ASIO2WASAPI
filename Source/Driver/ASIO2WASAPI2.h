@@ -39,59 +39,72 @@ struct IAudioRenderClient;
 extern CLSID CLSID_ASIO2WASAPI2_DRIVER;
 const TCHAR *const szDescription = TEXT("ASIO2WASAPI2");
 
-class ASIO2WASAPI2 : public IASIO, public CUnknown
-{
+class ASIO2WASAPI2 : public IASIO, public CUnknown {
 public:
     ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr);
+
     ~ASIO2WASAPI2();
 
-    STDMETHODIMP QueryInterface(REFIID riid, void **ppv)
-    {
+    STDMETHODIMP QueryInterface(REFIID riid, void **ppv) {
         return GetOwner()->QueryInterface(riid, ppv);
     };
+
     STDMETHODIMP_(ULONG)
-    AddRef()
-    {
+    AddRef() {
         return GetOwner()->AddRef();
     };
+
     STDMETHODIMP_(ULONG)
-    Release()
-    {
+    Release() {
         return GetOwner()->Release();
     };
 
     // Factory method
     static CUnknown *CreateInstance(LPUNKNOWN pUnk, HRESULT *phr);
+
     // IUnknown
     virtual HRESULT STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppvObject);
 
     ASIOBool init(void *sysRef);
+
     void getDriverName(char *name); // max 32 bytes incl. terminating zero
     long getDriverVersion();
+
     void getErrorMessage(char *string); // max 128 bytes incl. terminating zero
 
     ASIOError start();
+
     ASIOError stop();
 
     ASIOError getChannels(long *numInputChannels, long *numOutputChannels);
+
     ASIOError getLatencies(long *inputLatency, long *outputLatency);
+
     ASIOError getBufferSize(long *minSize, long *maxSize, long *preferredSize, long *granularity);
 
     ASIOError canSampleRate(ASIOSampleRate sampleRate);
+
     ASIOError getSampleRate(ASIOSampleRate *sampleRate);
+
     ASIOError setSampleRate(ASIOSampleRate sampleRate);
+
     ASIOError getClockSources(ASIOClockSource *clocks, long *numSources);
+
     ASIOError setClockSource(long index);
 
     ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp);
+
     ASIOError getChannelInfo(ASIOChannelInfo *info);
 
     ASIOError createBuffers(ASIOBufferInfo *bufferInfos, long numChannels,
                             long bufferSize, ASIOCallbacks *callbacks);
+
     ASIOError disposeBuffers();
 
     ASIOError controlPanel();
+
     ASIOError future(long selector, void *opt);
+
     ASIOError outputReady();
 
 private:
@@ -99,16 +112,26 @@ private:
 
 private:
     static DWORD WINAPI PlayThreadProc(LPVOID pThis);
+
     static BOOL CALLBACK ControlPanelProc(HWND hwndDlg,
                                           UINT message, WPARAM wParam, LPARAM lParam);
+
     HRESULT LoadData(std::shared_ptr<IAudioRenderClient> pRenderClient);
+
     long refTimeToBufferSize(LONGLONG time) const;
+
     LONGLONG bufferSizeToRefTime(long bufferSize) const;
+
     void readFromRegistry();
+
     void writeToRegistry();
+
     ASIOSampleType getASIOSampleType() const;
+
     void shutdown();
+
     void clearState();
+
     void setMostReliableFormat();
 
     // fields valid before initialization
