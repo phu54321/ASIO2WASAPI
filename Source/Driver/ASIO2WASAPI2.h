@@ -22,6 +22,7 @@
 
 #include <vector>
 #include <memory>
+#include "WASAPIOutput/WASAPIOutput.h"
 
 #ifndef _INC_MMREG
 #include <MMReg.h> // needed for WAVEFORMATEXTENSIBLE
@@ -110,12 +111,8 @@ private:
     std::unique_ptr<TrayOpener> openerPtr;
 
 private:
-    static DWORD WINAPI PlayThreadProc(LPVOID pThis);
-
     static BOOL CALLBACK ControlPanelProc(HWND hwndDlg,
                                           UINT message, WPARAM wParam, LPARAM lParam);
-
-    HRESULT LoadData(std::shared_ptr<IAudioRenderClient> pRenderClient);
 
     long refTimeToBufferSize(LONGLONG time) const;
 
@@ -131,8 +128,6 @@ private:
 
     void clearState();
 
-    void setMostReliableFormat();
-
     // fields valid before initialization
     int m_nChannels;
     int m_nSampleRate;
@@ -141,19 +136,17 @@ private:
     // fields filled by init()/cleaned by shutdown()
     bool m_active;
     std::shared_ptr<IMMDevice> m_pDevice;
-    std::shared_ptr<IAudioClient> m_pAudioClient;
-    WAVEFORMATEXTENSIBLE m_waveFormat;
     int m_bufferSize; // in audio frames
     HWND m_hAppWindowHandle;
 
     // fields filled by createBuffers()/cleaned by disposeBuffers()
+    // ASIO buffers *& callbacks
     std::vector<std::vector<BYTE>> m_buffers[2];
     ASIOCallbacks *m_callbacks;
 
     // fields filled by start()/cleaned by stop()
-    HANDLE m_hPlayThreadIsRunningEvent;
     int m_bufferIndex;
-    HANDLE m_hStopPlayThreadEvent;
+    std::unique_ptr<WASAPIOutput> m_output = nullptr;
     ASIOTimeStamp m_theSystemTime;
     double m_samplePosition;
 };

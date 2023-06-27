@@ -85,7 +85,7 @@ BOOL WINAPI DllMain(
     switch (fdwReason) {
 
         case DLL_PROCESS_ATTACH:
-            Logger::setOutputLevel(LogLevel::debug);
+            Logger::setOutputLevel(LogLevel::trace);
             Logger::info(L"ASIO2WASAPI attached");
             g_hinstDLL = hinstDLL;
             DisableThreadLibraryCalls(hinstDLL);

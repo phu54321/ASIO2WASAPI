@@ -32,7 +32,7 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/COMBaseClasses.cpp
         Source/Driver/ASIO2WASAPI2.rc
         Source/Driver/ASIO2WASAPI2.def
-        )
+        Source/Driver/WASAPIOutput/WASAPIOutput.cpp Source/Driver/WASAPIOutput/WASAPIOutput.h Source/Driver/WASAPIUtils.cpp Source/Driver/WASAPIUtils.h Source/Driver/raiiUtils.h Source/Driver/WASAPIOutput/createIAudioClient.cpp Source/Driver/WASAPIOutput/createIAudioClient.h)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)
 target_link_libraries(ASIO2WASAPI2 Avrt.lib winmm.lib)
 

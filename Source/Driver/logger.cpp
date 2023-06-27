@@ -134,10 +134,11 @@ void Logger::logV(LogLevel level, const wchar_t *format, va_list args) {
 }
 
 
+// %S: const char* on unicode space
 FuncTraceHelper::FuncTraceHelper(const char *funcname) : funcname(funcname) {
-    Logger::trace(L"entering %s", funcname);
+    Logger::trace(L"entering %S", funcname);
 }
 
 FuncTraceHelper::~FuncTraceHelper() {
-    Logger::trace(L"leaving %s", funcname);
+    Logger::trace(L"leaving %S", funcname);
 }
