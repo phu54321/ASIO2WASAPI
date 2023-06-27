@@ -54,9 +54,9 @@ ASIOError ASIOStop(void);
 ASIOError ASIOGetChannels(long *numInputChannels, long *numOutputChannels);
 ASIOError ASIOGetLatencies(long *inputLatency, long *outputLatency);
 ASIOError ASIOGetBufferSize(long *minSize, long *maxSize, long *preferredSize, long *granularity);
-ASIOError ASIOCanSampleRate(ASIOSampleRate sampleRate);
+ASIOError ASIOCanSampleRate(ASIOSampleRate _sampleRate);
 ASIOError ASIOGetSampleRate(ASIOSampleRate *currentRate);
-ASIOError ASIOSetSampleRate(ASIOSampleRate sampleRate);
+ASIOError ASIOSetSampleRate(ASIOSampleRate _sampleRate);
 ASIOError ASIOGetClockSources(ASIOClockSource *clocks, long *numSources);
 ASIOError ASIOSetClockSource(long reference);
 ASIOError ASIOGetSamplePosition (ASIOSamples *sPos, ASIOTimeStamp *tStamp);
@@ -280,7 +280,7 @@ typedef struct ASIOTime                          // both input/output
 
 using time info:
 it is recommended to use the new method with time info even if the asio
-device does not support timecode; continuous calls to ASIOGetSamplePosition
+_pDevice does not support timecode; continuous calls to ASIOGetSamplePosition
 and ASIOGetSampleRate are avoided, and there is a more defined relationship
 between callback time and the time info.
 
@@ -293,11 +293,11 @@ of the old bufferSwitch method. the ASIOTime structure is assumed to be valid
 and accessible until the callback returns.
 
 using time code:
-if the device supports reading time code, it will call host's asioMessage callback
+if the _pDevice supports reading time code, it will call host's asioMessage callback
 with kAsioSupportsTimeCode as the selector. it may then fill the according
 fields and set the kTcValid flag.
 host will call the future method with the kAsioEnableTimeCodeRead selector when
-it wants to enable or disable tc reading by the device. you should also support
+it wants to enable or disable tc reading by the _pDevice. you should also support
 the kAsioCanTimeInfo and kAsioCanTimeCode selectors in ASIOFuture (see example).
 
 note:
@@ -320,7 +320,7 @@ in createBuffers()
 {
 	memset(&asioTime, 0, sizeof(ASIOTime));
 	AsioTimeInfo* ti = &asioTime.timeInfo;
-	ti->sampleRate = theSampleRate;
+	ti->_sampleRate = theSampleRate;
 	ASIOTimeCode* tc = &asioTime.timeCode;
 	tc->speed = 1.;
 	timeInfoMode = false;
@@ -343,9 +343,9 @@ void switchBuffers(long doubleBufferIndex, bool processNow)
 		ti->flags =	kSystemTimeValid | kSamplePositionValid | kSampleRateValid;
 		ti->systemTime = theNanoSeconds;
 		ti->samplePosition = theSamplePosition;
-		if(ti->sampleRate != theSampleRate)
+		if(ti->_sampleRate != theSampleRate)
 			ti->flags |= kSampleRateChanged;
-		ti->sampleRate = theSampleRate;
+		ti->_sampleRate = theSampleRate;
 
 #if kCanTimeCode
 		if(canTimeCode && timeCodeEnabled)
@@ -389,45 +389,43 @@ ASIOError ASIOFuture(long selector, void *params)
 // application's audio stream handler callbacks
 //- - - - - - - - - - - - - - - - - - - - - - - - -
 
-typedef struct ASIOCallbacks
-{
-	void (*bufferSwitch) (long doubleBufferIndex, ASIOBool directProcess);
-		// bufferSwitch indicates that both input and output are to be processed.
-		// the current buffer half index (0 for A, 1 for B) determines
-		// - the output buffer that the host should start to fill. the other buffer
-		//   will be passed to output hardware regardless of whether it got filled
-		//   in time or not.
-		// - the input buffer that is now filled with incoming data. Note that
-		//   because of the synchronicity of i/o, the input always has at
-		//   least one buffer latency in relation to the output.
-		// directProcess suggests to the host whether it should immedeately
-		// start processing (directProcess == ASIOTrue), or whether its process
-		// should be deferred because the call comes from a very low level
-		// (for instance, a high level priority interrupt), and direct processing
-		// would cause timing instabilities for the rest of the system. If in doubt,
-		// directProcess should be set to ASIOFalse.
-		// Note: bufferSwitch may be called at interrupt time for highest efficiency.
+typedef struct ASIOCallbacks {
+    void (*bufferSwitch)(long doubleBufferIndex, ASIOBool directProcess);
+    // bufferSwitch indicates that both input and output are to be processed.
+    // the current buffer half index (0 for A, 1 for B) determines
+    // - the output buffer that the host should start to fill. the other buffer
+    //   will be passed to output hardware regardless of whether it got filled
+    //   in time or not.
+    // - the input buffer that is now filled with incoming data. Note that
+    //   because of the synchronicity of i/o, the input always has at
+    //   least one buffer latency in relation to the output.
+    // directProcess suggests to the host whether it should immedeately
+    // start processing (directProcess == ASIOTrue), or whether its process
+    // should be deferred because the call comes from a very low level
+    // (for instance, a high level priority interrupt), and direct processing
+    // would cause timing instabilities for the rest of the system. If in doubt,
+    // directProcess should be set to ASIOFalse.
+    // Note: bufferSwitch may be called at interrupt time for highest efficiency.
 
-	void (*sampleRateDidChange) (ASIOSampleRate sRate);
-		// gets called when the AudioStreamIO detects a sample rate change
-		// If sample rate is unknown, 0 is passed (for instance, clock loss
-		// when externally synchronized).
+    void (*sampleRateDidChange)(ASIOSampleRate sRate);
+    // gets called when the AudioStreamIO detects a sample rate change
+    // If sample rate is unknown, 0 is passed (for instance, clock loss
+    // when externally synchronized).
 
-	long (*asioMessage) (long selector, long value, void* message, double* opt);
-		// generic callback for various purposes, see selectors below.
-		// note this is only present if the asio version is 2 or higher
+    long (*asioMessage)(long selector, long value, void *message, double *opt);
+    // generic callback for various purposes, see selectors below.
+    // note this is only present if the asio version is 2 or higher
 
-	ASIOTime* (*bufferSwitchTimeInfo) (ASIOTime* params, long doubleBufferIndex, ASIOBool directProcess);
-		// new callback with time info. makes ASIOGetSamplePosition() and various
-		// calls to ASIOGetSampleRate obsolete,
-		// and allows for timecode sync etc. to be preferred; will be used if
-		// the driver calls asioMessage with selector kAsioSupportsTimeInfo.
+    ASIOTime *(*bufferSwitchTimeInfo)(ASIOTime *params, long doubleBufferIndex, ASIOBool directProcess);
+    // new callback with time info. makes ASIOGetSamplePosition() and various
+    // calls to ASIOGetSampleRate obsolete,
+    // and allows for timecode sync etc. to be preferred; will be used if
+    // the driver calls asioMessage with selector kAsioSupportsTimeInfo.
 } ASIOCallbacks;
 
 // asioMessage selectors
-enum
-{
-	kAsioSelectorSupported = 1,	// selector in <value>, returns 1L if supported,
+enum {
+    kAsioSelectorSupported = 1,    // selector in <value>, returns 1L if supported,
 								// 0 otherwise
     kAsioEngineVersion,			// returns engine (host) asio implementation version,
 								// 2 or higher
@@ -580,9 +578,10 @@ ASIOError ASIOGetChannels(long *numInputChannels, long *numOutputChannels);
 */
 
 ASIOError ASIOGetLatencies(long *inputLatency, long *outputLatency);
+
 /* Purpose:
 	  Returns the input and output latencies. This includes
-	  device specific delays, like FIFOs etc.
+	  _pDevice specific delays, like FIFOs etc.
 	Parameter:
 	  inputLatency will hold the 'age' of the first sample frame
 	  in the input buffer when the hosts reads it in bufferSwitch()
@@ -590,7 +589,7 @@ ASIOError ASIOGetLatencies(long *inputLatency, long *outputLatency);
 	  and delay between the actual physical switch, and the time
 	  when bufferSitch() enters).
 	  This will usually be the size of one block in sample frames, plus
-	  device specific latencies.
+	  _pDevice specific latencies.
 
 	  outputLatency will specify the time between the buffer switch,
 	  and the time when the next play buffer will start to sound.
@@ -643,34 +642,37 @@ ASIOError ASIOGetBufferSize(long *minSize, long *maxSize, long *preferredSize, l
 */
 
 ASIOError ASIOCanSampleRate(ASIOSampleRate sampleRate);
+
 /* Purpose:
 	  Inquires the hardware for the available sample rates.
 	Parameter:
-	  sampleRate is the rate in question.
+	  _sampleRate is the rate in question.
 	Returns:
 	  If the inquired sample rate is not supported, ASE_NoClock will be returned.
 	  If no input/output is present ASE_NotPresent will be returned.
 */
 ASIOError ASIOGetSampleRate(ASIOSampleRate *currentRate);
+
 /* Purpose:
 	  Get the current sample Rate.
 	Parameter:
 	  currentRate will hold the current sample rate on return.
 	Returns:
-	  If sample rate is unknown, sampleRate will be 0 and ASE_NoClock will be returned.
+	  If sample rate is unknown, _sampleRate will be 0 and ASE_NoClock will be returned.
 	  If no input/output is present ASE_NotPresent will be returned.
 	Notes:
 */
 
 ASIOError ASIOSetSampleRate(ASIOSampleRate sampleRate);
+
 /* Purpose:
-	  Set the hardware to the requested sample Rate. If sampleRate == 0,
+	  Set the hardware to the requested sample Rate. If _sampleRate == 0,
 	  enable external sync.
 	Parameter:
-	  sampleRate: on input, the requested rate
+	  _sampleRate: on input, the requested rate
 	Returns:
-	  If sampleRate is unknown ASE_NoClock will be returned.
-	  If the current clock is external, and sampleRate is != 0,
+	  If _sampleRate is unknown ASE_NoClock will be returned.
+	  If the current clock is external, and _sampleRate is != 0,
 	  ASE_InvalidMode will be returned
 	  If no input/output is present ASE_NotPresent will be returned.
 	Notes:
@@ -829,7 +831,7 @@ ASIOError ASIOCreateBuffers(ASIOBufferInfo *bufferInfos, long numChannels,
 	  bufferInfos is a pointer to an array of ASIOBufferInfo structures:
 	    - isInput: on input, ASIOTrue if the buffer is to be allocated
 	      for an input, output buffer else
-	    - channelNum: on input, the index of the channel in question
+	    - _channelNum: on input, the index of the channel in question
 	      (counting from 0)
 	    - buffers: on exit, 2 pointers to the halves of the channels' double-buffer.
 	      the size of the buffer(s) of course depend on both the ASIOSampleType
@@ -854,8 +856,9 @@ ASIOError ASIOCreateBuffers(ASIOBufferInfo *bufferInfos, long numChannels,
 */
 
 ASIOError ASIODisposeBuffers(void);
+
 /* Purpose:
-	  Releases all buffers for the device.
+	  Releases all buffers for the _pDevice.
 	Parameter:
 	  None.
 	Returns:
@@ -866,9 +869,10 @@ ASIOError ASIODisposeBuffers(void);
 */
 
 ASIOError ASIOControlPanel(void);
+
 /* Purpose:
 	  request the driver to start a control panel component
-	  for device specific user settings. This will not be
+	  for _pDevice specific user settings. This will not be
 	  accessed on some platforms (where the component is accessed
 	  instead).
 	Parameter:

@@ -319,7 +319,8 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
     int deviceIndex = 0;
     iterateAudioEndPoints([&](auto pMMDevice) {
         auto deviceId = getDeviceId(pMMDevice);
-        Logger::debug(L" - Device #%d: %ws", deviceIndex++, deviceId.c_str());
+        auto friendlyName = getDeviceFriendlyName(pMMDevice);
+        Logger::debug(L" - Device #%d: %ws (%ws)", deviceIndex++, friendlyName.c_str(), deviceId.c_str());
         if (deviceId.size() && m_deviceId.size() && deviceId == m_deviceId) {
             Logger::info(L"Found the device");
             m_pDevice = pMMDevice;
@@ -431,8 +432,6 @@ ASIOError ASIO2WASAPI2::createBuffers(ASIOBufferInfo *bufferInfos, long numChann
 
     m_bufferSize = bufferSize;
     m_callbacks = callbacks;
-    int sampleContainerLength = 2;
-    int bufferByteLength = bufferSize * sampleContainerLength;
 
     // the very allocation
     m_buffers[0].resize(m_nChannels);
@@ -440,10 +439,10 @@ ASIOError ASIO2WASAPI2::createBuffers(ASIOBufferInfo *bufferInfos, long numChann
 
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
-        m_buffers[0].at(info.channelNum).resize(bufferByteLength);
-        m_buffers[1].at(info.channelNum).resize(bufferByteLength);
-        info.buffers[0] = &m_buffers[0].at(info.channelNum)[0];
-        info.buffers[1] = &m_buffers[1].at(info.channelNum)[0];
+        m_buffers[0].at(info.channelNum).resize(bufferSize);
+        m_buffers[1].at(info.channelNum).resize(bufferSize);
+        info.buffers[0] = m_buffers[0].at(info.channelNum).data();
+        info.buffers[1] = m_buffers[0].at(info.channelNum).data();
     }
     return ASE_OK;
 }
@@ -511,7 +510,10 @@ ASIOError ASIO2WASAPI2::start() {
         return ASE_OK; // we are already playing
 
     // make sure the previous play thread exited
-    m_output = std::make_unique<WASAPIOutput>(m_pDevice, m_nChannels, m_nSampleRate);
+    m_samplePosition = 0;
+    m_output = std::make_unique<WASAPIOutput>(m_pDevice, m_nChannels, m_nSampleRate, m_bufferSize);
+    m_output->registerCallback([&]() { this->pushData(); });
+
     return ASE_OK;
 }
 
@@ -526,6 +528,17 @@ ASIOError ASIO2WASAPI2::stop() {
     m_output = nullptr;
     return ASE_OK;
 }
+
+void ASIO2WASAPI2::pushData() {
+    if (m_callbacks) {
+        auto nowEmptyBufferIndex = m_bufferIndex;
+        m_bufferIndex = 1 - m_bufferIndex;
+        auto &buffer = m_buffers[m_bufferIndex];
+        m_output->pushSamples(buffer);
+        m_callbacks->bufferSwitch(nowEmptyBufferIndex, ASIOTrue);
+    }
+}
+
 
 ASIOError ASIO2WASAPI2::getClockSources(ASIOClockSource *clocks, long *numSources) {
     if (!numSources || *numSources == 0)

@@ -19,9 +19,9 @@
 bool iterateAudioEndPoints(std::function<bool(std::shared_ptr<IMMDevice> pMMDevice)> cb);
 
 /**
- * Get device ID of IMMDevice
+ * Get _pDevice ID of IMMDevice
  * @param pDevice IMMDevice
- * @return device ID
+ * @return _pDevice ID
  */
 std::wstring getDeviceId(const std::shared_ptr<IMMDevice> &pDevice);
 
@@ -33,9 +33,9 @@ std::wstring getDeviceId(const std::shared_ptr<IMMDevice> &pDevice);
 std::wstring getDeviceFriendlyName(const std::shared_ptr<IMMDevice> &pDevice);
 
 /**
- * Get device from device ID (wstring)
+ * Get _pDevice from _pDevice ID (wstring)
  * @param deviceId
- * @return matching device. nullptr if one doesn't exist.
+ * @return matching _pDevice. nullptr if one doesn't exist.
  */
 std::shared_ptr<IMMDevice> getDeviceFromId(const std::wstring &deviceId);
 

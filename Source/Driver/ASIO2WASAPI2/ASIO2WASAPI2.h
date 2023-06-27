@@ -120,6 +120,9 @@ private:
 
     LONGLONG bufferSizeToRefTime(long bufferSize) const;
 
+
+    void pushData();
+
     void readFromRegistry();
 
     void writeToRegistry();
@@ -143,7 +146,7 @@ private:
 
     // fields filled by createBuffers()/cleaned by disposeBuffers()
     // ASIO buffers *& callbacks
-    std::vector<std::vector<BYTE>> m_buffers[2];
+    std::vector<std::vector<short>> m_buffers[2];
     ASIOCallbacks *m_callbacks;
 
     // fields filled by start()/cleaned by stop()

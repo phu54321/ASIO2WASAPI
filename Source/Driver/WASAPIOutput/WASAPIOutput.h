@@ -11,22 +11,27 @@
 #include <string>
 #include <memory>
 #include <utility>
+#include <functional>
+#include <vector>
 
 class WASAPIOutputImpl;
 
 class WASAPIOutput {
 public:
-    WASAPIOutput(std::shared_ptr<IMMDevice> pDevice, int nChannels, int sampleRate);
+    WASAPIOutput(const std::shared_ptr<IMMDevice> &pDevice, int nChannels, int sampleRate, int bufferSizeRequest);
 
     ~WASAPIOutput();
 
-    /// Push audio data to wasapi render path
-    /// \param buffer channel-interleaved 32bit integer samples
-    /// \param sampleN number of samples to put in
-    void pushSamples(short *buffer, int sampleN);
+    /**
+     * Push samples to ring central queue. This will be printed to asio.
+     * @param buffer `sample = buffer[channel][sampleIndex]`
+     */
+    void pushSamples(const std::vector<std::vector<short>> &buffer);
+
+    void registerCallback(std::function<void()> pullCallback);
 
 private:
-    std::unique_ptr<WASAPIOutputImpl> _pimpl;
+    std::unique_ptr<WASAPIOutputImpl> _pImpl;
 };
 
 class WASAPIOutputException : public std::exception {
