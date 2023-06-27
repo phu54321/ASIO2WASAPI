@@ -21,8 +21,8 @@
 */
 
 #include "COMBaseClasses.h"
-#include "ASIO2WASAPI2.h"
-#include "logger.h"
+#include "ASIO2WASAPI2/ASIO2WASAPI2.h"
+#include "utils/logger.h"
 
 LONG UnregisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname);
 

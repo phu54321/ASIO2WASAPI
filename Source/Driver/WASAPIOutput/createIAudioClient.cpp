@@ -3,8 +3,8 @@
 //
 
 #include "createIAudioClient.h"
-#include "../logger.h"
-#include "../raiiUtils.h"
+#include "../utils/logger.h"
+#include "../utils/raiiUtils.h"
 
 #include <mmsystem.h>
 #include <mmdeviceapi.h>

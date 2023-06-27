@@ -25,136 +25,25 @@
 #include <cmath>
 
 #include <Windows.h>
-#include <codecvt> // codecvt_utf8
-#include <locale>  // wstring_convert
 #include <timeapi.h>
 #include "ASIO2WASAPI2.h"
-#include "resource.h"
-#include "logger.h"
-#include "json.hpp"
-#include "WASAPIOutput/createIAudioClient.h"
-#include "WASAPIUtils.h"
+#include "../resource.h"
+#include "../utils/logger.h"
+#include "../utils/json.hpp"
+#include "../WASAPIOutput/createIAudioClient.h"
+#include "../utils/WASAPIUtils.h"
+#include "../utils/utf8convert.h"
+#include "../utils/raiiUtils.h"
 
 using json = nlohmann::json;
 
 CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
-const TCHAR *szPrefsRegKey = TEXT("Software\\ASIO2WASAPI2");
-
-template<typename T>
-auto make_autorelease(T *ptr) {
-    return std::shared_ptr<T>(ptr, [](T *p) {
-        if (p) p->Release();
-    });
-}
-
-template<typename T>
-auto make_autoclose(T *h) {
-    return std::shared_ptr<T>(h, [](T *h) {
-        if (h) CloseHandle(h);
-    });
-}
-
-inline long ASIO2WASAPI2::refTimeToBufferSize(REFERENCE_TIME time) const {
-    const double REFTIME_UNITS_PER_SECOND = 10000000.;
-    return static_cast<long>(ceil(m_nSampleRate * (time / REFTIME_UNITS_PER_SECOND)));
-}
-
-inline REFERENCE_TIME ASIO2WASAPI2::bufferSizeToRefTime(long bufferSize) const {
-    const double REFTIME_UNITS_PER_SECOND = 10000000.;
-    return static_cast<REFERENCE_TIME>(ceil(bufferSize / (m_nSampleRate / REFTIME_UNITS_PER_SECOND)));
-}
-
 const double twoRaisedTo32 = 4294967296.;
 const double twoRaisedTo32Reciprocal = 1. / twoRaisedTo32;
 
-inline void getNanoSeconds(ASIOTimeStamp *ts) {
-    double nanoSeconds = (double) ((unsigned long) timeGetTime()) * 1000000.;
-    ts->hi = (unsigned long) (nanoSeconds / twoRaisedTo32);
-    ts->lo = (unsigned long) (nanoSeconds - (ts->hi * twoRaisedTo32));
-}
-
-
-CUnknown *ASIO2WASAPI2::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) {
-    LOGGER_TRACE_FUNC;
-    return static_cast<CUnknown *>(new ASIO2WASAPI2(pUnk, phr));
-};
-
-STDMETHODIMP ASIO2WASAPI2::NonDelegatingQueryInterface(REFIID riid, void **ppv) {
-    LOGGER_TRACE_FUNC;
-    if (riid == CLSID_ASIO2WASAPI2_DRIVER) {
-        return GetInterface(this, ppv);
-    }
-    return CUnknown::NonDelegatingQueryInterface(riid, ppv);
-}
-
 ASIOSampleType ASIO2WASAPI2::getASIOSampleType() const {
     return ASIOSTInt16LSB;
-}
-
-const TCHAR *szJsonRegValName = TEXT("json");
-
-// convert UTF-8 string to std::wstring
-std::wstring utf8_to_wstring(const std::string &str) {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-    return myconv.from_bytes(str);
-}
-
-// convert std::wstring to UTF-8 string
-std::string wstring_to_utf8(const std::wstring &str) {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-    return myconv.to_bytes(str);
-}
-
-void ASIO2WASAPI2::readFromRegistry() {
-    LOGGER_TRACE_FUNC;
-    Logger::debug(L"ASIO2WASAPI2::readFromRegistery");
-    HKEY key = 0;
-    LONG lResult = RegOpenKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, KEY_READ, &key);
-    if (ERROR_SUCCESS == lResult) {
-        DWORD size;
-
-        RegGetValue(key, NULL, szJsonRegValName, RRF_RT_REG_SZ, NULL, NULL, &size);
-        if (size) {
-            std::vector<BYTE> v(size);
-            RegGetValue(key, NULL, szJsonRegValName, RRF_RT_REG_SZ, NULL, v.data(), &size);
-            try {
-                json j = json::parse(v.begin(), v.end());
-                int nSampleRate = j["nSampleRate"];
-                int nChannels = j["nChannels"];
-                std::wstring deviceId = utf8_to_wstring(j["deviceId"]);
-
-                m_nSampleRate = nSampleRate;
-                m_nChannels = nChannels;
-                m_deviceId = deviceId;
-                Logger::debug(L" - m_nChannels: %d", m_nChannels);
-                Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
-                Logger::debug(L" - m_deviceId: %ws", m_deviceId.c_str());
-            }
-            catch (json::exception &e) {
-                Logger::error(L"JSON error: %s", e.what());
-            }
-        }
-        RegCloseKey(key);
-    }
-}
-
-void ASIO2WASAPI2::writeToRegistry() {
-    LOGGER_TRACE_FUNC;
-    HKEY key = 0;
-    LONG lResult = RegCreateKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
-    if (ERROR_SUCCESS == lResult) {
-        json j = {
-                {"nChannels",   m_nChannels},
-                {"nSampleRate", m_nSampleRate},
-                {"deviceId",    wstring_to_utf8(m_deviceId)}};
-        auto jsonString = j.dump();
-        RegSetValueEx(key, szJsonRegValName, NULL, REG_SZ, (const BYTE *) jsonString.data(), (DWORD) jsonString.size());
-        RegCloseKey(key);
-        Logger::debug(L" - m_nChannels: %d", m_nChannels);
-        Logger::debug(L" - m_nSampleRate: %d", m_nSampleRate);
-        Logger::debug(L" - m_deviceId: %ws", &m_deviceId[0]);
-    }
 }
 
 void ASIO2WASAPI2::clearState() {
@@ -162,8 +51,8 @@ void ASIO2WASAPI2::clearState() {
 
     // For safety
     if (m_output) {
-        Logger::error(L"m_output still not NULL on clearState");
-        m_output = NULL;
+        Logger::error(L"m_output still not nullptr on clearState");
+        m_output = nullptr;
     }
 
     // fields valid before initialization
@@ -173,14 +62,14 @@ void ASIO2WASAPI2::clearState() {
 
     // fields filled by init()/cleaned by shutdown()
     m_active = false;
-    m_pDevice = NULL;
+    m_pDevice = nullptr;
     m_bufferIndex = 0;
-    m_hAppWindowHandle = NULL;
+    m_hAppWindowHandle = nullptr;
 
     // fields filled by createBuffers()/cleaned by disposeBuffers()
     m_buffers[0].clear();
     m_buffers[1].clear();
-    m_callbacks = NULL;
+    m_callbacks = nullptr;
 
     // fields filled by start()/cleaned by stop()
     m_bufferSize = 0;
@@ -215,11 +104,11 @@ void ASIO2WASAPI2::shutdown() {
 
 BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                                              UINT message, WPARAM wParam, LPARAM lParam) {
-    static ASIO2WASAPI2 *pDriver = NULL;
+    static ASIO2WASAPI2 *pDriver = nullptr;
     static std::vector<std::wstring> deviceStringIds;
     switch (message) {
         case WM_DESTROY:
-            pDriver = NULL;
+            pDriver = nullptr;
             deviceStringIds.clear();
             return 0;
         case WM_COMMAND: {
@@ -255,7 +144,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                         }
                         const auto &selectedDeviceId = deviceStringIds[lr];
                         // find this device
-                        std::shared_ptr<IMMDevice> pDevice = NULL;
+                        std::shared_ptr<IMMDevice> pDevice = nullptr;
                         {
 
                             iterateAudioEndPoints([&](std::shared_ptr<IMMDevice> pMMDevice) {
@@ -283,7 +172,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
 
                             ~CCallbackCaller() {
                                 if (m_pCallbacks)
-                                    m_pCallbacks->asioMessage(kAsioResetRequest, 0, NULL, NULL);
+                                    m_pCallbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
                             }
                         } caller(pDriver->m_callbacks);
 
@@ -327,7 +216,7 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
             SetDlgItemInt(hwndDlg, IDC_CHANNELS, (UINT) pDriver->m_nChannels, TRUE);
             SetDlgItemInt(hwndDlg, IDC_SAMPLE_RATE, (UINT) pDriver->m_nSampleRate, TRUE);
 
-            CoInitialize(NULL);
+            CoInitialize(nullptr);
 
             std::vector<std::wstring> deviceIds;
             if (!iterateAudioEndPoints([&](auto pMMDevice) {
@@ -424,7 +313,7 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
     HRESULT hr = S_OK;
     Logger::info(L"ASIO2WASAPI2 initializing");
 
-    CoInitialize(NULL);
+    CoInitialize(nullptr);
 
     bool bDeviceFound = false;
     int deviceIndex = 0;
@@ -492,7 +381,7 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
     writeToRegistry();
     if (m_callbacks) { // ask the host ro reset us
         m_nSampleRate = nPrevSampleRate;
-        m_callbacks->asioMessage(kAsioResetRequest, 0, NULL, NULL);
+        m_callbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
     } else { // reinitialize us with the new sample rate
         HWND hAppWindowHandle = m_hAppWindowHandle;
         shutdown();

@@ -24,15 +24,15 @@ endif ()
 
 # Main driver
 add_library(ASIO2WASAPI2 SHARED
-        Source/Driver/ASIO2WASAPI2.cpp
+        Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.cpp
         Source/Driver/dllmain.cpp
-        Source/Driver/logger.cpp
+        Source/Driver/utils/logger.cpp
         Source/Driver/register.cpp
-        Source/Driver/TrayOpener.cpp
+        Source/Driver/utils/TrayOpener.cpp
         Source/Driver/COMBaseClasses.cpp
-        Source/Driver/ASIO2WASAPI2.rc
-        Source/Driver/ASIO2WASAPI2.def
-        Source/Driver/WASAPIOutput/WASAPIOutput.cpp Source/Driver/WASAPIOutput/WASAPIOutput.h Source/Driver/WASAPIUtils.cpp Source/Driver/WASAPIUtils.h Source/Driver/raiiUtils.h Source/Driver/WASAPIOutput/createIAudioClient.cpp Source/Driver/WASAPIOutput/createIAudioClient.h)
+        Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.rc
+        Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.def
+        Source/Driver/WASAPIOutput/WASAPIOutput.cpp Source/Driver/WASAPIOutput/WASAPIOutput.h Source/Driver/utils/WASAPIUtils.cpp Source/Driver/utils/WASAPIUtils.h Source/Driver/utils/raiiUtils.h Source/Driver/WASAPIOutput/createIAudioClient.cpp Source/Driver/WASAPIOutput/createIAudioClient.h Source/Driver/utils/utf8convert.cpp Source/Driver/utils/utf8convert.h Source/Driver/ASIO2WASAPI2/regRW.cpp Source/Driver/ASIO2WASAPI2/CUnknownImpl.cpp)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)
 target_link_libraries(ASIO2WASAPI2 Avrt.lib winmm.lib)
 

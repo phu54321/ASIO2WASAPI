@@ -1,8 +1,8 @@
-#include <windows.h>
+#include <Windows.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string>
-#include <Shlobj.h>
+#include <ShlObj.h>
 #include "logger.h"
 
 ///

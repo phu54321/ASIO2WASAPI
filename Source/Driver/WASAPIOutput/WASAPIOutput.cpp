@@ -15,9 +15,9 @@
 
 #include "WASAPIOutput.h"
 #include "createIAudioClient.h"
-#include "../WASAPIUtils.h"
-#include "../logger.h"
-#include "../raiiUtils.h"
+#include "../utils/WASAPIUtils.h"
+#include "../utils/logger.h"
+#include "../utils/raiiUtils.h"
 
 const int inBufferSizeMultiplier = 8;
 

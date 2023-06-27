@@ -22,19 +22,21 @@
 
 #include <vector>
 #include <memory>
-#include "WASAPIOutput/WASAPIOutput.h"
+#include "../WASAPIOutput/WASAPIOutput.h"
 
 #ifndef _INC_MMREG
-#include <MMReg.h> // needed for WAVEFORMATEXTENSIBLE
+
+#include <mmreg.h> // needed for WAVEFORMATEXTENSIBLE
+
 #endif
 struct IMMDevice;
 struct IAudioClient;
 struct IAudioRenderClient;
 
-#include "COMBaseClasses.h"
+#include "../COMBaseClasses.h"
 #include "asiosys.h"
 #include "iasiodrv.h"
-#include "TrayOpener.hpp"
+#include "../utils/TrayOpener.hpp"
 
 extern CLSID CLSID_ASIO2WASAPI2_DRIVER;
 const TCHAR *const szDescription = TEXT("ASIO2WASAPI2");
@@ -45,7 +47,8 @@ public:
 
     ~ASIO2WASAPI2();
 
-    STDMETHODIMP QueryInterface(REFIID riid, void **ppv) {
+    // CUnknown
+    STDMETHODIMP QueryInterface(REFIID riid, void **ppv) override {
         return GetOwner()->QueryInterface(riid, ppv);
     };
 
@@ -59,53 +62,52 @@ public:
         return GetOwner()->Release();
     };
 
-    // Factory method
     static CUnknown *CreateInstance(LPUNKNOWN pUnk, HRESULT *phr);
 
-    // IUnknown
-    virtual HRESULT STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppvObject);
+    virtual HRESULT STDMETHODCALLTYPE NonDelegatingQueryInterface(REFIID riid, void **ppvObject) override;
 
-    ASIOBool init(void *sysRef);
+    // IASIO
+    ASIOBool init(void *sysRef) override;
 
-    void getDriverName(char *name); // max 32 bytes incl. terminating zero
-    long getDriverVersion();
+    void getDriverName(char *name) override; // max 32 bytes incl. terminating zero
+    long getDriverVersion() override;
 
-    void getErrorMessage(char *string); // max 128 bytes incl. terminating zero
+    void getErrorMessage(char *string) override; // max 128 bytes incl. terminating zero
 
-    ASIOError start();
+    ASIOError start() override;
 
-    ASIOError stop();
+    ASIOError stop() override;
 
-    ASIOError getChannels(long *numInputChannels, long *numOutputChannels);
+    ASIOError getChannels(long *numInputChannels, long *numOutputChannels) override;
 
-    ASIOError getLatencies(long *inputLatency, long *outputLatency);
+    ASIOError getLatencies(long *inputLatency, long *outputLatency) override;
 
-    ASIOError getBufferSize(long *minSize, long *maxSize, long *preferredSize, long *granularity);
+    ASIOError getBufferSize(long *minSize, long *maxSize, long *preferredSize, long *granularity) override;
 
-    ASIOError canSampleRate(ASIOSampleRate sampleRate);
+    ASIOError canSampleRate(ASIOSampleRate sampleRate) override;
 
-    ASIOError getSampleRate(ASIOSampleRate *sampleRate);
+    ASIOError getSampleRate(ASIOSampleRate *sampleRate) override;
 
-    ASIOError setSampleRate(ASIOSampleRate sampleRate);
+    ASIOError setSampleRate(ASIOSampleRate sampleRate) override;
 
-    ASIOError getClockSources(ASIOClockSource *clocks, long *numSources);
+    ASIOError getClockSources(ASIOClockSource *clocks, long *numSources) override;
 
-    ASIOError setClockSource(long index);
+    ASIOError setClockSource(long index) override;
 
-    ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp);
+    ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) override;
 
-    ASIOError getChannelInfo(ASIOChannelInfo *info);
+    ASIOError getChannelInfo(ASIOChannelInfo *info) override;
 
     ASIOError createBuffers(ASIOBufferInfo *bufferInfos, long numChannels,
-                            long bufferSize, ASIOCallbacks *callbacks);
+                            long bufferSize, ASIOCallbacks *callbacks) override;
 
-    ASIOError disposeBuffers();
+    ASIOError disposeBuffers() override;
 
-    ASIOError controlPanel();
+    ASIOError controlPanel() override;
 
-    ASIOError future(long selector, void *opt);
+    ASIOError future(long selector, void *opt) override;
 
-    ASIOError outputReady();
+    ASIOError outputReady() override;
 
 private:
     std::unique_ptr<TrayOpener> openerPtr;
