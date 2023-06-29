@@ -24,8 +24,9 @@ private:
     Logger &operator=(const Logger &) = delete;
 
 public:
-    static void setOutputLevel(LogLevel minLevel);
+    static void setMinimumOutputLevel(LogLevel minimumOutputLevel);
 
+    // wchar_t*
     static void trace(const wchar_t *fmt, ...);
 
     static void debug(const wchar_t *fmt, ...);
@@ -36,14 +37,24 @@ public:
 
     static void error(const wchar_t *fmt, ...);
 
-    static void log(LogLevel level, const wchar_t *fmt, ...);
+    // char*
+    static void trace(const char *fmt, ...);
+
+    static void debug(const char *fmt, ...);
+
+    static void info(const char *fmt, ...);
+
+    static void warn(const char *fmt, ...);
+
+    static void error(const char *fmt, ...);
 
 private:
     void logV(LogLevel level, const wchar_t *fmt, va_list args);
+    void logV(LogLevel level, const char *fmt, va_list args);
 
 private:
     FILE *outputFile;
-    LogLevel level = LogLevel::info;
+    LogLevel _minimumOutputLevel = LogLevel::info;
 };
 
 class FuncTraceHelper {

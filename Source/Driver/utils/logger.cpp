@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <string>
 #include <ShlObj.h>
+#include <iomanip>
+#include <chrono>
 #include "logger.h"
-
+#include "utf8convert.h"
 ///
 
 #ifndef UNICODE
@@ -42,7 +44,6 @@ Logger::Logger() : outputFile(nullptr) {
     if (rf) {
         fclose(rf);
         outputFile = tfopen(logFilePath.c_str(), TEXT("wb"));
-        setbuf(outputFile, NULL);
     }
 }
 
@@ -58,15 +59,23 @@ Logger &Logger::getInstance() {
     return inst;
 }
 
-void Logger::setOutputLevel(LogLevel level) {
+void Logger::setMinimumOutputLevel(LogLevel minimumOutputLevel) {
     auto &inst = getInstance();
-    inst.level = level;
+    inst._minimumOutputLevel = minimumOutputLevel;
 }
 
 //
 
 #define LOGGER_CREATE_LOGLEVEL_IMPL(level) \
     void Logger::level(const wchar_t* format, ...) { \
+        Logger& logger = getInstance(); \
+        va_list args; \
+        va_start(args, format); \
+        logger.logV(LogLevel::level, format, args); \
+        va_end(args); \
+    } \
+    \
+    void Logger::level(const char* format, ...) {    \
         Logger& logger = getInstance(); \
         va_list args; \
         va_start(args, format); \
@@ -85,49 +94,82 @@ LOGGER_CREATE_LOGLEVEL_IMPL(warn)
 
 LOGGER_CREATE_LOGLEVEL_IMPL(error)
 
-void Logger::log(LogLevel level, const wchar_t *format, ...) {
-    Logger &logger = getInstance();
-    va_list args;
-            va_start(args, format);
-    logger.logV(level, format, args);
-            va_end(args);
-}
-
 //
 
+static void getCurrentTimestamp(char *out) {
+    auto currentTime = std::chrono::system_clock::now();
+    auto transformed = currentTime.time_since_epoch().count() / 1000000;
+    auto millis = transformed % 1000;
+
+    auto tt = std::chrono::system_clock::to_time_t(currentTime);
+    auto timeinfo = localtime(&tt);
+
+    auto outP = strftime(out, 80, "%F %H:%M:%S", timeinfo);
+    sprintf(out + outP, ":%03d", (int) millis);
+}
+
+static void putTimestamp(FILE *outputFile) {
+    char timestamp[80];
+    getCurrentTimestamp(timestamp);
+    fputc('[', outputFile);
+    fputs(timestamp, outputFile);
+    fputc(']', outputFile);
+}
+
+static void putLogLevel(FILE *outputFile, LogLevel level) {
+    const char *levelString = nullptr;
+    switch (level) {
+        case LogLevel::trace:
+            levelString = "[TRACE]";
+            break;
+        case LogLevel::debug:
+            levelString = "[DEBUG]";
+            break;
+        case LogLevel::info:
+            levelString = "[INFO]";
+            break;
+        case LogLevel::warn:
+            levelString = "[WARN]";
+            break;
+        case LogLevel::error:
+            levelString = "[ERROR]";
+            break;
+        default:
+            levelString = "[unk]";
+    }
+    fputs(levelString, outputFile);
+    fputc(' ', outputFile);
+}
+
 void Logger::logV(LogLevel level, const wchar_t *format, va_list args) {
-    if (level < this->level) return;
+    if (level < this->_minimumOutputLevel) return;
 
     wchar_t wBuffer[2048];
-    char buffer[2048];  // UTF-8 encoding
     _vsnwprintf(wBuffer, 2048, format, args);
     wBuffer[2047] = '\0';
-
-    int nLen = WideCharToMultiByte(CP_UTF8, 0, wBuffer, lstrlenW(wBuffer), NULL, 0, NULL, NULL);
-    WideCharToMultiByte(CP_UTF8, 0, wBuffer, lstrlenW(wBuffer), buffer, nLen, NULL, NULL);
-
     OutputDebugStringW(wBuffer);
 
-    const char *levelString = nullptr;
     if (outputFile) {
-        switch (level) {
-            case LogLevel::trace:
-                fputs("[TRACE] ", outputFile);
-                break;
-            case LogLevel::debug:
-                fputs("[DEBUG] ", outputFile);
-                break;
-            case LogLevel::info:
-                fputs("[INFO] ", outputFile);
-                break;
-            case LogLevel::warn:
-                fputs("[WARN] ", outputFile);
-                break;
-            case LogLevel::error:
-                fputs("[ERROR] ", outputFile);
-                break;
-        }
+        putTimestamp(outputFile);
+        putLogLevel(outputFile, level);
+        auto utf8String = wstring_to_utf8(wBuffer);
+        fputs(utf8String.c_str(), outputFile);
+        fputc('\n', outputFile);
+    }
+}
 
+
+void Logger::logV(LogLevel level, const char *format, va_list args) {
+    if (level < this->_minimumOutputLevel) return;
+
+    char buffer[2048];  // UTF-8 encoding
+    vsnprintf(buffer, 2048, format, args);
+    buffer[2047] = '\0';
+    OutputDebugStringA(buffer);
+
+    if (outputFile) {
+        putTimestamp(outputFile);
+        putLogLevel(outputFile, level);
         fputs(buffer, outputFile);
         fputc('\n', outputFile);
     }
