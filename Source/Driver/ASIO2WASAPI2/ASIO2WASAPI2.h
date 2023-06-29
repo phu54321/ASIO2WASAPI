@@ -128,27 +128,25 @@ private:
 
     void settingsWriteToRegistry();
 
-    void shutdown();
-
-    void clearState();
+    void shutdown();;
 
     // fields valid before initialization
-    HWND m_hAppWindowHandle;
+    HWND m_hAppWindowHandle = nullptr;
     Settings m_settings;
 
     // fields filled by init()/cleaned by shutdown()
-    bool m_initialized;
+    bool m_initialized = false;
     std::shared_ptr<IMMDevice> m_pDevice;
 
     // fields filled by createBuffers()/cleaned by disposeBuffers()
     // ASIO buffers *& callbacks
-    int m_bufferSize; // in audio frames
+    int m_bufferSize = 0; // in audio frames
     std::vector<std::vector<short>> m_buffers[2];
-    ASIOCallbacks *m_callbacks;
+    ASIOCallbacks *m_callbacks = nullptr;
 
     // fields filled by start()/cleaned by stop()
     std::unique_ptr<WASAPIOutput> m_output = nullptr;
-    ASIOTimeStamp m_theSystemTime;
-    uint64_t m_samplePosition;
-    int m_bufferIndex;
+    ASIOTimeStamp m_theSystemTime = {0, 0};
+    uint64_t m_samplePosition = 0;
+    int m_bufferIndex = 0;
 };

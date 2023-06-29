@@ -39,48 +39,14 @@ using json = nlohmann::json;
 
 CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
-const double twoRaisedTo32 = 4294967296.;
-const double twoRaisedTo32Reciprocal = 1. / twoRaisedTo32;
+const uint64_t twoRaisedTo32 = UINT64_C(4294967296);
 const ASIOSampleType sampleType = ASIOSTInt16LSB;
-
-void ASIO2WASAPI2::clearState() {
-    LOGGER_TRACE_FUNC;
-
-    // For safety
-    if (m_output) {
-        Logger::error(L"m_output still not nullptr on clearState");
-        m_output = nullptr;
-    }
-
-    // fields valid before initialization
-    auto &settings = m_settings;
-    settings.nChannels = 2;
-    settings.nSampleRate = 48000;
-    settings.deviceId.clear();
-
-    // fields filled by init()/cleaned by shutdown()
-    m_initialized = false;
-    m_pDevice = nullptr;
-    m_bufferIndex = 0;
-    m_hAppWindowHandle = nullptr;
-
-    // fields filled by createBuffers()/cleaned by disposeBuffers()
-    m_buffers[0].clear();
-    m_buffers[1].clear();
-    m_callbacks = nullptr;
-
-    // fields filled by start()/cleaned by stop()
-    m_bufferSize = 0;
-    m_theSystemTime.hi = 0;
-    m_theSystemTime.lo = 0;
-    m_samplePosition = 0;
-}
 
 extern HINSTANCE g_hinstDLL;
 
 ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
         : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr) {
-    clearState();
+
     settingsReadFromRegistry();
 
     openerPtr = std::make_unique<TrayOpener>(
@@ -97,173 +63,8 @@ ASIO2WASAPI2::~ASIO2WASAPI2() {
 void ASIO2WASAPI2::shutdown() {
     stop();
     disposeBuffers();
-    clearState();
 }
 
-ASIOError ASIO2WASAPI2::controlPanel() {
-    LOGGER_TRACE_FUNC;
-
-    extern HINSTANCE g_hinstDLL;
-    DialogBoxParam(g_hinstDLL, MAKEINTRESOURCE(IDD_CONTROL_PANEL), m_hAppWindowHandle, (DLGPROC) ControlPanelProc,
-                   (LPARAM) this);
-    return ASE_OK;
-}
-
-BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
-                                             UINT message, WPARAM wParam, LPARAM lParam) {
-    static ASIO2WASAPI2 *pDriver = nullptr;
-    static std::vector<std::wstring> deviceStringIds;
-    switch (message) {
-        case WM_DESTROY:
-            pDriver = nullptr;
-            deviceStringIds.clear();
-            return 0;
-        case WM_COMMAND: {
-            LOGGER_TRACE_FUNC;
-            switch (LOWORD(wParam)) {
-                case IDOK:
-                    if (pDriver) {
-                        int nChannels = 2;
-                        int nSampleRate = 48000;
-                        // get nChannels and nSampleRate from the dialog
-                        {
-                            BOOL bSuccess = FALSE;
-                            int tmp = (int) GetDlgItemInt(hwndDlg, IDC_CHANNELS, &bSuccess, TRUE);
-                            if (bSuccess && tmp >= 0)
-                                nChannels = tmp;
-                            else {
-                                MessageBox(hwndDlg, TEXT("Invalid number of channels"), szDescription, MB_OK);
-                                return 0;
-                            }
-                            tmp = (int) GetDlgItemInt(hwndDlg, IDC_SAMPLE_RATE, &bSuccess, TRUE);
-                            if (bSuccess && tmp >= 0)
-                                nSampleRate = tmp;
-                            else {
-                                MessageBox(hwndDlg, TEXT("Invalid sample rate"), szDescription, MB_OK);
-                                return 0;
-                            }
-                        }
-                        // get the selected device's index from the dialog
-                        LRESULT lr = SendDlgItemMessage(hwndDlg, IDL_DEVICE, LB_GETCURSEL, 0, 0);
-                        if (lr == CB_ERR || lr < 0 || (size_t) lr >= deviceStringIds.size()) {
-                            MessageBox(hwndDlg, TEXT("No audio device selected"), szDescription, MB_OK);
-                            return 0;
-                        }
-                        const auto &selectedDeviceId = deviceStringIds[lr];
-                        // find this device
-                        std::shared_ptr<IMMDevice> pDevice = nullptr;
-                        {
-
-                            iterateAudioEndPoints([&](std::shared_ptr<IMMDevice> pMMDevice) {
-                                auto deviceId = getDeviceId(pMMDevice);
-                                if (deviceId.size() == 0)
-                                    return true;
-                                if (deviceId == selectedDeviceId) {
-                                    pDevice = pMMDevice;
-                                    return false;
-                                }
-                                return true;
-                            });
-                        }
-                        if (!pDevice) {
-                            MessageBox(hwndDlg, TEXT("Invalid audio device"), szDescription, MB_OK);
-                            return 0;
-                        }
-
-                        // make sure the reset request is issued no matter how we proceed
-                        class CCallbackCaller {
-                            ASIOCallbacks *m_pCallbacks;
-
-                        public:
-                            CCallbackCaller(ASIOCallbacks *pCallbacks) : m_pCallbacks(pCallbacks) {}
-
-                            ~CCallbackCaller() {
-                                if (m_pCallbacks)
-                                    m_pCallbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
-                            }
-                        } caller(pDriver->m_callbacks);
-
-                        // shut down the driver so no exclusive WASAPI connection would stand in our way
-                        HWND hAppWindowHandle = pDriver->m_hAppWindowHandle;
-                        pDriver->shutdown();
-
-                        // make sure the device supports this combination of nChannels and nSampleRate
-                        BOOL rc = FindStreamFormat(pDevice, nChannels, nSampleRate);
-                        if (!rc) {
-                            MessageBox(hwndDlg, TEXT("Sample rate is not supported in WASAPI exclusive mode"),
-                                       szDescription, MB_OK);
-                            return 0;
-                        }
-
-                        // copy selected device/sample rate/channel combination into the driver
-                        auto &settings = pDriver->m_settings;
-                        settings.nChannels = nChannels;
-                        settings.nSampleRate = nSampleRate;
-                        settings.deviceId = selectedDeviceId;
-
-                        // try to init the driver
-                        if (pDriver->init(hAppWindowHandle) == ASIOFalse) {
-                            MessageBox(hwndDlg, TEXT("ASIO driver failed to initialize"), szDescription, MB_OK);
-                            return 0;
-                        }
-                        pDriver->settingsWriteToRegistry();
-                    }
-                    EndDialog(hwndDlg, wParam);
-                    return 0;
-                case IDCANCEL:
-                    EndDialog(hwndDlg, wParam);
-                    return 0;
-            }
-        }
-            break;
-        case WM_INITDIALOG: {
-            const auto &settings = pDriver->m_settings;
-            LOGGER_TRACE_FUNC;
-            pDriver = (ASIO2WASAPI2 *) lParam;
-            if (!pDriver)
-                return FALSE;
-            SetDlgItemInt(hwndDlg, IDC_CHANNELS, (UINT) settings.nChannels, TRUE);
-            SetDlgItemInt(hwndDlg, IDC_SAMPLE_RATE, (UINT) settings.nSampleRate, TRUE);
-
-            CoInitialize(nullptr);
-
-            std::vector<std::wstring> deviceIds;
-            if (!iterateAudioEndPoints([&](auto pMMDevice) {
-                auto deviceId = getDeviceId(pMMDevice);
-                if (deviceId.size() == 0)
-                    return false;
-                deviceIds.push_back(deviceId);
-
-                auto friendlyName = getDeviceFriendlyName(pMMDevice);
-                HRESULT lr;
-                if (friendlyName.empty() ||
-                    (lr = SendDlgItemMessageW(hwndDlg, IDL_DEVICE, LB_ADDSTRING, -1, (LPARAM) friendlyName.c_str())) ==
-                    CB_ERR) {
-                    return false;
-                }
-                return true;
-            })) {
-                return false;
-            }
-
-            deviceStringIds = deviceIds;
-
-            // find current device id
-            unsigned nDeviceIdIndex = -1;
-            if (!settings.deviceId.empty())
-                for (unsigned i = 0; i < deviceStringIds.size(); i++) {
-                    if (deviceStringIds[i] == settings.deviceId) {
-                        nDeviceIdIndex = i;
-                        break;
-                    }
-                }
-            SendDlgItemMessage(hwndDlg, IDL_DEVICE, LB_SETCURSEL, nDeviceIdIndex, 0);
-            return TRUE;
-        }
-            break;
-    }
-    return FALSE;
-}
 
 /*  ASIO driver interface implementation
  */
@@ -287,33 +88,26 @@ ASIOError ASIO2WASAPI2::future(long selector, void *opt) {
 }
 
 ASIOError ASIO2WASAPI2::outputReady() {
-    // No latency reduction can be achieved, return ASE_NotPresent
+    // TODO: use this.
     return ASE_NotPresent;
 }
 
 ASIOError ASIO2WASAPI2::getChannels(long *numInputChannels, long *numOutputChannels) {
-    if (!m_initialized)
-        return ASE_NotPresent;
-
-    if (numInputChannels)
-        *numInputChannels = 0;
-    if (numOutputChannels)
-        *numOutputChannels = m_settings.nChannels;
+    if (!m_initialized) return ASE_NotPresent;
+    if (numInputChannels) *numInputChannels = 0;
+    if (numOutputChannels) *numOutputChannels = m_settings.nChannels;
     return ASE_OK;
 }
 
 
+/////
+
 ASIOBool ASIO2WASAPI2::init(void *sysRef) {
     LOGGER_TRACE_FUNC;
-
-    if (m_initialized)
-        return true;
-
-    m_hAppWindowHandle = (HWND) sysRef;
-
-    HRESULT hr = S_OK;
+    if (m_initialized) return true;
     Logger::info(L"ASIO2WASAPI2 initializing");
 
+    m_hAppWindowHandle = (HWND) sysRef;
     CoInitialize(nullptr);
 
     bool bDeviceFound = false;
@@ -339,44 +133,39 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
         return false;
     }
 
-    Logger::debug(L"Searching available stream format for device");
-    Logger::debug(L" - Target: %d channels, sample rate %d", m_settings.nChannels, m_settings.nSampleRate);
-    BOOL rc = FindStreamFormat(m_pDevice, m_settings.nChannels, m_settings.nSampleRate);
-    if (!rc) { // go through all devices and try to find the one that works for 16/48K
-        Logger::error(L"Specified device doesn't support specified stream format");
-        return false;
-    }
-
     m_initialized = true;
-
     return true;
 }
 
+///////////
+
 ASIOError ASIO2WASAPI2::getSampleRate(ASIOSampleRate *sampleRate) {
-    if (!sampleRate)
-        return ASE_InvalidParameter;
+    if (!m_initialized) return ASE_NotPresent;
+    if (!sampleRate) return ASE_InvalidParameter;
+    *sampleRate = m_settings.nSampleRate;
+    return ASE_OK;
+}
+
+ASIOError ASIO2WASAPI2::canSampleRate(ASIOSampleRate sampleRate) {
     if (!m_initialized)
         return ASE_NotPresent;
-    *sampleRate = m_settings.nSampleRate;
 
-    return ASE_OK;
+    int nSampleRate = static_cast<int>(sampleRate);
+    return FindStreamFormat(m_pDevice, m_settings.nChannels, nSampleRate) ? ASE_OK : ASE_NoClock;
 }
 
 ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
     LOGGER_TRACE_FUNC;
-
     Logger::debug(L"setSampleRate: %f", sampleRate);
 
-    if (!m_initialized)
-        return ASE_NotPresent;
+    if (!m_initialized) return ASE_NotPresent;
+    if (sampleRate == m_settings.nSampleRate) return ASE_OK;
 
-    if (sampleRate == m_settings.nSampleRate)
-        return ASE_OK;
-
-    ASIOError err = canSampleRate(sampleRate);
-    Logger::debug(L"canSampleRate: %d", err);
-    if (err != ASE_OK)
+    auto err = canSampleRate(sampleRate);
+    if (err != ASE_OK) {
+        Logger::debug(L"canSampleRate: %d (error)", err);
         return err;
+    }
 
     int nPrevSampleRate = m_settings.nSampleRate;
     m_settings.nSampleRate = (int) sampleRate;
@@ -384,15 +173,12 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
     if (m_callbacks) { // ask the host ro reset us
         m_settings.nSampleRate = nPrevSampleRate;
         m_callbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
-    } else { // reinitialize us with the new sample rate
-        HWND hAppWindowHandle = m_hAppWindowHandle;
-        shutdown();
-        settingsReadFromRegistry();
-        init(hAppWindowHandle);
     }
 
     return ASE_OK;
 }
+
+///////////////
 
 // all buffer sizes are in frames
 ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
@@ -400,14 +186,42 @@ ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
     if (!m_initialized)
         return ASE_NotPresent;
 
-    if (minSize)
-        *minSize = 32;
-    if (maxSize)
-        *maxSize = 1024;
-    if (preferredSize)
-        *preferredSize = 1024;
-    if (granularity)
-        *granularity = 0;
+    if (minSize) *minSize = 32;
+    if (maxSize) *maxSize = 1024;
+    if (preferredSize) *preferredSize = 1024;
+    if (granularity) *granularity = -1;
+
+    return ASE_OK;
+}
+
+static const char *knownChannelNames[] =
+        {
+                "Front left",
+                "Front right",
+                "Front center",
+                "Low frequency",
+                "Back left",
+                "Back right",
+                "Front left of center",
+                "Front right of center",
+                "Back center",
+                "Side left",
+                "Side right",
+        };
+
+ASIOError ASIO2WASAPI2::getChannelInfo(ASIOChannelInfo *info) {
+    if (!m_initialized) return ASE_NotPresent;
+    if (info->isInput) return ASE_InvalidParameter;
+    if (info->channel < 0 || info->channel >= m_settings.nChannels) return ASE_InvalidParameter;
+
+    info->type = sampleType;
+    info->channelGroup = 0;
+    info->isActive = (!m_buffers[0].empty()) ? ASIOTrue : ASIOFalse;
+
+    strcpy_s(info->name,
+             (info->channel < sizeof(knownChannelNames) / sizeof(knownChannelNames[0]))
+             ? knownChannelNames[info->channel]
+             : "Unknown");
 
     return ASE_OK;
 }
@@ -418,12 +232,11 @@ ASIOError ASIO2WASAPI2::createBuffers(
         long bufferSize,
         ASIOCallbacks *callbacks) {
 
-    if (!m_initialized)
-        return ASE_NotPresent;
-
     LOGGER_TRACE_FUNC;
 
-    // Check buffers
+    if (!m_initialized) return ASE_NotPresent;
+
+    // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
     if (numChannels < 0 || numChannels > m_settings.nChannels) return ASE_InvalidParameter;
     for (int i = 0; i < numChannels; i++) {
@@ -432,6 +245,7 @@ ASIOError ASIO2WASAPI2::createBuffers(
             return ASE_InvalidMode;
     }
 
+    // TODO: put buffer in some other RAII-ed struct
     // dispose exiting buffers
     disposeBuffers();
 
@@ -456,51 +270,14 @@ ASIOError ASIO2WASAPI2::disposeBuffers() {
 
     // wait for the play thread to finish
     m_output = nullptr;
-
     m_buffers[0].clear();
     m_buffers[1].clear();
     return ASE_OK;
 }
 
-const char *knownChannelNames[] =
-        {
-                "Front left",
-                "Front right",
-                "Front center",
-                "Low frequency",
-                "Back left",
-                "Back right",
-                "Front left of center",
-                "Front right of center",
-                "Back center",
-                "Side left",
-                "Side right",
-        };
 
-ASIOError ASIO2WASAPI2::getChannelInfo(ASIOChannelInfo *info) {
-    if (!m_initialized) return ASE_NotPresent;
-    if (info->isInput) return ASE_InvalidParameter;
-    if (info->channel < 0 || info->channel >= m_settings.nChannels) return ASE_InvalidParameter;
 
-    info->type = sampleType;
-    info->channelGroup = 0;
-    info->isActive = (!m_buffers[0].empty()) ? ASIOTrue : ASIOFalse;
-
-    strcpy_s(info->name, sizeof(info->name),
-             (info->channel < sizeof(knownChannelNames) / sizeof(knownChannelNames[0]))
-             ? knownChannelNames[info->channel]
-             : "Unknown");
-
-    return ASE_OK;
-}
-
-ASIOError ASIO2WASAPI2::canSampleRate(ASIOSampleRate sampleRate) {
-    if (!m_initialized)
-        return ASE_NotPresent;
-
-    int nSampleRate = static_cast<int>(sampleRate);
-    return FindStreamFormat(m_pDevice, m_settings.nChannels, nSampleRate) ? ASE_OK : ASE_NoClock;
-}
+////////////
 
 ASIOError ASIO2WASAPI2::start() {
     LOGGER_TRACE_FUNC;
@@ -517,6 +294,8 @@ ASIOError ASIO2WASAPI2::start() {
             m_settings.nChannels,
             m_settings.nSampleRate,
             m_bufferSize);
+
+    // TODO: make enqueue thread
     m_output->registerCallback([&]() { this->pushData(); });
 
     return ASE_OK;
@@ -525,11 +304,8 @@ ASIOError ASIO2WASAPI2::start() {
 ASIOError ASIO2WASAPI2::stop() {
     LOGGER_TRACE_FUNC;
 
-    if (!m_initialized)
-        return ASE_NotPresent;
-    if (!m_output)
-        return ASE_OK; // we already stopped
-
+    if (!m_initialized) return ASE_NotPresent;
+    if (!m_output) return ASE_OK; // we already stopped
     m_output = nullptr;
     return ASE_OK;
 }
@@ -544,6 +320,9 @@ void ASIO2WASAPI2::pushData() {
     }
 }
 
+
+////////
+// auxillary functions
 
 ASIOError ASIO2WASAPI2::getClockSources(ASIOClockSource *clocks, long *numSources) {
     if (!numSources || *numSources == 0)
@@ -572,7 +351,7 @@ ASIOError ASIO2WASAPI2::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tSta
     }
     if (sPos) {
         if (m_samplePosition >= twoRaisedTo32) {
-            sPos->hi = (unsigned long) (m_samplePosition * twoRaisedTo32Reciprocal);
+            sPos->hi = (unsigned long) (m_samplePosition / twoRaisedTo32);
             sPos->lo = (unsigned long) (m_samplePosition - (sPos->hi * twoRaisedTo32));
         } else {
             sPos->hi = 0;
