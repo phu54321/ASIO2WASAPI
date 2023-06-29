@@ -41,6 +41,12 @@ struct IAudioRenderClient;
 extern CLSID CLSID_ASIO2WASAPI2_DRIVER;
 const TCHAR *const szDescription = TEXT("ASIO2WASAPI2");
 
+struct Settings {
+    int nChannels = 2;
+    int nSampleRate = 48000;
+    std::wstring deviceId;
+};
+
 class ASIO2WASAPI2 : public IASIO, public CUnknown {
 public:
     ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr);
@@ -116,42 +122,33 @@ private:
     static BOOL CALLBACK ControlPanelProc(HWND hwndDlg,
                                           UINT message, WPARAM wParam, LPARAM lParam);
 
-    long refTimeToBufferSize(LONGLONG time) const;
-
-    LONGLONG bufferSizeToRefTime(long bufferSize) const;
-
-
     void pushData();
 
-    void readFromRegistry();
+    void settingsReadFromRegistry();
 
-    void writeToRegistry();
-
-    ASIOSampleType getASIOSampleType() const;
+    void settingsWriteToRegistry();
 
     void shutdown();
 
     void clearState();
 
     // fields valid before initialization
-    int m_nChannels;
-    int m_nSampleRate;
-    std::wstring m_deviceId;
+    HWND m_hAppWindowHandle;
+    Settings m_settings;
 
     // fields filled by init()/cleaned by shutdown()
-    bool m_active;
+    bool m_initialized;
     std::shared_ptr<IMMDevice> m_pDevice;
-    int m_bufferSize; // in audio frames
-    HWND m_hAppWindowHandle;
 
     // fields filled by createBuffers()/cleaned by disposeBuffers()
     // ASIO buffers *& callbacks
+    int m_bufferSize; // in audio frames
     std::vector<std::vector<short>> m_buffers[2];
     ASIOCallbacks *m_callbacks;
 
     // fields filled by start()/cleaned by stop()
-    int m_bufferIndex;
     std::unique_ptr<WASAPIOutput> m_output = nullptr;
     ASIOTimeStamp m_theSystemTime;
-    double m_samplePosition;
+    uint64_t m_samplePosition;
+    int m_bufferIndex;
 };

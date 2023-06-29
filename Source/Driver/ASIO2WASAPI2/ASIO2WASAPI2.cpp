@@ -41,10 +41,7 @@ CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1
 
 const double twoRaisedTo32 = 4294967296.;
 const double twoRaisedTo32Reciprocal = 1. / twoRaisedTo32;
-
-ASIOSampleType ASIO2WASAPI2::getASIOSampleType() const {
-    return ASIOSTInt16LSB;
-}
+const ASIOSampleType sampleType = ASIOSTInt16LSB;
 
 void ASIO2WASAPI2::clearState() {
     LOGGER_TRACE_FUNC;
@@ -56,12 +53,13 @@ void ASIO2WASAPI2::clearState() {
     }
 
     // fields valid before initialization
-    m_nChannels = 2;
-    m_nSampleRate = 48000;
-    m_deviceId.clear();
+    auto &settings = m_settings;
+    settings.nChannels = 2;
+    settings.nSampleRate = 48000;
+    settings.deviceId.clear();
 
     // fields filled by init()/cleaned by shutdown()
-    m_active = false;
+    m_initialized = false;
     m_pDevice = nullptr;
     m_bufferIndex = 0;
     m_hAppWindowHandle = nullptr;
@@ -83,7 +81,7 @@ extern HINSTANCE g_hinstDLL;
 ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
         : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr) {
     clearState();
-    readFromRegistry();
+    settingsReadFromRegistry();
 
     openerPtr = std::make_unique<TrayOpener>(
             g_hinstDLL,
@@ -100,6 +98,15 @@ void ASIO2WASAPI2::shutdown() {
     stop();
     disposeBuffers();
     clearState();
+}
+
+ASIOError ASIO2WASAPI2::controlPanel() {
+    LOGGER_TRACE_FUNC;
+
+    extern HINSTANCE g_hinstDLL;
+    DialogBoxParam(g_hinstDLL, MAKEINTRESOURCE(IDD_CONTROL_PANEL), m_hAppWindowHandle, (DLGPROC) ControlPanelProc,
+                   (LPARAM) this);
+    return ASE_OK;
 }
 
 BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
@@ -189,16 +196,17 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
                         }
 
                         // copy selected device/sample rate/channel combination into the driver
-                        pDriver->m_nSampleRate = nSampleRate;
-                        pDriver->m_nChannels = nChannels;
-                        pDriver->m_deviceId = selectedDeviceId;
+                        auto &settings = pDriver->m_settings;
+                        settings.nChannels = nChannels;
+                        settings.nSampleRate = nSampleRate;
+                        settings.deviceId = selectedDeviceId;
 
                         // try to init the driver
                         if (pDriver->init(hAppWindowHandle) == ASIOFalse) {
                             MessageBox(hwndDlg, TEXT("ASIO driver failed to initialize"), szDescription, MB_OK);
                             return 0;
                         }
-                        pDriver->writeToRegistry();
+                        pDriver->settingsWriteToRegistry();
                     }
                     EndDialog(hwndDlg, wParam);
                     return 0;
@@ -209,12 +217,13 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
         }
             break;
         case WM_INITDIALOG: {
+            const auto &settings = pDriver->m_settings;
             LOGGER_TRACE_FUNC;
             pDriver = (ASIO2WASAPI2 *) lParam;
             if (!pDriver)
                 return FALSE;
-            SetDlgItemInt(hwndDlg, IDC_CHANNELS, (UINT) pDriver->m_nChannels, TRUE);
-            SetDlgItemInt(hwndDlg, IDC_SAMPLE_RATE, (UINT) pDriver->m_nSampleRate, TRUE);
+            SetDlgItemInt(hwndDlg, IDC_CHANNELS, (UINT) settings.nChannels, TRUE);
+            SetDlgItemInt(hwndDlg, IDC_SAMPLE_RATE, (UINT) settings.nSampleRate, TRUE);
 
             CoInitialize(nullptr);
 
@@ -240,10 +249,10 @@ BOOL CALLBACK ASIO2WASAPI2::ControlPanelProc(HWND hwndDlg,
             deviceStringIds = deviceIds;
 
             // find current device id
-            int nDeviceIdIndex = -1;
-            if (pDriver->m_deviceId.size())
+            unsigned nDeviceIdIndex = -1;
+            if (!settings.deviceId.empty())
                 for (unsigned i = 0; i < deviceStringIds.size(); i++) {
-                    if (deviceStringIds[i] == pDriver->m_deviceId) {
+                    if (deviceStringIds[i] == settings.deviceId) {
                         nDeviceIdIndex = i;
                         break;
                     }
@@ -283,29 +292,21 @@ ASIOError ASIO2WASAPI2::outputReady() {
 }
 
 ASIOError ASIO2WASAPI2::getChannels(long *numInputChannels, long *numOutputChannels) {
-    if (!m_active)
+    if (!m_initialized)
         return ASE_NotPresent;
 
     if (numInputChannels)
         *numInputChannels = 0;
     if (numOutputChannels)
-        *numOutputChannels = m_nChannels;
+        *numOutputChannels = m_settings.nChannels;
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2::controlPanel() {
-    LOGGER_TRACE_FUNC;
-
-    extern HINSTANCE g_hinstDLL;
-    DialogBoxParam(g_hinstDLL, MAKEINTRESOURCE(IDD_CONTROL_PANEL), m_hAppWindowHandle, (DLGPROC) ControlPanelProc,
-                   (LPARAM) this);
-    return ASE_OK;
-}
 
 ASIOBool ASIO2WASAPI2::init(void *sysRef) {
     LOGGER_TRACE_FUNC;
 
-    if (m_active)
+    if (m_initialized)
         return true;
 
     m_hAppWindowHandle = (HWND) sysRef;
@@ -317,36 +318,36 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
 
     bool bDeviceFound = false;
     int deviceIndex = 0;
-    iterateAudioEndPoints([&](auto pMMDevice) {
-        auto deviceId = getDeviceId(pMMDevice);
-        auto friendlyName = getDeviceFriendlyName(pMMDevice);
-        Logger::debug(L" - Device #%d: %ws (%ws)", deviceIndex++, friendlyName.c_str(), deviceId.c_str());
-        if (deviceId.size() && m_deviceId.size() && deviceId == m_deviceId) {
-            Logger::info(L"Found the device");
-            m_pDevice = pMMDevice;
-            m_pDevice->AddRef();
-            bDeviceFound = true;
-            return false;
-        }
-        return true;
-    });
+    const auto &targetDeviceId = m_settings.deviceId;
+    if (!targetDeviceId.empty()) {
+        iterateAudioEndPoints([&](auto pMMDevice) {
+            auto deviceId = getDeviceId(pMMDevice);
+            auto friendlyName = getDeviceFriendlyName(pMMDevice);
+            Logger::debug(L" - Device #%d: %ws (%ws)", deviceIndex++, friendlyName.c_str(), deviceId.c_str());
+            if (deviceId == targetDeviceId) {
+                Logger::info(L"Found the device");
+                m_pDevice = pMMDevice;
+                bDeviceFound = true;
+                return false;
+            }
+            return true;
+        });
+    }
 
     if (!bDeviceFound) { // id not found
-        Logger::error(L"Target device not found: %ws", m_deviceId.c_str());
+        Logger::error("Target device not found: %ws", targetDeviceId.c_str());
         return false;
     }
 
-    m_deviceId = getDeviceId(m_pDevice);
-
     Logger::debug(L"Searching available stream format for device");
-    Logger::debug(L" - Target: %d channels, sample rate %d", m_nChannels, m_nSampleRate);
-    BOOL rc = FindStreamFormat(m_pDevice, m_nChannels, m_nSampleRate);
+    Logger::debug(L" - Target: %d channels, sample rate %d", m_settings.nChannels, m_settings.nSampleRate);
+    BOOL rc = FindStreamFormat(m_pDevice, m_settings.nChannels, m_settings.nSampleRate);
     if (!rc) { // go through all devices and try to find the one that works for 16/48K
         Logger::error(L"Specified device doesn't support specified stream format");
         return false;
     }
 
-    m_active = true;
+    m_initialized = true;
 
     return true;
 }
@@ -354,9 +355,9 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
 ASIOError ASIO2WASAPI2::getSampleRate(ASIOSampleRate *sampleRate) {
     if (!sampleRate)
         return ASE_InvalidParameter;
-    if (!m_active)
+    if (!m_initialized)
         return ASE_NotPresent;
-    *sampleRate = m_nSampleRate;
+    *sampleRate = m_settings.nSampleRate;
 
     return ASE_OK;
 }
@@ -366,10 +367,10 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
 
     Logger::debug(L"setSampleRate: %f", sampleRate);
 
-    if (!m_active)
+    if (!m_initialized)
         return ASE_NotPresent;
 
-    if (sampleRate == m_nSampleRate)
+    if (sampleRate == m_settings.nSampleRate)
         return ASE_OK;
 
     ASIOError err = canSampleRate(sampleRate);
@@ -377,16 +378,16 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
     if (err != ASE_OK)
         return err;
 
-    int nPrevSampleRate = m_nSampleRate;
-    m_nSampleRate = (int) sampleRate;
-    writeToRegistry();
+    int nPrevSampleRate = m_settings.nSampleRate;
+    m_settings.nSampleRate = (int) sampleRate;
+    settingsWriteToRegistry();  // new nSampleRate used here
     if (m_callbacks) { // ask the host ro reset us
-        m_nSampleRate = nPrevSampleRate;
+        m_settings.nSampleRate = nPrevSampleRate;
         m_callbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
     } else { // reinitialize us with the new sample rate
         HWND hAppWindowHandle = m_hAppWindowHandle;
         shutdown();
-        readFromRegistry();
+        settingsReadFromRegistry();
         init(hAppWindowHandle);
     }
 
@@ -396,7 +397,7 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
 // all buffer sizes are in frames
 ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
                                       long *preferredSize, long *granularity) {
-    if (!m_active)
+    if (!m_initialized)
         return ASE_NotPresent;
 
     if (minSize)
@@ -411,32 +412,34 @@ ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2::createBuffers(ASIOBufferInfo *bufferInfos, long numChannels,
-                                      long bufferSize, ASIOCallbacks *callbacks) {
-    LOGGER_TRACE_FUNC;
+ASIOError ASIO2WASAPI2::createBuffers(
+        ASIOBufferInfo *bufferInfos,
+        long numChannels,
+        long bufferSize,
+        ASIOCallbacks *callbacks) {
 
-    if (!m_active)
+    if (!m_initialized)
         return ASE_NotPresent;
 
-    // some sanity checks
-    if (!callbacks || numChannels < 0 || numChannels > m_nChannels)
-        return ASE_InvalidParameter;
+    LOGGER_TRACE_FUNC;
+
+    // Check buffers
+    if (!callbacks) return ASE_InvalidParameter;
+    if (numChannels < 0 || numChannels > m_settings.nChannels) return ASE_InvalidParameter;
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
-        if (info.isInput || info.channelNum < 0 || info.channelNum >= m_nChannels)
+        if (info.isInput || info.channelNum < 0 || info.channelNum >= m_settings.nChannels)
             return ASE_InvalidMode;
     }
 
     // dispose exiting buffers
     disposeBuffers();
 
+    // Allocate!
     m_bufferSize = bufferSize;
     m_callbacks = callbacks;
-
-    // the very allocation
-    m_buffers[0].resize(m_nChannels);
-    m_buffers[1].resize(m_nChannels);
-
+    m_buffers[0].resize(m_settings.nChannels);
+    m_buffers[1].resize(m_settings.nChannels);
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
         m_buffers[0].at(info.channelNum).resize(bufferSize);
@@ -449,41 +452,39 @@ ASIOError ASIO2WASAPI2::createBuffers(ASIOBufferInfo *bufferInfos, long numChann
 
 ASIOError ASIO2WASAPI2::disposeBuffers() {
     LOGGER_TRACE_FUNC;
-
     stop();
 
     // wait for the play thread to finish
     m_output = nullptr;
+
     m_buffers[0].clear();
     m_buffers[1].clear();
-
     return ASE_OK;
 }
 
+const char *knownChannelNames[] =
+        {
+                "Front left",
+                "Front right",
+                "Front center",
+                "Low frequency",
+                "Back left",
+                "Back right",
+                "Front left of center",
+                "Front right of center",
+                "Back center",
+                "Side left",
+                "Side right",
+        };
+
 ASIOError ASIO2WASAPI2::getChannelInfo(ASIOChannelInfo *info) {
-    if (!m_active)
-        return ASE_NotPresent;
+    if (!m_initialized) return ASE_NotPresent;
+    if (info->isInput) return ASE_InvalidParameter;
+    if (info->channel < 0 || info->channel >= m_settings.nChannels) return ASE_InvalidParameter;
 
-    if (info->channel < 0 || info->channel >= m_nChannels || info->isInput)
-        return ASE_InvalidParameter;
-
-    info->type = getASIOSampleType();
+    info->type = sampleType;
     info->channelGroup = 0;
-    info->isActive = (m_buffers[0].size() > 0) ? ASIOTrue : ASIOFalse;
-    const char *knownChannelNames[] =
-            {
-                    "Front left",
-                    "Front right",
-                    "Front center",
-                    "Low frequency",
-                    "Back left",
-                    "Back right",
-                    "Front left of center",
-                    "Front right of center",
-                    "Back center",
-                    "Side left",
-                    "Side right",
-            };
+    info->isActive = (!m_buffers[0].empty()) ? ASIOTrue : ASIOFalse;
 
     strcpy_s(info->name, sizeof(info->name),
              (info->channel < sizeof(knownChannelNames) / sizeof(knownChannelNames[0]))
@@ -494,24 +495,28 @@ ASIOError ASIO2WASAPI2::getChannelInfo(ASIOChannelInfo *info) {
 }
 
 ASIOError ASIO2WASAPI2::canSampleRate(ASIOSampleRate sampleRate) {
-    if (!m_active)
+    if (!m_initialized)
         return ASE_NotPresent;
 
     int nSampleRate = static_cast<int>(sampleRate);
-    return FindStreamFormat(m_pDevice, m_nChannels, nSampleRate) ? ASE_OK : ASE_NoClock;
+    return FindStreamFormat(m_pDevice, m_settings.nChannels, nSampleRate) ? ASE_OK : ASE_NoClock;
 }
 
 ASIOError ASIO2WASAPI2::start() {
     LOGGER_TRACE_FUNC;
 
-    if (!m_active || !m_callbacks)
+    if (!m_initialized || !m_callbacks)
         return ASE_NotPresent;
     if (m_output)
         return ASE_OK; // we are already playing
 
     // make sure the previous play thread exited
     m_samplePosition = 0;
-    m_output = std::make_unique<WASAPIOutput>(m_pDevice, m_nChannels, m_nSampleRate, m_bufferSize);
+    m_output = std::make_unique<WASAPIOutput>(
+            m_pDevice,
+            m_settings.nChannels,
+            m_settings.nSampleRate,
+            m_bufferSize);
     m_output->registerCallback([&]() { this->pushData(); });
 
     return ASE_OK;
@@ -520,7 +525,7 @@ ASIOError ASIO2WASAPI2::start() {
 ASIOError ASIO2WASAPI2::stop() {
     LOGGER_TRACE_FUNC;
 
-    if (!m_active)
+    if (!m_initialized)
         return ASE_NotPresent;
     if (!m_output)
         return ASE_OK; // we already stopped
@@ -559,7 +564,7 @@ ASIOError ASIO2WASAPI2::setClockSource(long index) {
 }
 
 ASIOError ASIO2WASAPI2::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) {
-    if (!m_active || !m_callbacks)
+    if (!m_initialized || !m_callbacks)
         return ASE_NotPresent;
     if (tStamp) {
         tStamp->lo = m_theSystemTime.lo;
@@ -578,7 +583,7 @@ ASIOError ASIO2WASAPI2::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tSta
 }
 
 ASIOError ASIO2WASAPI2::getLatencies(long *_inputLatency, long *_outputLatency) {
-    if (!m_active || !m_callbacks)
+    if (!m_initialized || !m_callbacks)
         return ASE_NotPresent;
     if (_inputLatency)
         *_inputLatency = m_bufferSize;
