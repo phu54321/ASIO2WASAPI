@@ -110,7 +110,7 @@ WASAPIOutputImpl::WASAPIOutputImpl(
     }
 
     auto deviceId = getDeviceId(pDevice);
-    Logger::info(L"WASAPIOutputImpl: %ws - Buffer size %d", deviceId.c_str(), bufferSize);
+    Logger::info("WASAPIOutputImpl: %ws - Buffer size %d", deviceId.c_str(), bufferSize);
     _outBufferSize = bufferSize;
 
     _ringBufferSize = _outBufferSize * inBufferSizeMultiplier;
@@ -153,8 +153,22 @@ void WASAPIOutputImpl::stop() {
 }
 
 
-void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer) {
-    assert (buffer.size() == _channelNum);
+int t = 0;
+
+void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer2) {
+//     TEST code - check whether issue is within pushSamples ~ render stage, or the data fed to pushSamples.
+    assert (buffer2.size() == _channelNum);
+
+    std::vector<std::vector<short>> buffer;
+    buffer.resize(buffer2.size());
+    for (int ch = 0; ch < buffer2.size(); ch++) {
+        auto &b = buffer[ch];
+        b.resize(buffer2[0].size());
+        for (int j = 0; j < b.size(); j++) {
+            b[j] = 10000 * sin(2 * M_PI * 440 * (t + j) / 48000);
+        }
+    }
+    t += buffer2[0].size();
 
     Logger::trace(L"pushSamples, rp %d wp %d bufferSize %d", _ringBufferReadPos, _ringBufferWritePos, buffer[0].size());
 
@@ -202,6 +216,7 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
     }
 
     if (_pullCallback) {
+        Logger::trace(L"Pulling data from ASIO side");
         _pullCallback();
     }
 
@@ -214,6 +229,7 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
     Logger::trace(L"LoadData, rp %d wp %d ringSize %d", _ringBufferReadPos, _ringBufferWritePos, _ringBufferSize);
 
     assert(_ringBufferSize % _outBufferSize == 0);
+    bool skipped = false;
     {
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
         size_t &rp = _ringBufferReadPos;
@@ -234,12 +250,16 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
             rp += _outBufferSize;
             if (rp == _ringBufferSize) rp = 0;
         } else {  // Skip this segment.
+            skipped = true;  // Don't log here: we're within mutex
             for (int i = 0; i < _outBufferSize; i++) {
                 for (unsigned channel = 0; channel < _channelNum; channel++) {
                     *(out++) = 0;
                 }
             }
         }
+    }
+    if (skipped) {
+        Logger::warn(L"[----------] Skipped pushing to wasapi");
     }
 
     pRenderClient->ReleaseBuffer(_outBufferSize, 0);
