@@ -31,54 +31,33 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     if (FAILED(hr)) return nullptr;
 
 
-    // TODO: accept bufferSizeRequest here
-    REFERENCE_TIME hnsRequestedDuration;
-//    if (bufferSizeRequest == BUFFER_SIZE_REQUEST_USEDEFAULT) {
-    hr = pAudioClient->GetDevicePeriod(&hnsRequestedDuration, nullptr);
-    if (FAILED(hr)) return nullptr;
-//    } else {
-//        hnsRequestedDuration = (REFERENCE_TIME) (1000.0 * 10000 * bufferSizeRequest / pWaveFormat->nSamplesPerSec);
-//    }
+    REFERENCE_TIME bufferDuration;
+    if (bufferSizeRequest == BUFFER_SIZE_REQUEST_USEDEFAULT) {
+        hr = pAudioClient->GetDevicePeriod(&bufferDuration, nullptr);
+        if (FAILED(hr)) return nullptr;
+    } else {
+        bufferDuration = (REFERENCE_TIME) lround(10000.0 *                         // (REFERENCE_TIME / ms) *
+                                                 1000 *                            // (ms / s) *
+                                                 bufferSizeRequest /                      // frames /
+                                                 pWaveFormat->nSamplesPerSec      // (frames / s)
+        );
+    }
 
-    Logger::trace(L"pAudioClient->Initialize - %lld", hnsRequestedDuration);
+
+    Logger::trace(L"pAudioClient->Initialize: bufferSizeRequest %d, bufferDuration %lld", bufferSizeRequest,
+                  bufferDuration);
     hr = pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_EXCLUSIVE,
             AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST,
-            hnsRequestedDuration,
-            hnsRequestedDuration,
+            bufferDuration,
+            bufferDuration,
             pWaveFormat,
             nullptr);
 
-    Logger::trace(L" - %d", hr);
-    if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
-        Logger::trace(L" - AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED", hr);
-        UINT bufferSize = 0;
-        hr = pAudioClient->GetBufferSize(&bufferSize);
-        if (FAILED(hr)) {
-            Logger::error(L"_pAudioClient->GetBufferSize failed");
-            return nullptr;
-        }
-        pAudioClient = nullptr;
-
-        const double REFTIME_UNITS_PER_SECOND = 10000000.;
-        auto hnsAlignedDuration = static_cast<REFERENCE_TIME>(round(
-                bufferSize / (pWaveFormat->nSamplesPerSec / REFTIME_UNITS_PER_SECOND)));
-
-        hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void **) &pAudioClient_);
-        if (FAILED(hr) || !pAudioClient_)
-            return nullptr;
-        pAudioClient = make_autorelease(pAudioClient_);
-
-        Logger::trace(L"[aligned] pAudioClient->Initialize - %lld", hnsAlignedDuration);
-        hr = pAudioClient->Initialize(
-                AUDCLNT_SHAREMODE_EXCLUSIVE,
-                AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                hnsAlignedDuration,
-                hnsAlignedDuration,
-                pWaveFormat,
-                nullptr);
+    if (FAILED(hr)) {
+        Logger::trace(L" - failed (%d)", hr);
+        return nullptr;
     }
-    if (FAILED(hr)) return nullptr;
     return pAudioClient;
 }
 
