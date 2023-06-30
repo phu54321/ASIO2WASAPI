@@ -1,50 +1,31 @@
+#include "logger.h"
+
 #include <Windows.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string>
-#include <ShlObj.h>
 #include <thread>
 #include <chrono>
-#include "logger.h"
 #include "utf8convert.h"
+#include "homeDirFilePath.h"
 
-///
-
+#ifndef tfopen
 #ifndef UNICODE
-typedef std::string String;
 #define tfopen fopen
 #else
-typedef std::wstring String;
 #define tfopen _wfopen
 #endif
-
-String getHomeDir() {
-    TCHAR path[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, 0, path))) {
-        return path;
-    }
-    return TEXT("");
-}
-
-void AddTrailingSeparator(String &str) {
-    if (str.length() == 0 || str[str.length() - 1] != '\\')
-        str += TEXT("\\");
-}
-
-
-///
+#endif
 
 
 Logger::Logger() : outputFile(nullptr) {
-    auto homeDir = getHomeDir();
-    AddTrailingSeparator(homeDir);
-    auto logFilePath = homeDir + TEXT("ASIO2WASAPI2.log");
+    auto logFileName = homeDirFilePath(TEXT("ASIO2WASAPI2.log"));
 
     // Only open log file if it exists
-    FILE *rf = tfopen(logFilePath.c_str(), TEXT("rb"));
+    FILE *rf = tfopen(logFileName.c_str(), TEXT("rb"));
     if (rf) {
         fclose(rf);
-        outputFile = tfopen(logFilePath.c_str(), TEXT("wb"));
+        outputFile = tfopen(logFileName.c_str(), TEXT("wb"));
         setbuf(outputFile, NULL);
     }
 }

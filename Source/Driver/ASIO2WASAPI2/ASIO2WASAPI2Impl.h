@@ -12,17 +12,10 @@
 #include <atomic>
 #include "../utils/AppException.h"
 #include "../WASAPIOutput/WASAPIOutput.h"
+#include "DriverSettings.h"
 
 #include "asiosys.h"
 #include "asio.h"
-
-
-struct DriverSettings {
-    int nChannels = 2;
-    int nSampleRate = 48000;
-    int bufferSize = 1024;
-    std::wstring deviceId;
-};
 
 
 struct PreparedState;
@@ -62,10 +55,6 @@ public:
     ASIOError outputReady();
 
 private:
-    void settingsReadFromRegistry();
-
-    void settingsWriteToRegistry();
-
     DriverSettings _settings{};
     std::shared_ptr<IMMDevice> _pDevice;
     std::shared_ptr<PreparedState> _preparedState;

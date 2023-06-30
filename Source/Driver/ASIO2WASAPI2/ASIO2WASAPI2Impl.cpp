@@ -42,10 +42,9 @@ static const ASIOSampleType sampleType = ASIOSTInt16LSB;
 
 extern HINSTANCE g_hinstDLL;
 
-ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef) {
+ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
+        : _settings(loadDriverSettings()) {
     LOGGER_TRACE_FUNC;
-
-    settingsReadFromRegistry();
 
     CoInitialize(nullptr);
 
@@ -102,12 +101,9 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
         return err;
     }
 
-    int nPrevSampleRate = _settings.nSampleRate;
     _settings.nSampleRate = (int) sampleRate;
-    settingsWriteToRegistry();  // new nSampleRate used here
 
     if (_preparedState) {
-        _settings.nSampleRate = nPrevSampleRate;
         _preparedState->requestReset();
     }
 
