@@ -5,6 +5,7 @@
 #include "PreparedState.h"
 #include "RunningState.h"
 #include "../utils/WASAPIUtils.h"
+#include "../utils/logger.h"
 
 static const uint64_t twoRaisedTo32 = UINT64_C(4294967296);
 
@@ -29,10 +30,6 @@ PreparedState::PreparedState(const std::shared_ptr<IMMDevice> &pDevice, DriverSe
                              ASIOCallbacks *callbacks)
         : _settings(std::move(_settings)), _callbacks(callbacks), _bufferSize(_settings.bufferSize),
           _pDevice(pDevice) {
-    if (!pDevice) {
-        throw AppException("Cannot find target device");
-    }
-
     auto bufferSize = _settings.bufferSize;
     _buffers[0].resize(_settings.nChannels);
     _buffers[1].resize(_settings.nChannels);
@@ -58,7 +55,12 @@ bool PreparedState::start() {
     // make sure the previous play thread exited
     _samplePosition = 0;
     _bufferIndex = 0;
-    _runningState = std::make_shared<RunningState>(this);
+    try {
+        _runningState = std::make_shared<RunningState>(this);
+    } catch (AppException &e) {
+        Logger::error("Cannot create runningState: %s", e.what());
+        return false;
+    }
     return true;
 }
 
