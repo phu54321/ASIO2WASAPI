@@ -48,7 +48,7 @@ void PreparedState::InitASIOBufferInfo(ASIOBufferInfo *bufferInfos, int infoCoun
     for (int i = 0; i < _settings.nChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
         info.buffers[0] = _buffers[0].at(info.channelNum).data();
-        info.buffers[1] = _buffers[0].at(info.channelNum).data();
+        info.buffers[1] = _buffers[1].at(info.channelNum).data();
     }
 }
 
