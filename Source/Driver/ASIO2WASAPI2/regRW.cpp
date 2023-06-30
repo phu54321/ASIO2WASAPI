@@ -2,7 +2,7 @@
 // Created by whyask37 on 2023-06-27.
 //
 
-#include "ASIO2WASAPI2.h"
+#include "ASIO2WASAPI2Impl.h"
 #include "../utils/logger.h"
 #include "../utils/json.hpp"
 #include "../utils/utf8convert.h"
@@ -12,10 +12,9 @@ using json = nlohmann::json;
 const TCHAR *szJsonRegValName = TEXT("json");
 const TCHAR *szPrefsRegKey = TEXT("Software\\ASIO2WASAPI2");
 
-void ASIO2WASAPI2::settingsReadFromRegistry() {
+void ASIO2WASAPI2Impl::settingsReadFromRegistry() {
     LOGGER_TRACE_FUNC;
-    Logger::debug(L"ASIO2WASAPI2::readFromRegistery");
-    HKEY key = 0;
+    HKEY key = nullptr;
     LONG lResult = RegOpenKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, KEY_READ, &key);
     if (ERROR_SUCCESS == lResult) {
         DWORD size;
@@ -45,9 +44,9 @@ void ASIO2WASAPI2::settingsReadFromRegistry() {
     }
 }
 
-void ASIO2WASAPI2::settingsWriteToRegistry() {
+void ASIO2WASAPI2Impl::settingsWriteToRegistry() {
     LOGGER_TRACE_FUNC;
-    HKEY key = 0;
+    HKEY key = nullptr;
     LONG lResult = RegCreateKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
     if (ERROR_SUCCESS == lResult) {
         json j = {

@@ -2,14 +2,13 @@
 // Created by whyask37 on 2023-06-26.
 //
 
-#define _USE_MATH_DEFINES
+const double m_pi = 3.14159265358979;
 
 #include <Windows.h>
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 #include <avrt.h>
 #include <cassert>
-#include <cmath>
 #include <mutex>
 #include <cstdlib>
 
@@ -100,13 +99,13 @@ WASAPIOutputImpl::WASAPIOutputImpl(
     if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, &_waveFormat, &_pAudioClient)) {
         Logger::error(L"Cannot find suitable stream format for output _pDevice (_pDevice ID %s)",
                       getDeviceId(pDevice).c_str());
-        throw WASAPIOutputException("FindStreamFormat failed");
+        throw AppException("FindStreamFormat failed");
     }
 
     UINT32 bufferSize;
     HRESULT hr = _pAudioClient->GetBufferSize(&bufferSize);
     if (FAILED(hr)) {
-        throw WASAPIOutputException("GetBufferSize failed");
+        throw AppException("GetBufferSize failed");
     }
 
     auto deviceId = getDeviceId(pDevice);
@@ -165,7 +164,7 @@ void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer
         auto &b = buffer[ch];
         b.resize(buffer2[0].size());
         for (int j = 0; j < b.size(); j++) {
-            b[j] = 10000 * sin(2 * M_PI * 440 * (t + j) / 48000);
+            b[j] = 10000 * sin(2 * m_pi * 440 * (t + j) / 48000);
         }
     }
     t += buffer2[0].size();

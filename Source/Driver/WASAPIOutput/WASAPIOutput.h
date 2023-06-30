@@ -13,6 +13,7 @@
 #include <utility>
 #include <functional>
 #include <vector>
+#include "../utils/AppException.h"
 
 class WASAPIOutputImpl;
 
@@ -34,16 +35,5 @@ private:
     std::unique_ptr<WASAPIOutputImpl> _pImpl;
 };
 
-class WASAPIOutputException : public std::exception {
-private:
-    std::string message;
-
-public:
-    explicit WASAPIOutputException(std::string s) : message(std::move(s)) {}
-
-    const char *what() const override {
-        return message.c_str();
-    }
-};
 
 #endif //ASIO2WASAPI2_WASAPIOUTPUT_H

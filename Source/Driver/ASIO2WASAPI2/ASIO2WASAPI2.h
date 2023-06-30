@@ -1,5 +1,7 @@
 /*  ASIO2WASAPI2 Universal ASIO Driver
-    Copyright (C) Lev Minkovsky
+
+    Copyright (C) 2017 Lev Minkovsky
+    Copyright (C) 2023 Hyunwoo Park (phu54321@naver.com) - modifications
 
     This file is part of ASIO2WASAPI2.
 
@@ -22,7 +24,7 @@
 
 #include <vector>
 #include <memory>
-#include "../WASAPIOutput/WASAPIOutput.h"
+#include <Windows.h>
 
 #ifndef _INC_MMREG
 
@@ -36,16 +38,11 @@ struct IAudioRenderClient;
 #include "../COMBaseClasses.h"
 #include "asiosys.h"
 #include "iasiodrv.h"
-#include "../utils/TrayOpener.hpp"
 
 extern CLSID CLSID_ASIO2WASAPI2_DRIVER;
 const TCHAR *const szDescription = TEXT("ASIO2WASAPI2");
 
-struct Settings {
-    int nChannels = 2;
-    int nSampleRate = 48000;
-    std::wstring deviceId;
-};
+class ASIO2WASAPI2Impl;
 
 class ASIO2WASAPI2 : public IASIO, public CUnknown {
 public:
@@ -59,12 +56,10 @@ public:
     };
 
     STDMETHODIMP_(ULONG)
-    AddRef() {
-        return GetOwner()->AddRef();
-    };
+    AddRef() override { return GetOwner()->AddRef(); };
 
     STDMETHODIMP_(ULONG)
-    Release() {
+    Release() override {
         return GetOwner()->Release();
     };
 
@@ -116,37 +111,5 @@ public:
     ASIOError outputReady() override;
 
 private:
-    std::unique_ptr<TrayOpener> openerPtr;
-
-private:
-    static BOOL CALLBACK ControlPanelProc(HWND hwndDlg,
-                                          UINT message, WPARAM wParam, LPARAM lParam);
-
-    void pushData();
-
-    void settingsReadFromRegistry();
-
-    void settingsWriteToRegistry();
-
-    void shutdown();;
-
-    // fields valid before initialization
-    HWND m_hAppWindowHandle = nullptr;
-    Settings m_settings;
-
-    // fields filled by init()/cleaned by shutdown()
-    bool m_initialized = false;
-    std::shared_ptr<IMMDevice> m_pDevice;
-
-    // fields filled by createBuffers()/cleaned by disposeBuffers()
-    // ASIO buffers *& callbacks
-    int m_bufferSize = 0; // in audio frames
-    std::vector<std::vector<short>> m_buffers[2];
-    ASIOCallbacks *m_callbacks = nullptr;
-
-    // fields filled by start()/cleaned by stop()
-    std::unique_ptr<WASAPIOutput> m_output = nullptr;
-    ASIOTimeStamp m_theSystemTime = {0, 0};
-    uint64_t m_samplePosition = 0;
-    int m_bufferIndex = 0;
+    std::unique_ptr<ASIO2WASAPI2Impl> _pImpl;
 };
