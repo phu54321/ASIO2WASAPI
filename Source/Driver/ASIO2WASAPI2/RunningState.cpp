@@ -15,6 +15,9 @@ RunningState::RunningState(PreparedState *p)
             p->_settings.nChannels,
             p->_settings.nSampleRate,
             p->_bufferSize);
+    _output->registerCallback([this]() {
+        signalPoll();
+    });
 
     _pollThread = std::thread(RunningState::threadProc, this);
 }
@@ -43,15 +46,33 @@ void RunningState::signalStop() {
     _notifier.notify_all();
 }
 
+void RunningState::signalPoll() {
+    LOGGER_TRACE_FUNC;
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _shouldPoll = true;
+    }
+    _notifier.notify_all();
+}
+
 void RunningState::threadProc(RunningState *state) {
     auto &_preparedState = state->_preparedState;
     while (true) {
         Logger::trace("Locking mutex");
         std::unique_lock<std::mutex> lock(state->_mutex);
         if (state->_pollStop) break;
-        else if (state->_isOutputReady) {
+        else if (state->_shouldPoll) {
             Logger::trace("Unlock d/t outputReady");
+
+            // Wait for output
+            if (!state->_isOutputReady) {
+                state->_notifier.wait(lock, [state]() {
+                    return state->_isOutputReady || state->_pollStop;
+                });
+            }
+            if (state->_pollStop) break;
             state->_isOutputReady = false;
+            state->_shouldPoll = false;
             lock.unlock();
 
             assert(_preparedState);
@@ -63,7 +84,7 @@ void RunningState::threadProc(RunningState *state) {
         } else {
             Logger::trace("Unlock & waiting");
             state->_notifier.wait(lock, [state]() {
-                return state->_pollStop || state->_isOutputReady;
+                return state->_pollStop || state->_shouldPoll;
             });
         }
     }

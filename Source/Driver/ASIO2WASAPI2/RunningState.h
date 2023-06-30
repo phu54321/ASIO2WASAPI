@@ -14,18 +14,22 @@
 
 class RunningState {
 public:
-    RunningState(PreparedState *p);
+    explicit RunningState(PreparedState *p);
 
     ~RunningState();
 
     void signalOutputReady();
 
+    void signalPoll();
+
 private:
     void signalStop();
 
     PreparedState *_preparedState;
-    std::atomic<bool> _isOutputReady{true};
-    std::atomic<bool> _pollStop{false};
+    bool _isOutputReady = true;
+    bool _shouldPoll = true;
+    bool _pollStop = false;
+
     std::mutex _mutex;
     std::condition_variable _notifier;
     std::thread _pollThread;
