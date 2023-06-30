@@ -5,8 +5,9 @@
 #include "RunningState.h"
 #include "../utils/logger.h"
 #include <utility>
+#include <cassert>
 
-RunningState::RunningState(const std::shared_ptr<PreparedState> &p)
+RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
     LOGGER_TRACE_FUNC;
     _output = std::make_unique<WASAPIOutput>(
@@ -53,14 +54,12 @@ void RunningState::threadProc(RunningState *state) {
             state->_isOutputReady = false;
             lock.unlock();
 
-            auto preparedState = _preparedState.lock();
-            if (preparedState) {
-                int currentBufferIndex = preparedState->m_bufferIndex;
-                const auto &currentBuffer = preparedState->m_buffers[currentBufferIndex];
-                state->_output->pushSamples(currentBuffer);
-                preparedState->m_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
-                preparedState->m_bufferIndex = 1 - currentBufferIndex;
-            }
+            assert(_preparedState);
+            int currentBufferIndex = _preparedState->m_bufferIndex;
+            const auto &currentBuffer = _preparedState->m_buffers[currentBufferIndex];
+            state->_output->pushSamples(currentBuffer);
+            _preparedState->m_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
+            _preparedState->m_bufferIndex = 1 - currentBufferIndex;
         } else {
             Logger::trace("Unlock & waiting");
             state->_notifier.wait(lock, [state]() {

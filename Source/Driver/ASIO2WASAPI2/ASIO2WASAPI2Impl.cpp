@@ -49,29 +49,11 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef) {
 
     CoInitialize(nullptr);
 
-    bool bDeviceFound = false;
-    int deviceIndex = 0;
-    const auto &targetDeviceId = m_settings.deviceId;
-    Logger::debug(L"Listing devices... (searching %ws)", targetDeviceId.c_str());
-    if (!targetDeviceId.empty()) {
-        iterateAudioEndPoints([&](auto pMMDevice) {
-            auto deviceId = getDeviceId(pMMDevice);
-            auto friendlyName = getDeviceFriendlyName(pMMDevice);
-            Logger::debug(L" - Device #%d: %ws (%ws)", deviceIndex++, friendlyName.c_str(), deviceId.c_str());
-            if (deviceId == targetDeviceId) {
-                Logger::info(L"Found the device");
-                m_pDevice = pMMDevice;
-                bDeviceFound = true;
-                return false;
-            }
-            return true;
-        });
-    }
-
-    if (!bDeviceFound) { // id not found
-        Logger::error(L"Target device not found: %s", targetDeviceId.c_str());
+    auto pDevice = getDeviceFromId(m_settings.deviceId);
+    if (!pDevice) { // id not found
         throw AppException("Target device not found");
     }
+    m_pDevice = pDevice;
 }
 
 ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
@@ -126,7 +108,7 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
 
     if (_preparedState) {
         m_settings.nSampleRate = nPrevSampleRate;
-        _preparedState->m_callbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
+        _preparedState->requestReset();
     }
 
     return ASE_OK;
@@ -186,27 +168,14 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
             return ASE_InvalidMode;
     }
 
-    // TODO: put buffer in some other RAII-ed struct
     // dispose exiting buffers
     disposeBuffers();
 
     // Allocate!
-    _preparedState = std::make_shared<PreparedState>();
-    _preparedState->pDevice = m_pDevice;
-    _preparedState->settings = m_settings;
-    _preparedState->m_bufferSize = bufferSize;
-    _preparedState->m_callbacks = callbacks;
+    m_settings.bufferSize = bufferSize;
+    _preparedState = std::make_shared<PreparedState>(m_pDevice, m_settings, callbacks);
+    _preparedState->InitASIOBufferInfo(bufferInfos, numChannels);
 
-    auto &buffers = _preparedState->m_buffers;
-    buffers[0].resize(m_settings.nChannels);
-    buffers[1].resize(m_settings.nChannels);
-    for (int i = 0; i < numChannels; i++) {
-        ASIOBufferInfo &info = bufferInfos[i];
-        buffers[0].at(info.channelNum).resize(bufferSize);
-        buffers[1].at(info.channelNum).resize(bufferSize);
-        info.buffers[0] = buffers[0].at(info.channelNum).data();
-        info.buffers[1] = buffers[0].at(info.channelNum).data();
-    }
     return ASE_OK;
 }
 
@@ -227,21 +196,13 @@ ASIOError ASIO2WASAPI2Impl::start() {
     LOGGER_TRACE_FUNC;
 
     if (!_preparedState) return ASE_NotPresent;
-    if (_preparedState->runningState) return ASE_OK; // we are already playing
-
-    // make sure the previous play thread exited
-    _preparedState->m_samplePosition = 0;
-    _preparedState->m_bufferIndex = 0;
-    _preparedState->runningState = std::make_shared<RunningState>(_preparedState);
-    return ASE_OK;
+    return _preparedState->start() ? ASE_OK : ASE_HWMalfunction;
 }
 
 ASIOError ASIO2WASAPI2Impl::outputReady() {
     LOGGER_TRACE_FUNC;
     if (_preparedState) {
-        if (_preparedState->runningState) {
-            _preparedState->runningState->signalOutputReady();
-        }
+        _preparedState->outputReady();
     }
     return ASE_OK;
 }
@@ -251,7 +212,7 @@ ASIOError ASIO2WASAPI2Impl::stop() {
     LOGGER_TRACE_FUNC;
 
     if (_preparedState) {
-        _preparedState->runningState = nullptr;
+        _preparedState->stop();
     }
     return ASE_OK;
 }
@@ -272,8 +233,8 @@ ASIOError ASIO2WASAPI2Impl::getLatencies(long *_inputLatency, long *_outputLaten
     if (!_preparedState)
         return ASE_NotPresent;
     if (_inputLatency)
-        *_inputLatency = _preparedState->m_bufferSize;
+        *_inputLatency = m_settings.bufferSize;
     if (_outputLatency)
-        *_outputLatency = 2 * _preparedState->m_bufferSize * 2;
+        *_outputLatency = 2 * m_settings.bufferSize;
     return ASE_OK;
 }

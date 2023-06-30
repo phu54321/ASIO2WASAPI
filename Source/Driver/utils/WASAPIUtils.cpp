@@ -7,6 +7,7 @@
 #include <functiondiscoverykeys_devpkey.h>
 #include "WASAPIUtils.h"
 #include "raiiUtils.h"
+#include "logger.h"
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
@@ -83,10 +84,15 @@ std::wstring getDeviceFriendlyName(const std::shared_ptr<IMMDevice> &pDevice) {
 
 std::shared_ptr<IMMDevice> getDeviceFromId(const std::wstring &deviceId) {
     std::shared_ptr<IMMDevice> output = nullptr;
+    int deviceIndex = 0;
 
+    Logger::debug(L"Listing devices... (searching %ws)", deviceId.c_str());
     iterateAudioEndPoints([&](auto p) {
         auto thisDeviceId = getDeviceId(p);
+        auto friendlyName = getDeviceFriendlyName(p);
+        Logger::debug(L" - Device #%d: %ws (%ws)", deviceIndex++, friendlyName.c_str(), deviceId.c_str());
         if (thisDeviceId == deviceId) {
+            Logger::info(L"Found the device");
             output = p;
             return false;
         }

@@ -14,7 +14,7 @@
 
 class RunningState {
 public:
-    RunningState(const std::shared_ptr<PreparedState> &p);
+    RunningState(PreparedState *p);
 
     ~RunningState();
 
@@ -23,7 +23,7 @@ public:
 private:
     void signalStop();
 
-    std::weak_ptr<PreparedState> _preparedState;
+    PreparedState *_preparedState;
     std::atomic<bool> _isOutputReady{true};
     std::atomic<bool> _pollStop{false};
     std::mutex _mutex;
