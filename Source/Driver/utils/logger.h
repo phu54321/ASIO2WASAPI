@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <mutex>
 
 enum LogLevel {
     trace = 0,
@@ -54,6 +55,7 @@ private:
 
 private:
     FILE *outputFile;
+    std::mutex _fileMutex;
     LogLevel _minimumOutputLevel = LogLevel::info;
 };
 

@@ -21,4 +21,18 @@ auto make_autoclose(T *h) {
     });
 }
 
+struct CExitEventSetter {
+    HANDLE &m_hEvent;
+
+    explicit CExitEventSetter(HANDLE &hEvent) : m_hEvent(hEvent) {}
+
+    ~CExitEventSetter() {
+        SetEvent(m_hEvent);
+        CloseHandle(m_hEvent);
+        m_hEvent = nullptr;
+    }
+};
+
+
 #endif //ASIO2WASAPI2_RAIIUTILS_H
+

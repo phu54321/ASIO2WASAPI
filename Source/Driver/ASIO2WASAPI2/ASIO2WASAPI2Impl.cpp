@@ -33,10 +33,11 @@
 #include "../WASAPIOutput/createIAudioClient.h"
 #include "../utils/WASAPIUtils.h"
 #include "../utils/raiiUtils.h"
+#include "RunningState.h"
+#include "PreparedState.h"
 
 using json = nlohmann::json;
 
-static const uint64_t twoRaisedTo32 = UINT64_C(4294967296);
 static const ASIOSampleType sampleType = ASIOSTInt16LSB;
 
 extern HINSTANCE g_hinstDLL;
@@ -46,7 +47,6 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef) {
 
     settingsReadFromRegistry();
 
-    m_hAppWindowHandle = (HWND) sysRef;
     CoInitialize(nullptr);
 
     bool bDeviceFound = false;
@@ -82,12 +82,6 @@ ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
 }
 
 
-ASIOError ASIO2WASAPI2Impl::outputReady() {
-    LOGGER_TRACE_FUNC;
-
-    // TODO: use this.
-    return ASE_NotPresent;
-}
 
 /////
 
@@ -129,9 +123,10 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
     int nPrevSampleRate = m_settings.nSampleRate;
     m_settings.nSampleRate = (int) sampleRate;
     settingsWriteToRegistry();  // new nSampleRate used here
-    if (m_callbacks) { // ask the host ro reset us
+
+    if (_preparedState) {
         m_settings.nSampleRate = nPrevSampleRate;
-        m_callbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
+        _preparedState->m_callbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
     }
 
     return ASE_OK;
@@ -164,7 +159,7 @@ ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
 
     info->type = sampleType;
     info->channelGroup = 0;
-    info->isActive = (!m_buffers[0].empty()) ? ASIOTrue : ASIOFalse;
+    info->isActive = _preparedState ? ASIOTrue : ASIOFalse;
 
     strcpy_s(info->name,
              (info->channel < sizeof(knownChannelNames) / sizeof(knownChannelNames[0]))
@@ -196,16 +191,21 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
     disposeBuffers();
 
     // Allocate!
-    m_bufferSize = bufferSize;
-    m_callbacks = callbacks;
-    m_buffers[0].resize(m_settings.nChannels);
-    m_buffers[1].resize(m_settings.nChannels);
+    _preparedState = std::make_shared<PreparedState>();
+    _preparedState->pDevice = m_pDevice;
+    _preparedState->settings = m_settings;
+    _preparedState->m_bufferSize = bufferSize;
+    _preparedState->m_callbacks = callbacks;
+
+    auto &buffers = _preparedState->m_buffers;
+    buffers[0].resize(m_settings.nChannels);
+    buffers[1].resize(m_settings.nChannels);
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
-        m_buffers[0].at(info.channelNum).resize(bufferSize);
-        m_buffers[1].at(info.channelNum).resize(bufferSize);
-        info.buffers[0] = m_buffers[0].at(info.channelNum).data();
-        info.buffers[1] = m_buffers[0].at(info.channelNum).data();
+        buffers[0].at(info.channelNum).resize(bufferSize);
+        buffers[1].at(info.channelNum).resize(bufferSize);
+        info.buffers[0] = buffers[0].at(info.channelNum).data();
+        info.buffers[1] = buffers[0].at(info.channelNum).data();
     }
     return ASE_OK;
 }
@@ -215,9 +215,7 @@ ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
     stop();
 
     // wait for the play thread to finish
-    m_output = nullptr;
-    m_buffers[0].clear();
-    m_buffers[1].clear();
+    _preparedState = nullptr;
     return ASE_OK;
 }
 
@@ -228,29 +226,33 @@ ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
 ASIOError ASIO2WASAPI2Impl::start() {
     LOGGER_TRACE_FUNC;
 
-    if (!m_callbacks)
-        return ASE_NotPresent;
-    if (m_output)
-        return ASE_OK; // we are already playing
+    if (!_preparedState) return ASE_NotPresent;
+    if (_preparedState->runningState) return ASE_OK; // we are already playing
 
     // make sure the previous play thread exited
-    m_samplePosition = 0;
-    m_output = std::make_unique<WASAPIOutput>(
-            m_pDevice,
-            m_settings.nChannels,
-            m_settings.nSampleRate,
-            m_bufferSize);
-
-    // TODO: make enqueue thread
-
+    _preparedState->m_samplePosition = 0;
+    _preparedState->m_bufferIndex = 0;
+    _preparedState->runningState = std::make_shared<RunningState>(_preparedState);
     return ASE_OK;
 }
+
+ASIOError ASIO2WASAPI2Impl::outputReady() {
+    LOGGER_TRACE_FUNC;
+    if (_preparedState) {
+        if (_preparedState->runningState) {
+            _preparedState->runningState->signalOutputReady();
+        }
+    }
+    return ASE_OK;
+}
+
 
 ASIOError ASIO2WASAPI2Impl::stop() {
     LOGGER_TRACE_FUNC;
 
-    if (!m_output) return ASE_OK; // we already stopped
-    m_output = nullptr;
+    if (_preparedState) {
+        _preparedState->runningState = nullptr;
+    }
     return ASE_OK;
 }
 
@@ -260,31 +262,18 @@ ASIOError ASIO2WASAPI2Impl::stop() {
 
 
 ASIOError ASIO2WASAPI2Impl::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) {
-    if (!m_callbacks)
+    if (!_preparedState)
         return ASE_NotPresent;
 
-    if (tStamp) {
-        tStamp->lo = m_theSystemTime.lo;
-        tStamp->hi = m_theSystemTime.hi;
-    }
-    if (sPos) {
-        if (m_samplePosition >= twoRaisedTo32) {
-            sPos->hi = (unsigned long) (m_samplePosition / twoRaisedTo32);
-            sPos->lo = (unsigned long) (m_samplePosition - (sPos->hi * twoRaisedTo32));
-        } else {
-            sPos->hi = 0;
-            sPos->lo = (unsigned long) m_samplePosition;
-        }
-    }
-    return ASE_OK;
+    return _preparedState->getSamplePosition(sPos, tStamp);
 }
 
 ASIOError ASIO2WASAPI2Impl::getLatencies(long *_inputLatency, long *_outputLatency) {
-    if (!m_callbacks)
+    if (!_preparedState)
         return ASE_NotPresent;
     if (_inputLatency)
-        *_inputLatency = m_bufferSize;
+        *_inputLatency = _preparedState->m_bufferSize;
     if (_outputLatency)
-        *_outputLatency = 2 * m_bufferSize;
+        *_outputLatency = 2 * _preparedState->m_bufferSize * 2;
     return ASE_OK;
 }

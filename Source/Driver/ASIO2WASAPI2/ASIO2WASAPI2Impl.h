@@ -8,9 +8,10 @@
 #define ASIO2WASAPI2_ASIO2WASAPI2IMPL_H
 
 #include <Windows.h>
+#include <thread>
+#include <atomic>
 #include "../utils/AppException.h"
 #include "../WASAPIOutput/WASAPIOutput.h"
-#include "../utils/TrayOpener.hpp"
 
 #include "asiosys.h"
 #include "asio.h"
@@ -23,17 +24,20 @@ struct DriverSettings {
 };
 
 
+struct PreparedState;
+
+class RunningState;
+
+
 class ASIO2WASAPI2Impl {
 public:
-    ASIO2WASAPI2Impl(void *sysRef);
+    explicit ASIO2WASAPI2Impl(void *sysRef);
 
     ~ASIO2WASAPI2Impl();
 
     ASIOError getChannels(long *numInputChannels, long *numOutputChannels);
 
     ASIOError getLatencies(long *inputLatency, long *outputLatency);
-
-    ASIOError getBufferSize(long *minSize, long *maxSize, long *preferredSize, long *granularity);
 
     ASIOError canSampleRate(ASIOSampleRate sampleRate);
 
@@ -61,24 +65,11 @@ private:
 
     void settingsWriteToRegistry();
 
-    // fields valid before initialization
-    HWND m_hAppWindowHandle;
     DriverSettings m_settings{};
-
-    // fields filled by init()/cleaned by shutdown()
     std::shared_ptr<IMMDevice> m_pDevice;
+    std::shared_ptr<PreparedState> _preparedState;
 
-    // fields filled by createBuffers()/cleaned by disposeBuffers()
-    // ASIO buffers *& callbacks
-    int m_bufferSize = 0; // in audio frames
-    std::vector<std::vector<short>> m_buffers[2];
-    ASIOCallbacks *m_callbacks = nullptr;
-
-    std::unique_ptr<WASAPIOutput> m_output;
-    ASIOTimeStamp m_theSystemTime = {0, 0};
-    uint64_t m_samplePosition = 0;
-
-    std::unique_ptr<TrayOpener> openerPtr{};
+    static void pollThread(PreparedState *state);
 };
 
 #endif //ASIO2WASAPI2_ASIO2WASAPI2IMPL_H

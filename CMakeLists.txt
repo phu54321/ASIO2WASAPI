@@ -29,7 +29,6 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/COMBaseClasses.cpp
 
         Source/Driver/utils/logger.cpp
-        Source/Driver/utils/TrayOpener.cpp
         Source/Driver/utils/WASAPIUtils.cpp
         Source/Driver/utils/utf8convert.cpp
 
@@ -41,7 +40,7 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/WASAPIOutput/createIAudioClient.cpp
         Source/Driver/ASIO2WASAPI2/regRW.cpp
         Source/Driver/ASIO2WASAPI2/CUnknownImpl.cpp
-        )
+        Source/Driver/ASIO2WASAPI2/PreparedState.cpp Source/Driver/ASIO2WASAPI2/PreparedState.h Source/Driver/ASIO2WASAPI2/RunningState.cpp Source/Driver/ASIO2WASAPI2/RunningState.h)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)
 target_link_libraries(ASIO2WASAPI2 Avrt.lib winmm.lib)
 

@@ -152,59 +152,39 @@ void WASAPIOutputImpl::stop() {
 }
 
 
-int t = 0;
-
-void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer2) {
-//     TEST code - check whether issue is within pushSamples ~ render stage, or the data fed to pushSamples.
-    assert (buffer2.size() == _channelNum);
-
-    std::vector<std::vector<short>> buffer;
-    buffer.resize(buffer2.size());
-    for (int ch = 0; ch < buffer2.size(); ch++) {
-        auto &b = buffer[ch];
-        b.resize(buffer2[0].size());
-        for (int j = 0; j < b.size(); j++) {
-            b[j] = 10000 * sin(2 * m_pi * 440 * (t + j) / 48000);
-        }
-    }
-    t += buffer2[0].size();
+void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer) {
+    assert (buffer.size() == _channelNum);
 
     Logger::trace(L"pushSamples, rp %d wp %d bufferSize %d", _ringBufferReadPos, _ringBufferWritePos, buffer[0].size());
+
+    if (buffer.size() != _channelNum) {
+        Logger::error("Invalid channel count: expected %d, got %d", _channelNum, buffer.size());
+        return;
+    }
+
+    if (buffer[0].size() != _outBufferSize) {
+        Logger::error("Invalid chunk length: expected %d, got %d", _outBufferSize, buffer[0].size());
+        return;
+    }
+
 
     {
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
 
-        // Fill in ring buffer
-        size_t inBufferSize = buffer[0].size();
-        inBufferSize %= _ringBufferSize;  // Possible overflow
-        size_t irp = buffer[0].size() - inBufferSize;
-        size_t wp = _ringBufferWritePos;
+        if (_ringBufferReadPos == (_ringBufferWritePos + _outBufferSize) % _ringBufferSize) {
+            Logger::warn("Write overflow!");
+            return;
+        }
 
-        auto fillToEndSize = min(inBufferSize, _ringBufferSize - wp);
+        size_t &wp = _ringBufferWritePos;
         for (int ch = 0; ch < _channelNum; ch++) {
             memcpy(
-                    _ringBuffer[ch].data() + wp,
-                    buffer[ch].data() + irp,
-                    fillToEndSize * sizeof(short)
-            );
+                    &_ringBuffer[ch][wp],
+                    buffer[ch].data(),
+                    _outBufferSize * sizeof(buffer[ch][0]));
         }
-        wp += fillToEndSize;
+        wp += _outBufferSize;
         if (wp == _ringBufferSize) wp = 0;
-
-        auto fillFromFirstSize = inBufferSize - fillToEndSize;
-        if (fillFromFirstSize > 0) {
-            assert(wp == 0);
-            for (int ch = 0; ch < _channelNum; ch++) {
-                memcpy(
-                        _ringBuffer[ch].data(),
-                        buffer[ch].data() + irp + fillToEndSize,
-                        fillFromFirstSize * sizeof(short)
-                );
-            }
-            wp = fillFromFirstSize;
-        }
-
-        _ringBufferWritePos = wp;
     }
 }
 
@@ -232,15 +212,12 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
     {
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
         size_t &rp = _ringBufferReadPos;
-        short *out = reinterpret_cast<short *>(pData);
+        auto out = reinterpret_cast<short *>(pData);
 
 
         assert(rp % _outBufferSize == 0);
-        auto rpAfterLoad = rp + _outBufferSize;
-        if (
-                (rpAfterLoad == _ringBufferSize && _ringBufferWritePos < rpAfterLoad) ||
-                (rpAfterLoad != _ringBufferSize && rpAfterLoad <= _ringBufferWritePos)
-                ) {  // Sufficient data to output
+        if (_ringBufferReadPos != _ringBufferWritePos) {
+            auto rpAfterLoad = rp + _outBufferSize;
             for (int i = 0; i < _outBufferSize; i++) {
                 for (unsigned channel = 0; channel < _channelNum; channel++) {
                     *(out++) = _ringBuffer[channel][i + rp];
@@ -268,24 +245,11 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
 /////
 
 DWORD WINAPI WASAPIOutputImpl::playThread(LPVOID pThis) {
-    struct CExitEventSetter {
-        HANDLE &m_hEvent;
-
-        explicit CExitEventSetter(WASAPIOutputImpl *pDriver) : m_hEvent(pDriver->_runningEvent) {
-            m_hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        }
-
-        ~CExitEventSetter() {
-            SetEvent(m_hEvent);
-            CloseHandle(m_hEvent);
-            m_hEvent = nullptr;
-        }
-    };
+    HRESULT hr;
 
     auto *pDriver = static_cast<WASAPIOutputImpl *>(pThis);
-
-    CExitEventSetter setter(pDriver);
-    HRESULT hr = S_OK;
+    pDriver->_runningEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    CExitEventSetter setter(pDriver->_runningEvent);
 
     auto pAudioClient = pDriver->_pAudioClient;
     BYTE *pData = nullptr;

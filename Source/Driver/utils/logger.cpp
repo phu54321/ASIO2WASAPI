@@ -3,10 +3,11 @@
 #include <stdio.h>
 #include <string>
 #include <ShlObj.h>
-#include <iomanip>
+#include <thread>
 #include <chrono>
 #include "logger.h"
 #include "utf8convert.h"
+
 ///
 
 #ifndef UNICODE
@@ -44,6 +45,7 @@ Logger::Logger() : outputFile(nullptr) {
     if (rf) {
         fclose(rf);
         outputFile = tfopen(logFilePath.c_str(), TEXT("wb"));
+        setbuf(outputFile, NULL);
     }
 }
 
@@ -113,7 +115,13 @@ static void putTimestamp(FILE *outputFile) {
     getCurrentTimestamp(timestamp);
     fputc('[', outputFile);
     fputs(timestamp, outputFile);
-    fputc(']', outputFile);
+    fputs("] ", outputFile);
+}
+
+static void putThreadId(FILE *outputFile) {
+    // See https://stackoverflow.com/questions/7432100/how-to-get-integer-thread-id-in-c11
+    size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+    fprintf(outputFile, "[Thread %zu] ", threadId);
 }
 
 static void putLogLevel(FILE *outputFile, LogLevel level) {
@@ -150,8 +158,10 @@ void Logger::logV(LogLevel level, const wchar_t *format, va_list args) {
     OutputDebugStringW(wBuffer);
 
     if (outputFile) {
+        std::lock_guard<std::mutex> lock(_fileMutex);
         putTimestamp(outputFile);
         putLogLevel(outputFile, level);
+        putThreadId(outputFile);
         auto utf8String = wstring_to_utf8(wBuffer);
         fputs(utf8String.c_str(), outputFile);
         fputc('\n', outputFile);
@@ -168,8 +178,10 @@ void Logger::logV(LogLevel level, const char *format, va_list args) {
     OutputDebugStringA(buffer);
 
     if (outputFile) {
+        std::lock_guard<std::mutex> lock(_fileMutex);
         putTimestamp(outputFile);
         putLogLevel(outputFile, level);
+        putThreadId(outputFile);
         fputs(buffer, outputFile);
         fputc('\n', outputFile);
     }

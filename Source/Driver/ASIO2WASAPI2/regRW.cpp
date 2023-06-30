@@ -61,3 +61,4 @@ void ASIO2WASAPI2Impl::settingsWriteToRegistry() {
         Logger::debug(L" - deviceId: %ws", &m_settings.deviceId[0]);
     }
 }
+
