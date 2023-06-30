@@ -22,14 +22,14 @@ auto make_autoclose(T *h) {
 }
 
 struct CExitEventSetter {
-    HANDLE &m_hEvent;
+    HANDLE &_hEvent;
 
-    explicit CExitEventSetter(HANDLE &hEvent) : m_hEvent(hEvent) {}
+    explicit CExitEventSetter(HANDLE &hEvent) : _hEvent(hEvent) {}
 
     ~CExitEventSetter() {
-        SetEvent(m_hEvent);
-        CloseHandle(m_hEvent);
-        m_hEvent = nullptr;
+        SetEvent(_hEvent);
+        CloseHandle(_hEvent);
+        _hEvent = nullptr;
     }
 };
 

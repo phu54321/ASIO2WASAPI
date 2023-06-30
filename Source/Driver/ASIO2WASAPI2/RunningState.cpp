@@ -11,10 +11,10 @@ RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
     LOGGER_TRACE_FUNC;
     _output = std::make_unique<WASAPIOutput>(
-            p->pDevice,
-            p->settings.nChannels,
-            p->settings.nSampleRate,
-            p->m_bufferSize);
+            p->_pDevice,
+            p->_settings.nChannels,
+            p->_settings.nSampleRate,
+            p->_bufferSize);
 
     _pollThread = std::thread(RunningState::threadProc, this);
 }
@@ -55,11 +55,11 @@ void RunningState::threadProc(RunningState *state) {
             lock.unlock();
 
             assert(_preparedState);
-            int currentBufferIndex = _preparedState->m_bufferIndex;
-            const auto &currentBuffer = _preparedState->m_buffers[currentBufferIndex];
+            int currentBufferIndex = _preparedState->_bufferIndex;
+            const auto &currentBuffer = _preparedState->_buffers[currentBufferIndex];
             state->_output->pushSamples(currentBuffer);
-            _preparedState->m_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
-            _preparedState->m_bufferIndex = 1 - currentBufferIndex;
+            _preparedState->_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
+            _preparedState->_bufferIndex = 1 - currentBufferIndex;
         } else {
             Logger::trace("Unlock & waiting");
             state->_notifier.wait(lock, [state]() {

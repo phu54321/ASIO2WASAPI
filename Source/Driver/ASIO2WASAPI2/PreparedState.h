@@ -35,21 +35,21 @@ public:
 
     ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) const;
 
-    int getBufferSize() const { return m_bufferSize; }
+    int getBufferSize() const { return _bufferSize; }
 
 private:
 
-    DriverSettings settings;
-    ASIOCallbacks *m_callbacks;
-    std::shared_ptr<IMMDevice> pDevice;
+    DriverSettings _settings;
+    ASIOCallbacks *_callbacks;
+    std::shared_ptr<IMMDevice> _pDevice;
 
-    int m_bufferSize = 0; // in audio frames
-    int m_bufferIndex = 0;
-    std::vector<std::vector<short>> m_buffers[2];
+    int _bufferSize = 0; // in audio frames
+    int _bufferIndex = 0;
+    std::vector<std::vector<short>> _buffers[2];
 
-    ASIOTimeStamp m_theSystemTime = {0, 0};
-    uint64_t m_samplePosition = 0;
-    std::shared_ptr<RunningState> runningState;
+    ASIOTimeStamp _theSystemTime = {0, 0};
+    uint64_t _samplePosition = 0;
+    std::shared_ptr<RunningState> _runningState;
 
 };
 

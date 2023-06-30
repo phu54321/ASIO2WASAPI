@@ -49,11 +49,11 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef) {
 
     CoInitialize(nullptr);
 
-    auto pDevice = getDeviceFromId(m_settings.deviceId);
+    auto pDevice = getDeviceFromId(_settings.deviceId);
     if (!pDevice) { // id not found
         throw AppException("Target device not found");
     }
-    m_pDevice = pDevice;
+    _pDevice = pDevice;
 }
 
 ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
@@ -71,7 +71,7 @@ ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputC
     LOGGER_TRACE_FUNC;
 
     if (numInputChannels) *numInputChannels = 0;
-    if (numOutputChannels) *numOutputChannels = m_settings.nChannels;
+    if (numOutputChannels) *numOutputChannels = _settings.nChannels;
     return ASE_OK;
 }
 
@@ -79,7 +79,7 @@ ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
     LOGGER_TRACE_FUNC;
 
     if (!sampleRate) return ASE_InvalidParameter;
-    *sampleRate = m_settings.nSampleRate;
+    *sampleRate = _settings.nSampleRate;
     return ASE_OK;
 }
 
@@ -87,14 +87,14 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate sampleRate) {
     LOGGER_TRACE_FUNC;
 
     int nSampleRate = static_cast<int>(sampleRate);
-    return FindStreamFormat(m_pDevice, m_settings.nChannels, nSampleRate) ? ASE_OK : ASE_NoClock;
+    return FindStreamFormat(_pDevice, _settings.nChannels, nSampleRate) ? ASE_OK : ASE_NoClock;
 }
 
 ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
     LOGGER_TRACE_FUNC;
 
     Logger::debug(L"setSampleRate: %f", sampleRate);
-    if (sampleRate == m_settings.nSampleRate) return ASE_OK;
+    if (sampleRate == _settings.nSampleRate) return ASE_OK;
 
     auto err = canSampleRate(sampleRate);
     if (err != ASE_OK) {
@@ -102,12 +102,12 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
         return err;
     }
 
-    int nPrevSampleRate = m_settings.nSampleRate;
-    m_settings.nSampleRate = (int) sampleRate;
+    int nPrevSampleRate = _settings.nSampleRate;
+    _settings.nSampleRate = (int) sampleRate;
     settingsWriteToRegistry();  // new nSampleRate used here
 
     if (_preparedState) {
-        m_settings.nSampleRate = nPrevSampleRate;
+        _settings.nSampleRate = nPrevSampleRate;
         _preparedState->requestReset();
     }
 
@@ -137,7 +137,7 @@ ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
     LOGGER_TRACE_FUNC;
 
     if (info->isInput) return ASE_InvalidParameter;
-    if (info->channel < 0 || info->channel >= m_settings.nChannels) return ASE_InvalidParameter;
+    if (info->channel < 0 || info->channel >= _settings.nChannels) return ASE_InvalidParameter;
 
     info->type = sampleType;
     info->channelGroup = 0;
@@ -161,10 +161,10 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 
     // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
-    if (numChannels < 0 || numChannels > m_settings.nChannels) return ASE_InvalidParameter;
+    if (numChannels < 0 || numChannels > _settings.nChannels) return ASE_InvalidParameter;
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
-        if (info.isInput || info.channelNum < 0 || info.channelNum >= m_settings.nChannels)
+        if (info.isInput || info.channelNum < 0 || info.channelNum >= _settings.nChannels)
             return ASE_InvalidMode;
     }
 
@@ -172,8 +172,8 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
     disposeBuffers();
 
     // Allocate!
-    m_settings.bufferSize = bufferSize;
-    _preparedState = std::make_shared<PreparedState>(m_pDevice, m_settings, callbacks);
+    _settings.bufferSize = bufferSize;
+    _preparedState = std::make_shared<PreparedState>(_pDevice, _settings, callbacks);
     _preparedState->InitASIOBufferInfo(bufferInfos, numChannels);
 
     return ASE_OK;
@@ -233,8 +233,8 @@ ASIOError ASIO2WASAPI2Impl::getLatencies(long *_inputLatency, long *_outputLaten
     if (!_preparedState)
         return ASE_NotPresent;
     if (_inputLatency)
-        *_inputLatency = m_settings.bufferSize;
+        *_inputLatency = _settings.bufferSize;
     if (_outputLatency)
-        *_outputLatency = 2 * m_settings.bufferSize;
+        *_outputLatency = 2 * _settings.bufferSize;
     return ASE_OK;
 }

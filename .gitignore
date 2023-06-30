@@ -142,7 +142,7 @@ _TeamCity*
 
 # AxoCover is a Code Coverage Tool
 .axoCover/*
-!.axoCover/settings.json
+!.axoCover/_settings.json
 
 # Coverlet is a free, cross platform Code Coverage Tool
 coverage*.json
@@ -184,13 +184,13 @@ publish/
 # Publish Web Output
 *.[Pp]ublish.xml
 *.azurePubxml
-# Note: Comment the next line if you want to checkin your web deploy settings,
+# Note: Comment the next line if you want to checkin your web deploy _settings,
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
 *.publishproj
 
-# Microsoft Azure Web App publish settings. Comment the next line if you want to
-# checkin your Azure Web App publish settings, but sensitive information contained
+# Microsoft Azure Web App publish _settings. Comment the next line if you want to
+# checkin your Azure Web App publish _settings, but sensitive information contained
 # in these scripts will be unencrypted
 PublishScripts/
 
@@ -271,7 +271,7 @@ ServiceFabricBackup/
 # Business Intelligence projects
 *.rdl.data
 *.bim.layout
-*.bim_*.settings
+*.bim_*._settings
 *.rptproj.rsuser
 *- [Bb]ackup.rdl
 *- [Bb]ackup ([0-9]).rdl
@@ -322,7 +322,7 @@ paket-files/
 # FAKE - F# Make
 .fake/
 
-# CodeRush personal settings
+# CodeRush personal _settings
 .cr/personal
 
 # Python Tools for Visual Studio (PTVS)
@@ -380,7 +380,7 @@ FodyWeavers.xsd
 
 # VS Code files for those working on multiple tools
 .vscode/*
-!.vscode/settings.json
+!.vscode/_settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
@@ -685,11 +685,11 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
+# Spyder project _settings
 .spyderproject
 .spyproject
 
-# Rope project settings
+# Rope project _settings
 .ropeproject
 
 # mkdocs documentation

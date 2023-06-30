@@ -29,12 +29,12 @@ void ASIO2WASAPI2Impl::settingsReadFromRegistry() {
                 int nChannels = j["nChannels"];
                 std::wstring deviceId = utf8_to_wstring(j["deviceId"]);
 
-                m_settings.nSampleRate = nSampleRate;
-                m_settings.nChannels = nChannels;
-                m_settings.deviceId = deviceId;
-                Logger::debug(L" - nChannels: %d", m_settings.nChannels);
-                Logger::debug(L" - nSampleRate: %d", m_settings.nSampleRate);
-                Logger::debug(L" - deviceId: %ws", m_settings.deviceId.c_str());
+                _settings.nSampleRate = nSampleRate;
+                _settings.nChannels = nChannels;
+                _settings.deviceId = deviceId;
+                Logger::debug(L" - nChannels: %d", _settings.nChannels);
+                Logger::debug(L" - nSampleRate: %d", _settings.nSampleRate);
+                Logger::debug(L" - deviceId: %ws", _settings.deviceId.c_str());
             }
             catch (json::exception &e) {
                 Logger::error(L"JSON error: %s", e.what());
@@ -50,15 +50,15 @@ void ASIO2WASAPI2Impl::settingsWriteToRegistry() {
     LONG lResult = RegCreateKeyEx(HKEY_CURRENT_USER, szPrefsRegKey, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
     if (ERROR_SUCCESS == lResult) {
         json j = {
-                {"nChannels",   m_settings.nChannels},
-                {"nSampleRate", m_settings.nSampleRate},
-                {"deviceId",    wstring_to_utf8(m_settings.deviceId)}};
+                {"nChannels",   _settings.nChannels},
+                {"nSampleRate", _settings.nSampleRate},
+                {"deviceId",    wstring_to_utf8(_settings.deviceId)}};
         auto jsonString = j.dump();
         RegSetValueEx(key, szJsonRegValName, NULL, REG_SZ, (const BYTE *) jsonString.data(), (DWORD) jsonString.size());
         RegCloseKey(key);
-        Logger::debug(L" - nChannels: %d", m_settings.nChannels);
-        Logger::debug(L" - nSampleRate: %d", m_settings.nSampleRate);
-        Logger::debug(L" - deviceId: %ws", &m_settings.deviceId[0]);
+        Logger::debug(L" - nChannels: %d", _settings.nChannels);
+        Logger::debug(L" - nSampleRate: %d", _settings.nSampleRate);
+        Logger::debug(L" - deviceId: %ws", &_settings.deviceId[0]);
     }
 }
 

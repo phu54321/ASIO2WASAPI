@@ -66,11 +66,9 @@ private:
 
     void settingsWriteToRegistry();
 
-    DriverSettings m_settings{};
-    std::shared_ptr<IMMDevice> m_pDevice;
+    DriverSettings _settings{};
+    std::shared_ptr<IMMDevice> _pDevice;
     std::shared_ptr<PreparedState> _preparedState;
-
-    static void pollThread(PreparedState *state);
 };
 
 #endif //ASIO2WASAPI2_ASIO2WASAPI2IMPL_H

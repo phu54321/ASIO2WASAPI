@@ -24398,7 +24398,7 @@ inline void swap(nlohmann::NLOHMANN_BASIC_JSON_TPL& j1, nlohmann::NLOHMANN_BASIC
 
 
 
-// restore clang diagnostic settings
+// restore clang diagnostic _settings
 #if defined(__clang__)
     #pragma clang diagnostic pop
 #endif

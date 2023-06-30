@@ -846,7 +846,7 @@ ASIOError ASIOCreateBuffers(ASIOBufferInfo *bufferInfos, long numChannels,
 	  If not enough memory is available ASE_NoMemory will be returned.
 	  If no input/output is present ASE_NotPresent will be returned.
 	  If bufferSize is not supported, or one or more of the bufferInfos elements
-	  contain invalid settings, ASE_InvalidMode will be returned.
+	  contain invalid _settings, ASE_InvalidMode will be returned.
 	Notes:
 	  If individual channel selection is not possible but requested,
 	  the driver has to handle this. namely, bufferSwitch() will only
@@ -872,7 +872,7 @@ ASIOError ASIOControlPanel(void);
 
 /* Purpose:
 	  request the driver to start a control panel component
-	  for _pDevice specific user settings. This will not be
+	  for _pDevice specific user _settings. This will not be
 	  accessed on some platforms (where the component is accessed
 	  instead).
 	Parameter:
@@ -881,7 +881,7 @@ ASIOError ASIOControlPanel(void);
 	  If no panel is available ASE_NotPresent will be returned.
 	  Actually, the return code is ignored.
 	Notes:
-	  if the user applied settings which require a re-configuration
+	  if the user applied _settings which require a re-configuration
 	  of parts or all of the enigine and/or driver (such as a change of
 	  the block size), the asioMessage callback can be used (see
 	  ASIO_Callbacks).
