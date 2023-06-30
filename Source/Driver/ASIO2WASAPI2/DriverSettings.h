@@ -12,7 +12,7 @@ struct DriverSettings {
     int nChannels = 2;
     int nSampleRate = 48000;
     int bufferSize = 1024;
-    std::wstring deviceId;
+    std::vector<std::wstring> deviceIdList;
 };
 
 DriverSettings loadDriverSettings();

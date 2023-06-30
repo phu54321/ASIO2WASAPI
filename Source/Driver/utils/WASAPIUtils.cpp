@@ -12,12 +12,11 @@
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
-bool iterateAudioEndPoints(std::function<bool(std::shared_ptr<IMMDevice> pMMDevice)> cb) {
-    IMMDeviceEnumerator *pEnumerator_ = NULL;
-    DWORD flags = 0;
 
+bool iterateAudioEndPoints(std::function<bool(IMMDevicePtr pMMDevice)> cb) {
+    IMMDeviceEnumerator *pEnumerator_ = nullptr;
     HRESULT hr = CoCreateInstance(
-            CLSID_MMDeviceEnumerator, NULL,
+            CLSID_MMDeviceEnumerator, nullptr,
             CLSCTX_ALL, IID_IMMDeviceEnumerator,
             (void **) &pEnumerator_);
     if (FAILED(hr))
@@ -25,7 +24,7 @@ bool iterateAudioEndPoints(std::function<bool(std::shared_ptr<IMMDevice> pMMDevi
 
     auto pEnumerator = make_autorelease(pEnumerator_);
 
-    IMMDeviceCollection *pMMDeviceCollection_ = NULL;
+    IMMDeviceCollection *pMMDeviceCollection_ = nullptr;
     hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pMMDeviceCollection_);
     if (FAILED(hr))
         return false;
@@ -37,7 +36,7 @@ bool iterateAudioEndPoints(std::function<bool(std::shared_ptr<IMMDevice> pMMDevi
         return false;
 
     for (UINT i = 0; i < nDevices; i++) {
-        IMMDevice *pMMDevice_ = NULL;
+        IMMDevice *pMMDevice_ = nullptr;
         hr = pMMDeviceCollection->Item(i, &pMMDevice_);
         if (FAILED(hr))
             return false;
@@ -49,10 +48,38 @@ bool iterateAudioEndPoints(std::function<bool(std::shared_ptr<IMMDevice> pMMDevi
     return true;
 }
 
+
+IMMDevicePtr getDefaultOutputDevice() {
+    IMMDeviceEnumerator *pEnumerator_ = nullptr;
+    DWORD flags = 0;
+
+    HRESULT hr = CoCreateInstance(
+            CLSID_MMDeviceEnumerator, nullptr,
+            CLSCTX_ALL, IID_IMMDeviceEnumerator,
+            (void **) &pEnumerator_);
+    if (FAILED(hr)) return nullptr;
+
+
+    auto pEnumerator = make_autorelease(pEnumerator_);
+    IMMDevice *device;
+    hr = pEnumerator_->GetDefaultAudioEndpoint(EDataFlow::eRender, ERole::eConsole, &device);
+    if (FAILED(hr)) return nullptr;
+
+    return make_autorelease(device);
+}
+
 ////
 
+std::vector<IMMDevicePtr> getIMMDeviceList() {
+    std::vector<IMMDevicePtr> v;
+    iterateAudioEndPoints([&](auto p) {
+        v.push_back(p);
+        return true;
+    });
+    return v;
+}
 
-std::wstring getDeviceId(const std::shared_ptr<IMMDevice> &pDevice) {
+std::wstring getDeviceId(const IMMDevicePtr &pDevice) {
     std::wstring id;
     LPWSTR pDeviceId = nullptr;
     HRESULT hr = pDevice->GetId(&pDeviceId);
@@ -64,7 +91,7 @@ std::wstring getDeviceId(const std::shared_ptr<IMMDevice> &pDevice) {
     return id;
 }
 
-std::wstring getDeviceFriendlyName(const std::shared_ptr<IMMDevice> &pDevice) {
+std::wstring getDeviceFriendlyName(const IMMDevicePtr &pDevice) {
     IPropertyStore *pPropertyStore_;
     HRESULT hr = pDevice->OpenPropertyStore(STGM_READ, &pPropertyStore_);
     if (FAILED(hr)) return L"";
@@ -80,24 +107,4 @@ std::wstring getDeviceFriendlyName(const std::shared_ptr<IMMDevice> &pDevice) {
     std::wstring ret = var.pwszVal;
     PropVariantClear(&var);
     return ret;
-}
-
-std::shared_ptr<IMMDevice> getDeviceFromId(const std::wstring &deviceId) {
-    std::shared_ptr<IMMDevice> output = nullptr;
-    int deviceIndex = 0;
-
-    Logger::debug(L"Listing devices... (searching %ws)", deviceId.c_str());
-    iterateAudioEndPoints([&](auto p) {
-        auto thisDeviceId = getDeviceId(p);
-        auto friendlyName = getDeviceFriendlyName(p);
-        Logger::debug(L" - Device #%d: %ws (%ws)", deviceIndex++, friendlyName.c_str(), deviceId.c_str());
-        if (thisDeviceId == deviceId) {
-            Logger::info(L"Found the device");
-            output = p;
-            return false;
-        }
-        return true;
-    });
-
-    return output;
 }

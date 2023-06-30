@@ -48,11 +48,43 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
 
     CoInitialize(nullptr);
 
-    auto pDevice = getDeviceFromId(_settings.deviceId);
-    if (!pDevice) { // id not found
-        throw AppException("Target device not found");
+    auto &targetDeviceIdList = _settings.deviceIdList;
+
+    auto defaultDeviceId = getDeviceId(getDefaultOutputDevice());
+    auto devices = getIMMDeviceList();
+
+    std::vector<std::wstring> deviceIdList;
+    std::transform(devices.begin(), devices.end(), std::back_inserter(deviceIdList), getDeviceId);
+    std::vector<std::wstring> friendlyNameList;
+    std::transform(devices.begin(), devices.end(), std::back_inserter(friendlyNameList), getDeviceFriendlyName);
+
+
+    Logger::info("Will find these %d devices", targetDeviceIdList.size());
+    for (int i = 0; i < targetDeviceIdList.size(); i++) {
+        if (targetDeviceIdList[i].empty() || targetDeviceIdList[i] == L"(default)") {
+            targetDeviceIdList[i] = defaultDeviceId;
+            Logger::info(L" - Target #%02d: default output device %s", i, defaultDeviceId.c_str());
+        } else {
+            Logger::info(L" - Target #%02d: %ws", i, targetDeviceIdList[i].c_str());
+        }
     }
-    _pDevice = pDevice;
+
+    Logger::info("Enumerating devices - Total %d device found", devices.size());
+    for (int i = 0; i < devices.size(); i++) {
+        Logger::info(L" - Device #%02d: %ws %ws", i, friendlyNameList[i].c_str(), deviceIdList[i].c_str());
+        for (const auto &id: _settings.deviceIdList) {
+            auto &device = devices[i];
+            if (id == deviceIdList[i] || id == friendlyNameList[i]) {
+                Logger::info("   : Matched");
+                _pDeviceList.push_back(device);
+                break;
+            }
+        }
+    }
+
+    if (_pDeviceList.empty()) {
+        throw AppException("No target device(s) found...");
+    }
 }
 
 ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
@@ -86,7 +118,10 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate sampleRate) {
     LOGGER_TRACE_FUNC;
 
     int nSampleRate = static_cast<int>(sampleRate);
-    return FindStreamFormat(_pDevice, _settings.nChannels, nSampleRate) ? ASE_OK : ASE_NoClock;
+    for (auto &device: _pDeviceList) {
+        if (!FindStreamFormat(device, _settings.nChannels, nSampleRate)) return ASE_NoClock;
+    }
+    return ASE_OK;
 }
 
 ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
@@ -169,7 +204,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 
     // Allocate!
     _settings.bufferSize = bufferSize;
-    _preparedState = std::make_shared<PreparedState>(_pDevice, _settings, callbacks);
+    _preparedState = std::make_shared<PreparedState>(_pDeviceList, _settings, callbacks);
     _preparedState->InitASIOBufferInfo(bufferInfos, numChannels);
 
     return ASE_OK;

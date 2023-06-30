@@ -16,13 +16,25 @@ DriverSettings loadDriverSettings() {
         throw AppException("Cannot open ASIO2WASAPI2.json");
     }
 
-    auto j = json::parse(fp);
+    try {
+        auto j = json::parse(fp);
 
-    DriverSettings ret;
-    ret.nChannels = j.value("channelCount", 2);
-    ret.nSampleRate = j.value("sampleRate", 48000);
-    ret.bufferSize = j.value("bufferSize", 1024);
-    ret.deviceId = utf8_to_wstring(j.value("deviceId", ""));
-    return ret;
+        DriverSettings ret;
+        ret.nChannels = j.value("channelCount", 2);
+        ret.nSampleRate = j.value("sampleRate", 48000);
+        ret.bufferSize = j.value("bufferSize", 1024);
+
+        if (j["deviceId"].is_string()) {
+            Logger::info("s");
+            ret.deviceIdList.push_back(utf8_to_wstring(j.value("deviceId", "")));
+        } else if (j["deviceId"].is_array()) {
+            for (const auto &item: j["deviceId"]) {
+                ret.deviceIdList.push_back(utf8_to_wstring(item));
+            }
+        }
+        return ret;
+    } catch (json::exception &e) {
+        Logger::error("JSON parse failed: %s", e.what());
+        throw AppException("JSON parse failed");
+    }
 }
-

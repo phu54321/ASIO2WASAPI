@@ -35,5 +35,6 @@ private:
     std::unique_ptr<WASAPIOutputImpl> _pImpl;
 };
 
+using WASAPIOutputPtr = std::shared_ptr<WASAPIOutput>;
 
 #endif //ASIO2WASAPI2_WASAPIOUTPUT_H

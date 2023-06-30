@@ -16,12 +16,12 @@
 
 #include "asiosys.h"
 #include "asio.h"
+#include "../utils/WASAPIUtils.h"
 
 
 struct PreparedState;
 
 class RunningState;
-
 
 class ASIO2WASAPI2Impl {
 public:
@@ -56,7 +56,7 @@ public:
 
 private:
     DriverSettings _settings{};
-    std::shared_ptr<IMMDevice> _pDevice;
+    std::vector<IMMDevicePtr> _pDeviceList;
     std::shared_ptr<PreparedState> _preparedState;
 };
 

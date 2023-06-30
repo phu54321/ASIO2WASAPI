@@ -10,12 +10,15 @@
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
     LOGGER_TRACE_FUNC;
-    _output = std::make_unique<WASAPIOutput>(
-            p->_pDevice,
-            p->_settings.nChannels,
-            p->_settings.nSampleRate,
-            p->_bufferSize);
-    _output->registerCallback([this]() {
+
+    for (auto &device: p->_pDeviceList) {
+        _outputList.push_back(std::make_unique<WASAPIOutput>(
+                device,
+                p->_settings.nChannels,
+                p->_settings.nSampleRate,
+                p->_bufferSize));
+    }
+    _outputList[0]->registerCallback([this]() {
         signalPoll();
     });
 
@@ -81,7 +84,9 @@ void RunningState::threadProc(RunningState *state) {
             int currentBufferIndex = _preparedState->_bufferIndex;
             const auto &currentBuffer = _preparedState->_buffers[currentBufferIndex];
             Logger::debug("Writing %d samples from buffer %d", bufferSize, currentBufferIndex);
-            state->_output->pushSamples(currentBuffer);
+            for (auto &output: state->_outputList) {
+                output->pushSamples(currentBuffer);
+            }
 
             Logger::debug("Switching to buffer %d", 1 - currentBufferIndex);
             _preparedState->_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);

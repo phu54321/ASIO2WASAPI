@@ -18,7 +18,7 @@ class PreparedState {
     friend class RunningState;
 
 public:
-    PreparedState(const std::shared_ptr<IMMDevice> &pDevice, DriverSettings settings, ASIOCallbacks *callbacks);
+    PreparedState(const std::vector<IMMDevicePtr> &pDeviceList, DriverSettings settings, ASIOCallbacks *callbacks);
 
     ~PreparedState();
 
@@ -41,7 +41,7 @@ private:
 
     DriverSettings _settings;
     ASIOCallbacks *_callbacks;
-    std::shared_ptr<IMMDevice> _pDevice;
+    std::vector<IMMDevicePtr> _pDeviceList;
 
     int _bufferSize = 0; // in audio frames
     int _bufferIndex = 0;

@@ -34,7 +34,7 @@ private:
     std::condition_variable _notifier;
     std::thread _pollThread;
 
-    std::unique_ptr<WASAPIOutput> _output;
+    std::vector<WASAPIOutputPtr> _outputList;
 
     static void threadProc(RunningState *state);
 };
