@@ -57,6 +57,8 @@ void RunningState::signalPoll() {
 
 void RunningState::threadProc(RunningState *state) {
     auto &_preparedState = state->_preparedState;
+    auto bufferSize = state->_preparedState->_settings.bufferSize;
+
     while (true) {
         Logger::trace("Locking mutex");
         std::unique_lock<std::mutex> lock(state->_mutex);
@@ -78,7 +80,10 @@ void RunningState::threadProc(RunningState *state) {
             assert(_preparedState);
             int currentBufferIndex = _preparedState->_bufferIndex;
             const auto &currentBuffer = _preparedState->_buffers[currentBufferIndex];
+            Logger::debug("Writing %d samples from buffer %d", bufferSize, currentBufferIndex);
             state->_output->pushSamples(currentBuffer);
+
+            Logger::debug("Switching to buffer %d", 1 - currentBufferIndex);
             _preparedState->_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
             _preparedState->_bufferIndex = 1 - currentBufferIndex;
         } else {
