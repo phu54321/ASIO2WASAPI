@@ -9,20 +9,29 @@
 #include <cassert>
 #include <avrt.h>
 
+#include "../WASAPIOutput/WASAPIOutputEvent.h"
+
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
     SPDLOG_TRACE_FUNC;
 
-    for (auto &device: p->_pDeviceList) {
-        _outputList.push_back(std::make_unique<WASAPIOutput>(
-                device,
-                p->_settings.nChannels,
-                p->_settings.nSampleRate,
-                p->_bufferSize));
+    for (int i = 0; i < p->_pDeviceList.size(); i++) {
+        auto &device = p->_pDeviceList[i];
+        if (i == 0) {
+            auto output = std::make_unique<WASAPIOutputEvent>(
+                    device,
+                    p->_settings.nChannels,
+                    p->_settings.nSampleRate,
+                    p->_bufferSize,
+                    [this]() {
+                        signalPoll();
+                    });
+            _outputList.push_back(std::move(output));
+        } else {
+            // TODO: add WASAPIOutputPull
+            break;
+        }
     }
-    _outputList[0]->registerCallback([this]() {
-        signalPoll();
-    });
 
     _pollThread = std::thread(RunningState::threadProc, this);
 }
@@ -100,7 +109,7 @@ void RunningState::threadProc(RunningState *state) {
             int currentBufferIndex = _preparedState->_bufferIndex;
             const auto &currentBuffer = _preparedState->_buffers[currentBufferIndex];
             mainlog->debug("[RunningState::threadProc] Writing {} samples from buffer {}", bufferSize,
-                          currentBufferIndex);
+                           currentBufferIndex);
             for (auto &output: state->_outputList) {
                 output->pushSamples(currentBuffer);
             }

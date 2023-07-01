@@ -40,13 +40,14 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2Impl.cpp
         Source/Driver/ASIO2WASAPI2/PreparedState.cpp
         Source/Driver/ASIO2WASAPI2/RunningState.cpp
+        Source/Driver/WASAPIOutput/WASAPIOutputEvent.cpp
 
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.rc
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.def
-        Source/Driver/WASAPIOutput/WASAPIOutput.cpp
         Source/Driver/WASAPIOutput/createIAudioClient.cpp
         Source/Driver/ASIO2WASAPI2/CUnknownImpl.cpp
-        Source/Driver/utils/homeDirFilePath.cpp)
+        Source/Driver/utils/homeDirFilePath.cpp
+        )
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)

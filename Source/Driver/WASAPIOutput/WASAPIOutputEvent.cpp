@@ -12,11 +12,13 @@
 #include <cstdlib>
 
 #include "WASAPIOutput.h"
+#include "WASAPIOutputEvent.h"
 #include "createIAudioClient.h"
 #include <spdlog/spdlog.h>
 #include "../utils/WASAPIUtils.h"
 #include "../utils/raiiUtils.h"
 #include "../utils/logger.h"
+#include "../utils/AppException.h"
 
 const double m_pi = 3.14159265358979;
 
@@ -24,76 +26,14 @@ const int inBufferSizeMultiplier = 8;
 
 const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
 
-class WASAPIOutputImpl {
-public:
-    WASAPIOutputImpl(const std::shared_ptr<IMMDevice> &pDevice, int channelNum, int sampleRate, int bufferSizeRequest);
 
-    ~WASAPIOutputImpl();
-
-    /**
-     * Push samples to ring central queue. This will be printed to asio.
-     * @param buffer `sample = buffer[channel][sampleIndex]`
-     */
-    void pushSamples(const std::vector<std::vector<short>> &buffer);
-
-    void registerCallback(std::function<void()> pullCallback) {
-        _pullCallback = pullCallback;
-    }
-
-private:
-    void start();
-
-    void stop();
-
-    static DWORD WINAPI playThread(LPVOID pThis);
-
-private:
-    HRESULT LoadData(const std::shared_ptr<IAudioRenderClient> &pRenderClient);
-
-private:
-    int _channelNum;
-    int _sampleRate;
-    size_t _outBufferSize;
-
-    std::vector<std::vector<short>> _ringBuffer;
-    std::mutex _ringBufferMutex;
-    size_t _ringBufferSize;
-    size_t _ringBufferReadPos = 0;
-    size_t _ringBufferWritePos = 0;
-
-    std::shared_ptr<IMMDevice> _pDevice;
-    std::shared_ptr<IAudioClient> _pAudioClient;
-    std::wstring _pDeviceId;
-    WAVEFORMATEXTENSIBLE _waveFormat{};
-
-    HANDLE _stopEvent = nullptr;
-    HANDLE _runningEvent = nullptr;
-
-    std::function<void()> _pullCallback;
-};
-
-WASAPIOutput::WASAPIOutput(const std::shared_ptr<IMMDevice> &pDevice, int channelNum, int sampleRate,
-                           int bufferSizeRequest)
-        : _pImpl(std::make_unique<WASAPIOutputImpl>(pDevice, channelNum, sampleRate, bufferSizeRequest)) {}
-
-WASAPIOutput::~WASAPIOutput() = default;
-
-void WASAPIOutput::pushSamples(const std::vector<std::vector<short>> &buffer) {
-    _pImpl->pushSamples(buffer);
-}
-
-void WASAPIOutput::registerCallback(std::function<void()> pullCallback) {
-    _pImpl->registerCallback(pullCallback);
-}
-
-////////////
-
-WASAPIOutputImpl::WASAPIOutputImpl(
+WASAPIOutputEvent::WASAPIOutputEvent(
         const std::shared_ptr<IMMDevice> &pDevice,
         int channelNum,
         int sampleRate,
-        int bufferSizeRequest)
-        : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate) {
+        int bufferSizeRequest,
+        std::function<void()> eventCallback)
+        : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate), _eventCallback(eventCallback) {
 
     SPDLOG_TRACE_FUNC;
 
@@ -110,7 +50,7 @@ WASAPIOutputImpl::WASAPIOutputImpl(
         throw AppException("GetBufferSize failed");
     }
 
-    mainlog->info(L"WASAPIOutputImpl: {} - Buffer size {}", _pDeviceId, bufferSize);
+    mainlog->info(L"WASAPIOutputEvent: {} - Buffer size {}", _pDeviceId, bufferSize);
     _outBufferSize = bufferSize;
 
     _ringBufferSize = _outBufferSize * inBufferSizeMultiplier;
@@ -124,14 +64,14 @@ WASAPIOutputImpl::WASAPIOutputImpl(
     start();
 }
 
-WASAPIOutputImpl::~WASAPIOutputImpl() {
+WASAPIOutputEvent::~WASAPIOutputEvent() {
     SPDLOG_TRACE_FUNC;
 
     stop();
     WaitForSingleObject(_runningEvent, INFINITE);
 }
 
-void WASAPIOutputImpl::start() {
+void WASAPIOutputEvent::start() {
     SPDLOG_TRACE_FUNC;
 
     // Wait for previous wasapi thread to close
@@ -142,7 +82,7 @@ void WASAPIOutputImpl::start() {
     }
 }
 
-void WASAPIOutputImpl::stop() {
+void WASAPIOutputEvent::stop() {
     SPDLOG_TRACE_FUNC;
 
     if (_stopEvent) {
@@ -153,10 +93,11 @@ void WASAPIOutputImpl::stop() {
 }
 
 
-void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer) {
+void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<short>> &buffer) {
     assert (buffer.size() == _channelNum);
 
-    mainlog->trace(L"{} pushSamples, rp {} wp {} bufferSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos, buffer[0].size());
+    mainlog->trace(L"{} pushSamples, rp {} wp {} bufferSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
+                   buffer[0].size());
 
     if (buffer.size() != _channelNum) {
         mainlog->error(L"{} Invalid channel count: expected {}, got {}", _pDeviceId, _channelNum, buffer.size());
@@ -176,7 +117,7 @@ void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer
             return;
         }
 
-        size_t &wp = _ringBufferWritePos;
+        size_t & wp = _ringBufferWritePos;
         for (int ch = 0; ch < _channelNum; ch++) {
             memcpy(
                     &_ringBuffer[ch][wp],
@@ -189,16 +130,16 @@ void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer
 }
 
 
-HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pRenderClient) {
+HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &pRenderClient) {
     if (!pRenderClient) {
         return E_INVALIDARG;
     }
 
     SPDLOG_TRACE_FUNC;
 
-    if (_pullCallback) {
+    if (_eventCallback) {
         mainlog->trace(L"{} Pulling data from ASIO side", _pDeviceId);
-        _pullCallback();
+        _eventCallback();
     }
 
     BYTE *pData;
@@ -207,13 +148,14 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
     UINT32 sampleSize = _waveFormat.Format.wBitsPerSample / 8;
     assert(sampleSize == 2);
 
-    mainlog->trace(L"{} LoadData, rp {} wp {} ringSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos, _ringBufferSize);
+    mainlog->trace(L"{} LoadData, rp {} wp {} ringSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
+                   _ringBufferSize);
 
     assert(_ringBufferSize % _outBufferSize == 0);
     bool skipped = false;
     {
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
-        size_t &rp = _ringBufferReadPos;
+        size_t & rp = _ringBufferReadPos;
         auto out = reinterpret_cast<short *>(pData);
 
         assert(rp % _outBufferSize == 0);
@@ -242,10 +184,10 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
 
 /////
 
-DWORD WINAPI WASAPIOutputImpl::playThread(LPVOID pThis) {
+DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
     HRESULT hr;
 
-    auto *pDriver = static_cast<WASAPIOutputImpl *>(pThis);
+    auto *pDriver = static_cast<WASAPIOutputEvent *>(pThis);
     pDriver->_runningEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     CExitEventSetter setter(pDriver->_runningEvent);
 
@@ -301,3 +243,6 @@ DWORD WINAPI WASAPIOutputImpl::playThread(LPVOID pThis) {
 
     return 0;
 }
+//
+// Created by whyask37 on 2023-07-01.
+//
