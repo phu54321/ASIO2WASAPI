@@ -194,6 +194,8 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
         return E_INVALIDARG;
     }
 
+    SPDLOG_TRACE_FUNC;
+
     if (_pullCallback) {
         mainlog->trace(L"{} Pulling data from ASIO side", _pDeviceId);
         _pullCallback();
@@ -214,10 +216,8 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
         size_t &rp = _ringBufferReadPos;
         auto out = reinterpret_cast<short *>(pData);
 
-
         assert(rp % _outBufferSize == 0);
-        if (_ringBufferReadPos != _ringBufferWritePos) {
-            auto rpAfterLoad = rp + _outBufferSize;
+        if (rp != _ringBufferWritePos) {
             for (int i = 0; i < _outBufferSize; i++) {
                 for (unsigned channel = 0; channel < _channelNum; channel++) {
                     *(out++) = _ringBuffer[channel][i + rp];
@@ -227,13 +227,11 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
             if (rp == _ringBufferSize) rp = 0;
         } else {  // Skip this segment.
             skipped = true;  // Don't log here: we're within mutex
-            for (int i = 0; i < _outBufferSize; i++) {
-                for (unsigned channel = 0; channel < _channelNum; channel++) {
-                    *(out++) = 0;
-                }
-            }
+            memset(out, 0, sizeof(short) * _channelNum * _outBufferSize);
         }
     }
+
+    // mainlog->warn may take long, so this logging should be done outside _ringBufferMutex lock.
     if (skipped) {
         mainlog->warn(L"{} [----------] Skipped pushing to wasapi", _pDeviceId);
     }
