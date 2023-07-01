@@ -63,11 +63,11 @@ void RunningState::threadProc(RunningState *state) {
     auto bufferSize = state->_preparedState->_settings.bufferSize;
 
     while (true) {
-        Logger::trace("Locking mutex");
+        Logger::trace("[RunningState] Locking mutex");
         std::unique_lock<std::mutex> lock(state->_mutex);
         if (state->_pollStop) break;
         else if (state->_shouldPoll) {
-            Logger::trace("Unlock d/t outputReady");
+            Logger::trace("[RunningState] Unlock d/t outputReady");
 
             // Wait for output
             if (!state->_isOutputReady) {
@@ -83,16 +83,16 @@ void RunningState::threadProc(RunningState *state) {
             assert(_preparedState);
             int currentBufferIndex = _preparedState->_bufferIndex;
             const auto &currentBuffer = _preparedState->_buffers[currentBufferIndex];
-            Logger::debug("Writing %d samples from buffer %d", bufferSize, currentBufferIndex);
+            Logger::debug("[RunningState] Writing %d samples from buffer %d", bufferSize, currentBufferIndex);
             for (auto &output: state->_outputList) {
                 output->pushSamples(currentBuffer);
             }
 
-            Logger::debug("Switching to buffer %d", 1 - currentBufferIndex);
+            Logger::debug("[RunningState] Switching to buffer %d", 1 - currentBufferIndex);
             _preparedState->_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
             _preparedState->_bufferIndex = 1 - currentBufferIndex;
         } else {
-            Logger::trace("Unlock & waiting");
+            Logger::trace("[RunningState] Unlock & waiting");
             state->_notifier.wait(lock, [state]() {
                 return state->_pollStop || state->_shouldPoll;
             });

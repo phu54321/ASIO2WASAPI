@@ -5,6 +5,7 @@
 #include "createIAudioClient.h"
 #include "../utils/logger.h"
 #include "../utils/raiiUtils.h"
+#include "../utils/WASAPIUtils.h"
 
 #include <mmsystem.h>
 #include <mmdeviceapi.h>
@@ -21,6 +22,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
 
     HRESULT hr;
+    auto deviceId = getDeviceId(pDevice);
 
     IAudioClient *pAudioClient_ = nullptr;
     hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void **) &pAudioClient_);
@@ -44,7 +46,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
 
 
-    Logger::trace(L"pAudioClient->Initialize: bufferSizeRequest %d, bufferDuration %lld", bufferSizeRequest,
+    Logger::trace(L"pAudioClient->Initialize: device %ws, bufferSizeRequest %d, bufferDuration %lld", deviceId.c_str(), bufferSizeRequest,
                   bufferDuration);
     hr = pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_EXCLUSIVE,
@@ -55,7 +57,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
             nullptr);
 
     if (FAILED(hr)) {
-        Logger::trace(L" - failed (%d)", hr);
+        Logger::trace(L" - pAudioClient->Initialize failed (%d)", hr);
         return nullptr;
     }
     return pAudioClient;
