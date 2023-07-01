@@ -33,10 +33,14 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     if (FAILED(hr)) return nullptr;
 
 
-    REFERENCE_TIME bufferDuration;
+    REFERENCE_TIME defaultBufferDuration, minBufferDuration, bufferDuration;
+    hr = pAudioClient->GetDevicePeriod(&defaultBufferDuration, &minBufferDuration);
+    if (FAILED(hr)) return nullptr;
+    Logger::info(L"%ws - minimum duration %d, default duration %d", deviceId.c_str(), minBufferDuration,
+                 defaultBufferDuration);
+
     if (bufferSizeRequest == BUFFER_SIZE_REQUEST_USEDEFAULT) {
-        hr = pAudioClient->GetDevicePeriod(&bufferDuration, nullptr);
-        if (FAILED(hr)) return nullptr;
+        bufferDuration = defaultBufferDuration;
     } else {
         bufferDuration = (REFERENCE_TIME) lround(10000.0 *                         // (REFERENCE_TIME / ms) *
                                                  1000 *                            // (ms / s) *
@@ -46,7 +50,8 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
 
 
-    Logger::trace(L"pAudioClient->Initialize: device %ws, bufferSizeRequest %d, bufferDuration %lld", deviceId.c_str(), bufferSizeRequest,
+    Logger::trace(L"pAudioClient->Initialize: device %ws, bufferSizeRequest %d, bufferDuration %lld", deviceId.c_str(),
+                  bufferSizeRequest,
                   bufferDuration);
     hr = pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_EXCLUSIVE,
@@ -57,9 +62,16 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
             nullptr);
 
     if (FAILED(hr)) {
-        Logger::trace(L" - pAudioClient->Initialize failed (%d)", hr);
+        Logger::trace(L" - pAudioClient->Initialize failed (0x%08X)", hr);
+        Logger::trace("    : pWaveFormat->wFormatTag: %d", pWaveFormat->wFormatTag);
+        Logger::trace("    : pWaveFormat->nChannels: %d", pWaveFormat->nChannels);
+        Logger::trace("    : pWaveFormat->nSamplesPerSec: %d", pWaveFormat->nSamplesPerSec);
+        Logger::trace("    : pWaveFormat->nAvgBytesPerSec: %d", pWaveFormat->nAvgBytesPerSec);
+        Logger::trace("    : pWaveFormat->nBlockAlign: %d", pWaveFormat->nBlockAlign);
+        Logger::trace("    : pWaveFormat->cbSize: %d", pWaveFormat->cbSize);
         return nullptr;
     }
+
     return pAudioClient;
 }
 
