@@ -6,6 +6,7 @@
 #include "../utils/logger.h"
 #include <utility>
 #include <cassert>
+#include <avrt.h>
 
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
@@ -61,6 +62,12 @@ void RunningState::signalPoll() {
 void RunningState::threadProc(RunningState *state) {
     auto &_preparedState = state->_preparedState;
     auto bufferSize = state->_preparedState->_settings.bufferSize;
+
+    // Ask MMCSS to temporarily boost the runThread priority
+    // to reduce the possibility of glitches while we play.
+    DWORD taskIndex = 0;
+    AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+
 
     while (true) {
         Logger::trace("[RunningState] Locking mutex");
