@@ -81,14 +81,14 @@ LOGGER_CREATE_LOGLEVEL_IMPL(error)
 
 static void getCurrentTimestamp(char *out) {
     auto currentTime = std::chrono::system_clock::now();
-    auto transformed = currentTime.time_since_epoch().count() / 1000000;
-    auto millis = transformed % 1000;
+    auto transformed = currentTime.time_since_epoch().count();
+    auto micros = transformed % 1000000;
 
     auto tt = std::chrono::system_clock::to_time_t(currentTime);
     auto timeinfo = localtime(&tt);
 
     auto outP = strftime(out, 80, "%F %H:%M:%S", timeinfo);
-    sprintf(out + outP, ":%03d", (int) millis);
+    sprintf(out + outP, ":%06d", (int) micros);
 }
 
 static void putTimestamp(FILE *outputFile) {
