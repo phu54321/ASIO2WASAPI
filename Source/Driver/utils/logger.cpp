@@ -102,29 +102,29 @@ static void putTimestamp(FILE *outputFile) {
 static void putThreadId(FILE *outputFile) {
     // See https://stackoverflow.com/questions/7432100/how-to-get-integer-thread-id-in-c11
     size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
-    fprintf(outputFile, "[Thread %zu] ", threadId);
+    fprintf(outputFile, "[Thread 0x%016zX] ", threadId);
 }
 
 static void putLogLevel(FILE *outputFile, LogLevel level) {
-    const char *levelString = nullptr;
+    const char *levelString;
     switch (level) {
         case LogLevel::trace:
-            levelString = "[TRACE]";
+            levelString = "[trace]";
             break;
         case LogLevel::debug:
-            levelString = "[DEBUG]";
+            levelString = "[debug]";
             break;
         case LogLevel::info:
-            levelString = "[INFO]";
+            levelString = "[info] ";
             break;
         case LogLevel::warn:
-            levelString = "[WARN]";
+            levelString = "[warn] ";
             break;
         case LogLevel::error:
-            levelString = "[ERROR]";
+            levelString = "[error]";
             break;
         default:
-            levelString = "[unk]";
+            levelString = "???????";
     }
     fputs(levelString, outputFile);
     fputc(' ', outputFile);
