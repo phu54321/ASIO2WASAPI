@@ -40,7 +40,7 @@ struct IAudioRenderClient;
 #include "iasiodrv.h"
 
 extern CLSID CLSID_ASIO2WASAPI2_DRIVER;
-const TCHAR *const szDescription = TEXT("ASIO2WASAPI2");
+const char *const szDescription = "ASIO2WASAPI2";
 
 class ASIO2WASAPI2Impl;
 

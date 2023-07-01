@@ -13,9 +13,10 @@
 
 #include "WASAPIOutput.h"
 #include "createIAudioClient.h"
+#include <spdlog/spdlog.h>
 #include "../utils/WASAPIUtils.h"
-#include "../utils/logger.h"
 #include "../utils/raiiUtils.h"
+#include "../utils/logger.h"
 
 const double m_pi = 3.14159265358979;
 
@@ -94,13 +95,12 @@ WASAPIOutputImpl::WASAPIOutputImpl(
         int bufferSizeRequest)
         : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate) {
 
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     _pDeviceId = getDeviceId(pDevice);
 
     if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, &_waveFormat, &_pAudioClient)) {
-        Logger::error(L"Cannot find suitable stream format for output _pDevice (_pDevice ID %s)",
-                      getDeviceId(pDevice).c_str());
+        mainlog->error(L"Cannot find suitable stream format for output _pDevice (_pDevice ID {})", _pDeviceId);
         throw AppException("FindStreamFormat failed");
     }
 
@@ -110,7 +110,7 @@ WASAPIOutputImpl::WASAPIOutputImpl(
         throw AppException("GetBufferSize failed");
     }
 
-    Logger::info(L"WASAPIOutputImpl: %ws - Buffer size %d", _pDeviceId.c_str(), bufferSize);
+    mainlog->info(L"WASAPIOutputImpl: {} - Buffer size {}", _pDeviceId, bufferSize);
     _outBufferSize = bufferSize;
 
     _ringBufferSize = _outBufferSize * inBufferSizeMultiplier;
@@ -125,14 +125,14 @@ WASAPIOutputImpl::WASAPIOutputImpl(
 }
 
 WASAPIOutputImpl::~WASAPIOutputImpl() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     stop();
     WaitForSingleObject(_runningEvent, INFINITE);
 }
 
 void WASAPIOutputImpl::start() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     // Wait for previous wasapi thread to close
     WaitForSingleObject(_runningEvent, INFINITE);
@@ -143,7 +143,7 @@ void WASAPIOutputImpl::start() {
 }
 
 void WASAPIOutputImpl::stop() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (_stopEvent) {
         SetEvent(_stopEvent);
@@ -156,15 +156,15 @@ void WASAPIOutputImpl::stop() {
 void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer) {
     assert (buffer.size() == _channelNum);
 
-    Logger::trace(L"%s pushSamples, rp %d wp %d bufferSize %d", _pDeviceId.c_str(), _ringBufferReadPos, _ringBufferWritePos, buffer[0].size());
+    mainlog->trace(L"{} pushSamples, rp {} wp {} bufferSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos, buffer[0].size());
 
     if (buffer.size() != _channelNum) {
-        Logger::error("%s Invalid channel count: expected %d, got %d", _pDeviceId.c_str(), _channelNum, buffer.size());
+        mainlog->error(L"{} Invalid channel count: expected {}, got {}", _pDeviceId, _channelNum, buffer.size());
         return;
     }
 
     if (buffer[0].size() != _outBufferSize) {
-        Logger::error("%s Invalid chunk length: expected %d, got %d", _pDeviceId.c_str(), _outBufferSize, buffer[0].size());
+        mainlog->error(L"{} Invalid chunk length: expected {}, got {}", _pDeviceId, _outBufferSize, buffer[0].size());
         return;
     }
 
@@ -172,7 +172,7 @@ void WASAPIOutputImpl::pushSamples(const std::vector<std::vector<short>> &buffer
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
 
         if (_ringBufferReadPos == (_ringBufferWritePos + _outBufferSize) % _ringBufferSize) {
-            Logger::warn("%s Write overflow!", _pDeviceId.c_str());
+            mainlog->warn(L"{} Write overflow!", _pDeviceId);
             return;
         }
 
@@ -195,7 +195,7 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
     }
 
     if (_pullCallback) {
-        Logger::trace(L"%s Pulling data from ASIO side", _pDeviceId.c_str());
+        mainlog->trace(L"{} Pulling data from ASIO side", _pDeviceId);
         _pullCallback();
     }
 
@@ -205,7 +205,7 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
     UINT32 sampleSize = _waveFormat.Format.wBitsPerSample / 8;
     assert(sampleSize == 2);
 
-    Logger::trace(L"%s LoadData, rp %d wp %d ringSize %d", _pDeviceId.c_str(), _ringBufferReadPos, _ringBufferWritePos, _ringBufferSize);
+    mainlog->trace(L"{} LoadData, rp {} wp {} ringSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos, _ringBufferSize);
 
     assert(_ringBufferSize % _outBufferSize == 0);
     bool skipped = false;
@@ -235,7 +235,7 @@ HRESULT WASAPIOutputImpl::LoadData(const std::shared_ptr<IAudioRenderClient> &pR
         }
     }
     if (skipped) {
-        Logger::warn(L"%s [----------] Skipped pushing to wasapi", _pDeviceId.c_str());
+        mainlog->warn(L"{} [----------] Skipped pushing to wasapi", _pDeviceId);
     }
 
     pRenderClient->ReleaseBuffer(_outBufferSize, 0);

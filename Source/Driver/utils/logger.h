@@ -1,73 +1,24 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <mutex>
+#include <spdlog/spdlog.h>
+#include <memory>
 
-enum LogLevel {
-    trace = 0,
-    debug,
-    info,
-    warn,
-    error
-};
-
-class Logger {
-private:
-    Logger();
-
-    ~Logger();
-
-    static Logger &getInstance();
-
-    Logger(const Logger &) = delete;
-
-    Logger &operator=(const Logger &) = delete;
-
-public:
-    static void setMinimumOutputLevel(LogLevel minimumOutputLevel);
-
-    // wchar_t*
-    static void trace(const wchar_t *fmt, ...);
-
-    static void debug(const wchar_t *fmt, ...);
-
-    static void info(const wchar_t *fmt, ...);
-
-    static void warn(const wchar_t *fmt, ...);
-
-    static void error(const wchar_t *fmt, ...);
-
-    // char*
-    static void trace(const char *fmt, ...);
-
-    static void debug(const char *fmt, ...);
-
-    static void info(const char *fmt, ...);
-
-    static void warn(const char *fmt, ...);
-
-    static void error(const char *fmt, ...);
-
-private:
-    void logV(LogLevel level, const wchar_t *fmt, va_list args);
-    void logV(LogLevel level, const char *fmt, va_list args);
-
-private:
-    FILE *outputFile;
-    std::mutex _fileMutex;
-    LogLevel _minimumOutputLevel = LogLevel::info;
-};
+extern std::unique_ptr<spdlog::logger> mainlog;
+void initMainLog();
 
 class FuncTraceHelper {
 public:
-    FuncTraceHelper(const char *funcname);
+    FuncTraceHelper(const char *funcname) : _funcname(funcname) {
+        mainlog->trace("Entering {}", funcname);
+    }
 
-    ~FuncTraceHelper();
+    ~FuncTraceHelper() {
+        mainlog->trace("Entering {}", _funcname);
+    }
 
 private:
-    const char *funcname;
+    const char *_funcname;
 };
 
-#define LOGGER_TRACE_FUNC \
+#define SPDLOG_TRACE_FUNC \
     FuncTraceHelper _fth(__FUNCTION__)

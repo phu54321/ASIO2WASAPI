@@ -6,6 +6,7 @@
 #include "RunningState.h"
 #include "../utils/WASAPIUtils.h"
 #include "../utils/logger.h"
+#include <spdlog/spdlog.h>
 
 static const uint64_t twoRaisedTo32 = UINT64_C(4294967296);
 
@@ -58,7 +59,7 @@ bool PreparedState::start() {
     try {
         _runningState = std::make_shared<RunningState>(this);
     } catch (AppException &e) {
-        Logger::error("Cannot create runningState: %s", e.what());
+        mainlog->error("Cannot create runningState: {}", e.what());
         return false;
     }
     return true;

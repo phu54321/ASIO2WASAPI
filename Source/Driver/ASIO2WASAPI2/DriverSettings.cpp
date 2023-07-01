@@ -3,10 +3,11 @@
 //
 
 #include "ASIO2WASAPI2Impl.h"
-#include "../utils/logger.h"
 #include "../utils/json.hpp"
 #include "../utils/utf8convert.h"
 #include "../utils/homeDirFilePath.h"
+#include "../utils/logger.h"
+#include <spdlog/spdlog.h>
 
 using json = nlohmann::json;
 
@@ -25,7 +26,6 @@ DriverSettings loadDriverSettings() {
         ret.bufferSize = j.value("bufferSize", 1024);
 
         if (j["deviceId"].is_string()) {
-            Logger::info("s");
             ret.deviceIdList.push_back(utf8_to_wstring(j.value("deviceId", "")));
         } else if (j["deviceId"].is_array()) {
             for (const auto &item: j["deviceId"]) {
@@ -34,7 +34,7 @@ DriverSettings loadDriverSettings() {
         }
         return ret;
     } catch (json::exception &e) {
-        Logger::error("JSON parse failed: %s", e.what());
+        mainlog->error("JSON parse failed: {}", e.what());
         throw AppException("JSON parse failed");
     }
 }

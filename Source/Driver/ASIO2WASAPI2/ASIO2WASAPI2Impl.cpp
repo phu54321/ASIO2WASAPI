@@ -20,21 +20,17 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <cstdio>
 #include <cstring>
-#include <cmath>
-
 #include <Windows.h>
-#include <timeapi.h>
+#include <spdlog/spdlog.h>
 #include "ASIO2WASAPI2Impl.h"
 #include "../resource.h"
-#include "../utils/logger.h"
 #include "../utils/json.hpp"
 #include "../WASAPIOutput/createIAudioClient.h"
-#include "../utils/WASAPIUtils.h"
 #include "../utils/raiiUtils.h"
 #include "RunningState.h"
 #include "PreparedState.h"
+#include "../utils/logger.h"
 
 using json = nlohmann::json;
 
@@ -44,7 +40,7 @@ extern HINSTANCE g_hinstDLL;
 
 ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
         : _settings(loadDriverSettings()) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     CoInitialize(nullptr);
 
@@ -59,23 +55,23 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
     std::transform(devices.begin(), devices.end(), std::back_inserter(friendlyNameList), getDeviceFriendlyName);
 
 
-    Logger::info("Will find these %d devices", targetDeviceIdList.size());
+    mainlog->info("Will find these {} devices", targetDeviceIdList.size());
     for (int i = 0; i < targetDeviceIdList.size(); i++) {
         if (targetDeviceIdList[i].empty() || targetDeviceIdList[i] == L"(default)") {
             targetDeviceIdList[i] = defaultDeviceId;
-            Logger::info(L" - Target #%02d: default output device %s", i, defaultDeviceId.c_str());
+            mainlog->info(L" - Target #{:02d}: default output device {}", i, defaultDeviceId);
         } else {
-            Logger::info(L" - Target #%02d: %ws", i, targetDeviceIdList[i].c_str());
+            mainlog->info(L" - Target #{:02d}: {}", i, targetDeviceIdList[i]);
         }
     }
 
-    Logger::info("Enumerating devices - Total %d device found", devices.size());
+    mainlog->info("Enumerating devices - Total {} device found", devices.size());
     for (int i = 0; i < devices.size(); i++) {
-        Logger::info(L" - Device #%02d: %ws %ws", i, friendlyNameList[i].c_str(), deviceIdList[i].c_str());
+        mainlog->info(L" - Device #{:02d}: {} {}", i, friendlyNameList[i], deviceIdList[i]);
         for (const auto &id: _settings.deviceIdList) {
             auto &device = devices[i];
             if (id == deviceIdList[i] || id == friendlyNameList[i]) {
-                Logger::info("   : Matched");
+                mainlog->info("   : Matched");
                 _pDeviceList.push_back(device);
                 break;
             }
@@ -88,7 +84,7 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
 }
 
 ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     stop();
     disposeBuffers();
@@ -99,7 +95,7 @@ ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
 /////
 
 ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputChannels) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (numInputChannels) *numInputChannels = 0;
     if (numOutputChannels) *numOutputChannels = _settings.nChannels;
@@ -107,7 +103,7 @@ ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputC
 }
 
 ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (!sampleRate) return ASE_InvalidParameter;
     *sampleRate = _settings.nSampleRate;
@@ -115,7 +111,7 @@ ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
 }
 
 ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate sampleRate) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     int nSampleRate = static_cast<int>(sampleRate);
     for (auto &device: _pDeviceList) {
@@ -125,14 +121,14 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate sampleRate) {
 }
 
 ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
-    Logger::debug(L"setSampleRate: %f", sampleRate);
+    mainlog->debug(L"setSampleRate: {}", sampleRate);
     if (sampleRate == _settings.nSampleRate) return ASE_OK;
 
     auto err = canSampleRate(sampleRate);
     if (err != ASE_OK) {
-        Logger::debug(L"canSampleRate: %d (error)", err);
+        mainlog->debug(L"canSampleRate: {} (error)", err);
         return err;
     }
 
@@ -165,7 +161,7 @@ static const char *knownChannelNames[] =
         };
 
 ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (info->isInput) return ASE_InvalidParameter;
     if (info->channel < 0 || info->channel >= _settings.nChannels) return ASE_InvalidParameter;
@@ -188,7 +184,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
         long bufferSize,
         ASIOCallbacks *callbacks) {
 
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
@@ -211,7 +207,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 }
 
 ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
     stop();
 
     // wait for the play thread to finish
@@ -224,14 +220,14 @@ ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
 ////////////
 
 ASIOError ASIO2WASAPI2Impl::start() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (!_preparedState) return ASE_NotPresent;
     return _preparedState->start() ? ASE_OK : ASE_HWMalfunction;
 }
 
 ASIOError ASIO2WASAPI2Impl::outputReady() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
     if (_preparedState) {
         _preparedState->outputReady();
     }
@@ -240,7 +236,7 @@ ASIOError ASIO2WASAPI2Impl::outputReady() {
 
 
 ASIOError ASIO2WASAPI2Impl::stop() {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (_preparedState) {
         _preparedState->stop();

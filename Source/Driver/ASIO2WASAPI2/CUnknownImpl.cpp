@@ -24,12 +24,12 @@
 #include "../utils/logger.h"
 
 CUnknown *ASIO2WASAPI2::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
     return static_cast<CUnknown *>(new ASIO2WASAPI2(pUnk, phr));
 };
 
 STDMETHODIMP ASIO2WASAPI2::NonDelegatingQueryInterface(REFIID riid, void **ppv) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
     if (riid == CLSID_ASIO2WASAPI2_DRIVER) {
         return GetInterface(this, ppv);
     }

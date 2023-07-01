@@ -24,6 +24,7 @@
 #include "ASIO2WASAPI2.h"
 #include "ASIO2WASAPI2Impl.h"
 #include "../utils/logger.h"
+#include <spdlog/spdlog.h>
 
 
 CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
@@ -56,7 +57,7 @@ ASIOError ASIO2WASAPI2::future(long selector, void *opt) {
 
 
 ASIOBool ASIO2WASAPI2::init(void *sysRef) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (_pImpl) return true;
     try {
@@ -64,7 +65,7 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
         return true;
     } catch (AppException &e) {
         // Swallow here...
-        Logger::error("ASIO2WASAPI2Impl constructor failed: %s", e.what());
+        mainlog->error("ASIO2WASAPI2Impl constructor failed: {}", e.what());
         return false;
     }
 }
@@ -125,7 +126,7 @@ ASIOError ASIO2WASAPI2::createBuffers(
         long bufferSize,
         ASIOCallbacks *callbacks) {
 
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->createBuffers(bufferInfos, numChannels, bufferSize, callbacks);
@@ -176,7 +177,7 @@ ASIOError ASIO2WASAPI2::getClockSources(ASIOClockSource *clocks, long *numSource
 }
 
 ASIOError ASIO2WASAPI2::setClockSource(long index) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     return (index == 0) ? ASE_OK : ASE_NotPresent;
 }

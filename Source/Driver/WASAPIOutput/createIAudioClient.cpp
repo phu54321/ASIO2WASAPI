@@ -3,11 +3,10 @@
 //
 
 #include "createIAudioClient.h"
-#include "../utils/logger.h"
 #include "../utils/raiiUtils.h"
 #include "../utils/WASAPIUtils.h"
-
-#include <mmsystem.h>
+#include <spdlog/spdlog.h>
+#include "../utils/logger.h"
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 
@@ -15,7 +14,7 @@ const IID IID_IAudioClient = __uuidof(IAudioClient);
 
 std::shared_ptr<IAudioClient>
 createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWaveFormat, int bufferSizeRequest) {
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (!pDevice || !pWaveFormat) {
         return nullptr;
@@ -36,8 +35,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     REFERENCE_TIME defaultBufferDuration, minBufferDuration, bufferDuration;
     hr = pAudioClient->GetDevicePeriod(&defaultBufferDuration, &minBufferDuration);
     if (FAILED(hr)) return nullptr;
-    Logger::info(L"%ws - minimum duration %d, default duration %d", deviceId.c_str(), minBufferDuration,
-                 defaultBufferDuration);
+    mainlog->debug(L"{} - minimum duration {}, default duration {}", deviceId, minBufferDuration, defaultBufferDuration);
 
     if (bufferSizeRequest == BUFFER_SIZE_REQUEST_USEDEFAULT) {
         bufferDuration = defaultBufferDuration;
@@ -50,7 +48,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
 
 
-    Logger::trace(L"pAudioClient->Initialize: device %ws, bufferSizeRequest %d, bufferDuration %lld", deviceId.c_str(),
+    mainlog->debug(L"pAudioClient->Initialize: device {}, bufferSizeRequest {}, bufferDuration {}", deviceId,
                   bufferSizeRequest,
                   bufferDuration);
     hr = pAudioClient->Initialize(
@@ -62,13 +60,13 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
             nullptr);
 
     if (FAILED(hr)) {
-        Logger::trace(L" - pAudioClient->Initialize failed (0x%08X)", hr);
-        Logger::trace("    : pWaveFormat->wFormatTag: %d", pWaveFormat->wFormatTag);
-        Logger::trace("    : pWaveFormat->nChannels: %d", pWaveFormat->nChannels);
-        Logger::trace("    : pWaveFormat->nSamplesPerSec: %d", pWaveFormat->nSamplesPerSec);
-        Logger::trace("    : pWaveFormat->nAvgBytesPerSec: %d", pWaveFormat->nAvgBytesPerSec);
-        Logger::trace("    : pWaveFormat->nBlockAlign: %d", pWaveFormat->nBlockAlign);
-        Logger::trace("    : pWaveFormat->cbSize: %d", pWaveFormat->cbSize);
+        mainlog->error(" - pAudioClient->Initialize failed (0:08x})", hr);
+        mainlog->error("    : pWaveFormat->wFormatTag: {}", pWaveFormat->wFormatTag);
+        mainlog->error("    : pWaveFormat->nChannels: {}", pWaveFormat->nChannels);
+        mainlog->error("    : pWaveFormat->nSamplesPerSec: {}", pWaveFormat->nSamplesPerSec);
+        mainlog->error("    : pWaveFormat->nAvgBytesPerSec: {}", pWaveFormat->nAvgBytesPerSec);
+        mainlog->error("    : pWaveFormat->nBlockAlign: {}", pWaveFormat->nBlockAlign);
+        mainlog->error("    : pWaveFormat->cbSize: {}", pWaveFormat->cbSize);
         return nullptr;
     }
 
@@ -83,7 +81,7 @@ bool FindStreamFormat(
         WAVEFORMATEXTENSIBLE *pwfxt,
         std::shared_ptr<IAudioClient> *ppAudioClient) {
 
-    LOGGER_TRACE_FUNC;
+    SPDLOG_TRACE_FUNC;
 
     if (!pDevice) return false;
 
@@ -92,7 +90,7 @@ bool FindStreamFormat(
     WAVEFORMATEXTENSIBLE waveFormat;
 
     // try 16-bit first
-    Logger::debug(L"Trying 16-bit packed");
+    mainlog->debug("Trying 16-bit packed");
     waveFormat.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     waveFormat.Format.nChannels = nChannels;
     waveFormat.Format.nSamplesPerSec = nSampleRate;
@@ -106,11 +104,11 @@ bool FindStreamFormat(
 
     auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest);
     if (pAudioClient) {
-        Logger::debug(L" - works!");
+        mainlog->debug(" - works!");
         goto Finish;
     }
 
-    Logger::debug(L" - none works");
+    mainlog->debug(" - none works");
 
     Finish:
     bool bSuccess = (pAudioClient != nullptr);

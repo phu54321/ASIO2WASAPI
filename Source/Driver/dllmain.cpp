@@ -22,7 +22,10 @@
 
 #include "COMBaseClasses.h"
 #include "ASIO2WASAPI2/ASIO2WASAPI2.h"
+#include "utils/homeDirFilePath.h"
+#include <spdlog/spdlog.h>
 #include "utils/logger.h"
+
 
 LONG UnregisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname);
 
@@ -85,8 +88,8 @@ BOOL WINAPI DllMain(
     switch (fdwReason) {
 
         case DLL_PROCESS_ATTACH:
-            Logger::setMinimumOutputLevel(LogLevel::trace);
-            Logger::info(L"ASIO2WASAPI attached");
+            initMainLog();
+            mainlog->info(L"ASIO2WASAPI attached");
             g_hinstDLL = hinstDLL;
             DisableThreadLibraryCalls(hinstDLL);
             hinstance = hinstDLL;
@@ -96,7 +99,7 @@ BOOL WINAPI DllMain(
 
         case DLL_PROCESS_DETACH:
             InitClasses(FALSE);
-            Logger::info(L"ASIO2WASAPI detaching");
+            mainlog->info(L"ASIO2WASAPI detaching");
             break;
     }
     return TRUE;
@@ -139,11 +142,11 @@ STDAPI DllCanUnloadNow() {
 
 HRESULT DllRegisterServer() {
     char szDllPathName[MAX_PATH] = {0};
-    GetModuleFileName(g_hinstDLL, szDllPathName, MAX_PATH);
+    GetModuleFileNameA(g_hinstDLL, szDllPathName, MAX_PATH);
     LONG rc = RegisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription, szDescription, "Apartment");
 
     if (rc) {
-        MessageBox(NULL, (LPCTSTR) "DllRegisterServer failed!", szDescription, MB_OK);
+        MessageBox(NULL, TEXT("DllRegisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
         return -1;
     }
 
@@ -152,11 +155,11 @@ HRESULT DllRegisterServer() {
 
 HRESULT DllUnregisterServer() {
     char szDllPathName[MAX_PATH] = {0};
-    GetModuleFileName(g_hinstDLL, szDllPathName, MAX_PATH);
+    GetModuleFileNameA(g_hinstDLL, szDllPathName, MAX_PATH);
     LONG rc = UnregisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription);
 
     if (rc) {
-        MessageBox(NULL, (LPCTSTR) "DllUnregisterServer failed!", szDescription, MB_OK);
+        MessageBox(NULL, TEXT("DllUnregisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
         return -1;
     }
 
