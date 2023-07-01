@@ -18,6 +18,8 @@ const double m_pi = 3.14159265358979;
 #include "../utils/logger.h"
 #include "../utils/raiiUtils.h"
 
+const double m_pi = 3.14159265358979;
+
 const int inBufferSizeMultiplier = 8;
 
 const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
@@ -46,8 +48,6 @@ private:
     static DWORD WINAPI playThread(LPVOID pThis);
 
 private:
-    int t = 0;
-
     HRESULT LoadData(const std::shared_ptr<IAudioRenderClient> &pRenderClient);
 
 private:
