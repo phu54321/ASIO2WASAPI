@@ -14,7 +14,13 @@ using json = nlohmann::json;
 DriverSettings loadDriverSettings() {
     FILE *fp = homeDirFOpen(TEXT("ASIO2WASAPI2.json"), TEXT("rb"));
     if (!fp) {
-        throw AppException("Cannot open ASIO2WASAPI2.json");
+        // use default
+        DriverSettings ret;
+        mainlog->info("ASIO2WASAPI2.json not found. Using default settings");
+        ret.deviceIdList.emplace_back(L"(default)");
+        ret.deviceIdList.emplace_back(L"Hi-Fi Cable Input(VB-Audio Hi-Fi Cable)");
+        ret.deviceIdList.emplace_back(L"CABLE Input(VB-Audio Virtual Cable)");
+        return ret;
     }
 
     try {
