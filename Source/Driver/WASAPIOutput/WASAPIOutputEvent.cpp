@@ -20,11 +20,7 @@
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
 
-const double m_pi = 3.14159265358979;
-
 const int inBufferSizeMultiplier = 8;
-
-const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
 
 
 WASAPIOutputEvent::WASAPIOutputEvent(
@@ -39,7 +35,8 @@ WASAPIOutputEvent::WASAPIOutputEvent(
 
     _pDeviceId = getDeviceId(pDevice);
 
-    if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, &_waveFormat, &_pAudioClient)) {
+    if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, WASAPIMode::Event, &_waveFormat,
+                          &_pAudioClient)) {
         mainlog->error(L"Cannot find suitable stream format for output _pDevice (_pDevice ID {})", _pDeviceId);
         throw AppException("FindStreamFormat failed");
     }
@@ -143,7 +140,11 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     }
 
     BYTE *pData;
-    pRenderClient->GetBuffer(_outBufferSize, &pData);
+    HRESULT hr = pRenderClient->GetBuffer(_outBufferSize, &pData);
+    if (FAILED(hr)) {
+        mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{0:08X})", _pDeviceId, hr);
+        return E_FAIL;
+    }
 
     UINT32 sampleSize = _waveFormat.Format.wBitsPerSample / 8;
     assert(sampleSize == 2);

@@ -10,6 +10,7 @@
 #include <avrt.h>
 
 #include "../WASAPIOutput/WASAPIOutputEvent.h"
+#include "../WASAPIOutput/WASAPIOutputPush.h"
 
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
@@ -28,8 +29,13 @@ RunningState::RunningState(PreparedState *p)
                     });
             _outputList.push_back(std::move(output));
         } else {
-            // TODO: add WASAPIOutputPull
-            break;
+            auto output = std::make_unique<WASAPIOutputPush>(
+                    device,
+                    p->_settings.nChannels,
+                    p->_settings.nSampleRate,
+                    p->_bufferSize
+            );
+            _outputList.push_back(std::move(output));
         }
     }
 

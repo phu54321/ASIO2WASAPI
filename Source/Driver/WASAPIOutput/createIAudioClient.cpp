@@ -10,10 +10,9 @@
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 
-const IID IID_IAudioClient = __uuidof(IAudioClient);
-
 std::shared_ptr<IAudioClient>
-createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWaveFormat, int bufferSizeRequest) {
+createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWaveFormat, int bufferSizeRequest,
+                  WASAPIMode mode) {
     SPDLOG_TRACE_FUNC;
 
     if (!pDevice || !pWaveFormat) {
@@ -49,11 +48,13 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
 
 
     mainlog->debug(L"pAudioClient->Initialize: device {}, bufferSizeRequest {}, bufferDuration {}", deviceId,
-                  bufferSizeRequest,
-                  bufferDuration);
+                   bufferSizeRequest,
+                   bufferDuration);
+    auto streamFlags = AUDCLNT_STREAMFLAGS_NOPERSIST;
+    if (mode == WASAPIMode::Event) streamFlags |= AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
     hr = pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_EXCLUSIVE,
-            AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST,
+            streamFlags,
             bufferDuration,
             bufferDuration,
             pWaveFormat,
@@ -78,6 +79,7 @@ bool FindStreamFormat(
         int nChannels,
         int nSampleRate,
         int bufferSizeRequest,
+        WASAPIMode mode,
         WAVEFORMATEXTENSIBLE *pwfxt,
         std::shared_ptr<IAudioClient> *ppAudioClient) {
 
@@ -102,7 +104,7 @@ bool FindStreamFormat(
     waveFormat.dwChannelMask = dwChannelMask;
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-    auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest);
+    auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
     if (pAudioClient) {
         mainlog->debug(" - works!");
         goto Finish;

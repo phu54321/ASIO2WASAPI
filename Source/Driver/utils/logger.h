@@ -13,7 +13,7 @@ public:
     }
 
     ~FuncTraceHelper() {
-        mainlog->trace("Entering {}", _funcname);
+        mainlog->trace("Leaving {}", _funcname);
     }
 
 private:
