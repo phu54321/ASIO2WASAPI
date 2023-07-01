@@ -66,17 +66,28 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
     }
 
     mainlog->info("Enumerating devices - Total {} device found", devices.size());
+    std::map<std::wstring, IMMDevicePtr> deviceMap;
     for (int i = 0; i < devices.size(); i++) {
         mainlog->info(L" - Device #{:02d}: {} {}", i, friendlyNameList[i], deviceIdList[i]);
         for (const auto &id: _settings.deviceIdList) {
             auto &device = devices[i];
             if (id == deviceIdList[i] || id == friendlyNameList[i]) {
                 mainlog->info("   : Matched");
-                _pDeviceList.push_back(device);
+                deviceMap[id] = device;
                 break;
             }
         }
     }
+
+    // Put _pDeviceList with order of _settings.deviceIdList
+    mainlog->info("Total {} device matched", deviceMap.size());
+    for (const auto &id: _settings.deviceIdList) {
+        auto it = deviceMap.find(id);
+        if (it != deviceMap.end()) {
+            _pDeviceList.push_back(it->second);
+        }
+    }
+
 
     if (_pDeviceList.empty()) {
         throw AppException("No target device(s) found...");
