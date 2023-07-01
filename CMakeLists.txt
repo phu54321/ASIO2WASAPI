@@ -17,8 +17,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Release mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-Release)
+elseif (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    message("RelWithDebInfo mode")
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-RelWithDebInfo)
 else ()
-    message(FATAL_ERROR "Error: Only Debug/Release mode supported")
+    message(FATAL_ERROR "Error: Only Debug/Release mode supported, but got ${CMAKE_BUILD_TYPE}")
 endif ()
 
 
