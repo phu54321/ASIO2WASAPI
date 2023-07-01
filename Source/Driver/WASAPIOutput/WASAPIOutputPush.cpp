@@ -79,7 +79,7 @@ void WASAPIOutputPush::pushSamples(const std::vector<std::vector<short>> &buffer
         return;
     }
 
-    mainlog->trace(L"{} pushSamples, buffersize {}", _pDeviceId, _outBufferSize);
+    mainlog->debug(L"{} pushSamples, buffersize {}", _pDeviceId, _outBufferSize);
 
 
     BYTE *pData;

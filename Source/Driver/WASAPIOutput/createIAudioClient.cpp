@@ -92,7 +92,6 @@ bool FindStreamFormat(
     WAVEFORMATEXTENSIBLE waveFormat;
 
     // try 16-bit first
-    mainlog->debug("Trying 16-bit packed");
     waveFormat.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     waveFormat.Format.nChannels = nChannels;
     waveFormat.Format.nSamplesPerSec = nSampleRate;
@@ -106,11 +105,8 @@ bool FindStreamFormat(
 
     auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
     if (pAudioClient) {
-        mainlog->debug(" - works!");
         goto Finish;
     }
-
-    mainlog->debug(" - none works");
 
     Finish:
     bool bSuccess = (pAudioClient != nullptr);

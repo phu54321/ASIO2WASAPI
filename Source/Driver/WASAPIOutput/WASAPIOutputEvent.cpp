@@ -93,7 +93,7 @@ void WASAPIOutputEvent::stop() {
 void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<short>> &buffer) {
     assert (buffer.size() == _channelNum);
 
-    mainlog->trace(L"{} pushSamples, rp {} wp {} bufferSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
+    mainlog->debug(L"{} pushSamples, rp {} wp {} bufferSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
                    buffer[0].size());
 
     if (buffer.size() != _channelNum) {
@@ -110,7 +110,7 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<short>> &buffe
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
 
         if (_ringBufferReadPos == (_ringBufferWritePos + _outBufferSize) % _ringBufferSize) {
-            mainlog->warn(L"{} Write overflow!", _pDeviceId);
+            mainlog->warn(L"{} [++++++++++] Write overflow!", _pDeviceId);
             return;
         }
 
@@ -149,7 +149,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     UINT32 sampleSize = _waveFormat.Format.wBitsPerSample / 8;
     assert(sampleSize == 2);
 
-    mainlog->trace(L"{} LoadData, rp {} wp {} ringSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
+    mainlog->debug(L"{} LoadData, rp {} wp {} ringSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
                    _ringBufferSize);
 
     assert(_ringBufferSize % _outBufferSize == 0);
