@@ -20,7 +20,7 @@
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
 
-const int inBufferSizeMultiplier = 4;
+const int ringBufferSizeMultiplier = 3;
 
 
 WASAPIOutputEvent::WASAPIOutputEvent(
@@ -32,25 +32,25 @@ WASAPIOutputEvent::WASAPIOutputEvent(
         : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate), _eventCallback(eventCallback) {
 
     SPDLOG_TRACE_FUNC;
+    HRESULT hr;
 
     _pDeviceId = getDeviceId(pDevice);
 
+    _inputBufferSize = bufferSizeRequest;
     if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, WASAPIMode::Event, &_waveFormat,
                           &_pAudioClient)) {
         mainlog->error(L"{} Cannot find suitable stream format for output _pDevice", _pDeviceId);
         throw AppException("FindStreamFormat failed");
     }
 
-    UINT32 bufferSize;
-    HRESULT hr = _pAudioClient->GetBufferSize(&bufferSize);
+    hr = _pAudioClient->GetBufferSize(&_outputBufferSize);
     if (FAILED(hr)) {
         throw AppException("GetBufferSize failed");
     }
+    mainlog->info(L"{} WASAPIOutputEvent: - Buffer size: input {}, output {}",
+                  _pDeviceId, _inputBufferSize, _outputBufferSize);
 
-    mainlog->info(L"WASAPIOutputEvent: {} - Buffer size {}", _pDeviceId, bufferSize);
-    _outBufferSize = bufferSize;
-
-    _ringBufferSize = _outBufferSize * inBufferSizeMultiplier;
+    _ringBufferSize = (_inputBufferSize + _outputBufferSize) * ringBufferSizeMultiplier;
     _ringBuffer.resize(channelNum);
     for (int i = 0; i < channelNum; i++) {
         _ringBuffer[i].resize(_ringBufferSize);
@@ -93,36 +93,78 @@ void WASAPIOutputEvent::stop() {
 void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<short>> &buffer) {
     assert (buffer.size() == _channelNum);
 
-    mainlog->debug(L"{} pushSamples, rp {} wp {} bufferSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
-                   buffer[0].size());
+    mainlog->debug(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
+                   _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
+                   _ringBufferSize, _inputBufferSize, _outputBufferSize);
 
     if (buffer.size() != _channelNum) {
         mainlog->error(L"{} Invalid channel count: expected {}, got {}", _pDeviceId, _channelNum, buffer.size());
         return;
     }
 
-    if (buffer[0].size() != _outBufferSize) {
-        mainlog->error(L"{} Invalid chunk length: expected {}, got {}", _pDeviceId, _outBufferSize, buffer[0].size());
+    if (buffer[0].size() != _inputBufferSize) {
+        mainlog->error(L"{} Invalid chunk length: expected {}, got {}", _pDeviceId, _inputBufferSize, buffer[0].size());
         return;
     }
 
+    bool write_overflow = false;
     {
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
+        auto &rp = _ringBufferReadPos;
+        auto &wp = _ringBufferWritePos;
 
-        if (_ringBufferReadPos == (_ringBufferWritePos + _outBufferSize) % _ringBufferSize) {
-            mainlog->warn(L"{} [++++++++++] Write overflow!", _pDeviceId);
-            return;
+        if (rp <= wp) {
+            // case 1: -----rp+++++++++++wp-------
+            if (wp + _inputBufferSize <= _ringBufferSize) {
+                // case 1-1 -----rp+++++++++++wp@@@@@wp--
+                for (int ch = 0; ch < _channelNum; ch++) {
+                    memcpy(
+                            _ringBuffer[ch].data() + wp,
+                            buffer[ch].data(),
+                            _inputBufferSize * sizeof(buffer[ch][0]));
+                }
+                wp += _inputBufferSize;
+                if (wp == _ringBufferSize) wp = 0;
+            } else {
+                // case 1-1 @@wp--rp+++++++++++wp@@@@@@@@
+                auto fillToEndSize = _ringBufferSize - wp;
+                auto fillFromStartSize = _inputBufferSize - fillToEndSize;
+                if (fillFromStartSize >= rp) {
+                    write_overflow = true;
+                } else {
+                    for (int ch = 0; ch < _channelNum; ch++) {
+                        memcpy(
+                                _ringBuffer[ch].data() + wp,
+                                buffer[ch].data(),
+                                fillToEndSize * sizeof(buffer[ch][0]));
+                        memcpy(
+                                _ringBuffer[ch].data(),
+                                buffer[ch].data() + fillToEndSize,
+                                fillFromStartSize * sizeof(buffer[ch][0]));
+                    }
+                    wp = fillFromStartSize;
+                }
+            }
+        } else {
+            // case 2: ++++wp--------------rp++++
+            if (wp + _inputBufferSize >= rp) {
+                write_overflow = true;
+            } else {
+                for (int ch = 0; ch < _channelNum; ch++) {
+                    memcpy(
+                            _ringBuffer[ch].data() + wp,
+                            buffer[ch].data(),
+                            _inputBufferSize * sizeof(buffer[ch][0]));
+                }
+                wp += _inputBufferSize;
+            }
         }
+    }
 
-        size_t & wp = _ringBufferWritePos;
-        for (int ch = 0; ch < _channelNum; ch++) {
-            memcpy(
-                    &_ringBuffer[ch][wp],
-                    buffer[ch].data(),
-                    _outBufferSize * sizeof(buffer[ch][0]));
-        }
-        wp += _outBufferSize;
-        if (wp == _ringBufferSize) wp = 0;
+    // Logging may take long, so do this outside of the mutex
+    if (write_overflow) {
+        mainlog->warn(L"{} [++++++++++] Write overflow!", _pDeviceId);
+        return;
     }
 }
 
@@ -140,9 +182,10 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     }
 
     BYTE *pData;
-    HRESULT hr = pRenderClient->GetBuffer(_outBufferSize, &pData);
+    HRESULT hr = pRenderClient->GetBuffer(_outputBufferSize, &pData);
     if (FAILED(hr)) {
-        mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{:08X})", _pDeviceId, (uint32_t)hr);
+        mainlog->error(L"{} _pRenderClient->GetBuffer({}) failed, (0x{:08X})", _pDeviceId, _outputBufferSize,
+                       (uint32_t) hr);
         return E_FAIL;
     }
 
@@ -152,25 +195,30 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     mainlog->debug(L"{} LoadData, rp {} wp {} ringSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
                    _ringBufferSize);
 
-    assert(_ringBufferSize % _outBufferSize == 0);
     bool skipped = false;
     {
         std::lock_guard<std::mutex> guard(_ringBufferMutex);
-        size_t & rp = _ringBufferReadPos;
-        auto out = reinterpret_cast<short *>(pData);
+        size_t &rp = _ringBufferReadPos;
+        size_t &wp = _ringBufferWritePos;
+        size_t currentDataLength = (wp - rp + _ringBufferSize) % _ringBufferSize;
 
-        assert(rp % _outBufferSize == 0);
-        if (rp != _ringBufferWritePos) {
-            for (int i = 0; i < _outBufferSize; i++) {
-                for (unsigned channel = 0; channel < _channelNum; channel++) {
-                    *(out++) = _ringBuffer[channel][i + rp];
+        if (currentDataLength < _outputBufferSize) {
+            memset(pData, 0, sampleSize * _channelNum * _outputBufferSize);
+            skipped = true;
+        } else {
+            for (unsigned channel = 0; channel < _channelNum; channel++) {
+                auto out = reinterpret_cast<short *>(pData) + channel;
+                short *pStart = _ringBuffer[channel].data() + rp;
+                short *pEnd = _ringBuffer[channel].data() + (rp + _outputBufferSize) % _ringBufferSize;
+                short *pWrap = _ringBuffer[channel].data() + _ringBufferSize;
+                for (short *p = pStart; p != pEnd;) {
+                    *out = *p;
+                    out += _channelNum;
+                    p++;
+                    if (p == pWrap) p = _ringBuffer[channel].data();
                 }
             }
-            rp += _outBufferSize;
-            if (rp == _ringBufferSize) rp = 0;
-        } else {  // Skip this segment.
-            skipped = true;  // Don't log here: we're within mutex
-            memset(out, 0, sizeof(short) * _channelNum * _outBufferSize);
+            rp = (rp + _outputBufferSize) % _ringBufferSize;
         }
     }
 
@@ -179,7 +227,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
         mainlog->warn(L"{} [----------] Skipped pushing to wasapi", _pDeviceId);
     }
 
-    pRenderClient->ReleaseBuffer(_outBufferSize, 0);
+    pRenderClient->ReleaseBuffer(_outputBufferSize, 0);
     return S_OK;
 }
 

@@ -42,7 +42,8 @@ private:
 private:
     int _channelNum;
     int _sampleRate;
-    size_t _outBufferSize;
+    UINT32 _inputBufferSize;
+    UINT32 _outputBufferSize;
 
     std::vector<std::vector<short>> _ringBuffer;
     std::mutex _ringBufferMutex;
