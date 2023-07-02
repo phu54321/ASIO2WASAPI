@@ -20,7 +20,7 @@
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
 
-const int ringBufferSizeMultiplier = 3;
+const int ringBufferSizeMultiplier = 2;
 
 
 WASAPIOutputEvent::WASAPIOutputEvent(
