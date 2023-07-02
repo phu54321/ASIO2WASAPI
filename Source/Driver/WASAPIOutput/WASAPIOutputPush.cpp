@@ -17,6 +17,7 @@ const double m_pi = 3.14159265358979;
 
 // WASAPI shared mode keeps its own queue, so it needs some padding to prevent write overflow
 const int outBufferSizeMultiplier = 4;
+const int minimumPushBuferSize = 1024;
 
 WASAPIOutputPush::WASAPIOutputPush(
         const std::shared_ptr<IMMDevice> &pDevice,
@@ -32,7 +33,7 @@ WASAPIOutputPush::WASAPIOutputPush(
     _outBufferSize = bufferSizeRequest;
 
     // WASAPI shared mode keeps its own queue, so it needs some spacing.
-    bufferSizeRequest *= outBufferSizeMultiplier;
+    bufferSizeRequest = max(bufferSizeRequest * outBufferSizeMultiplier, minimumPushBuferSize);
 
     if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, WASAPIMode::Pull, &_waveFormat,
                           &_pAudioClient)) {
