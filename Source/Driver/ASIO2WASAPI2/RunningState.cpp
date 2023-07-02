@@ -1,13 +1,12 @@
-//
-// Created by whyask37 on 2023-06-30.
-//
-
 #include "RunningState.h"
 #include "../utils/logger.h"
+#include "../utils/raiiUtils.h"
 #include <spdlog/spdlog.h>
 #include <utility>
 #include <cassert>
 #include <avrt.h>
+#include <timeapi.h>
+#include <mmsystem.h>
 
 #include "../WASAPIOutput/WASAPIOutputEvent.h"
 #include "../WASAPIOutput/WASAPIOutputPush.h"
@@ -71,6 +70,7 @@ void RunningState::signalStop() {
     _notifier.notify_all();
 }
 
+
 void RunningState::threadProc(RunningState *state) {
     auto &_preparedState = state->_preparedState;
     auto bufferSize = state->_preparedState->_settings.bufferSize;
@@ -80,12 +80,14 @@ void RunningState::threadProc(RunningState *state) {
     DWORD taskIndex = 0;
     AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
 
+    TIMECAPS tcaps;
+    timeGetDevCaps(&tcaps, sizeof(tcaps));
+    timeBeginPeriod(tcaps.wPeriodMin); // 주기를 1ms로 설정
+    mainlog->info("timeBeginPeriod({})", tcaps.wPeriodMin);
 
     double lastPollTime = accurateTime();
     double pollInterval = (double) state->_preparedState->_bufferSize / state->_preparedState->_settings.nSampleRate;
     bool shouldPoll = true;
-    auto sleepDuration = 1;
-    if (pollInterval < 0.01) sleepDuration = 0;
 
     while (true) {
         mainlog->trace("[RunningState::threadProc] Locking mutex");
@@ -123,22 +125,32 @@ void RunningState::threadProc(RunningState *state) {
             _preparedState->_bufferIndex = 1 - currentBufferIndex;
         } else {
             auto currentTime = accurateTime();
+            auto targetTime = lastPollTime + pollInterval;
+
             mainlog->trace("checkPollTimer: current {:.6f} last {:.6f} interval {:.6f}",
                            currentTime, lastPollTime, pollInterval);
 
-            if (currentTime >= lastPollTime + pollInterval) {
+            if (currentTime >= targetTime) {
                 lastPollTime += pollInterval;
                 mainlog->debug("shouldPoll = true");
                 shouldPoll = true;
             } else {
                 mainlog->trace("[RunningState::threadProc] Unlock mutex & waiting");
-//                state->_notifier.wait_for(lock, duration, [&]() {
-//                    return state->_pollStop || shouldPoll;
-//                });
                 lock.unlock();
-                Sleep(sleepDuration);
+
+                double remainingTime = targetTime - currentTime;
+                Sleep((int) floor(remainingTime / tcaps.wPeriodMin) * tcaps.wPeriodMin);
+
+                while (true) {
+                    currentTime = accurateTime();
+                    if (currentTime >= targetTime) break;
+                    Sleep(0);
+                }
+
                 lock.lock();
             }
         }
     }
+
+    timeEndPeriod(tcaps.wPeriodMin);
 }

@@ -82,6 +82,36 @@ public:
 
 HINSTANCE g_hinstDLL;
 
+void enableHighPresicionTimer() {
+    // For Windows 11: apps require this code to
+    // get 1ms timer accuracy when backgrounded.
+    PROCESS_POWER_THROTTLING_STATE PowerThrottling;
+    RtlZeroMemory(&PowerThrottling, sizeof(PowerThrottling));
+    PowerThrottling.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+    PowerThrottling.ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
+    PowerThrottling.StateMask = 0;
+    if (SetProcessInformation(GetCurrentProcess(),
+                              ProcessPowerThrottling,
+                              &PowerThrottling,
+                              sizeof(PowerThrottling)) == 0) {
+        auto err = GetLastError();
+        TCHAR *message = nullptr;
+        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+                      nullptr,
+                      err,
+                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                      (TCHAR *) &message,
+                      0,
+                      nullptr);
+        mainlog->error(
+                TEXT("SetProcessInformation(~PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION) failed: 0x{:08X} ({})"),
+                err, message);
+        LocalFree(message);
+    } else {
+        mainlog->info("High-precision timeSetEvent enabled");
+    }
+}
+
 BOOL WINAPI DllMain(
         __in HINSTANCE hinstDLL,
         __in DWORD fdwReason,
@@ -91,6 +121,7 @@ BOOL WINAPI DllMain(
         case DLL_PROCESS_ATTACH:
             initMainLog();
             initAccurateTime();
+            enableHighPresicionTimer();
             mainlog->info(L"ASIO2WASAPI attached");
             g_hinstDLL = hinstDLL;
             DisableThreadLibraryCalls(hinstDLL);
