@@ -10,6 +10,15 @@
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 
+static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWaveFormat) {
+    mainlog->error("    : {}.wFormatTag: {}", varname, pWaveFormat.wFormatTag);
+    mainlog->error("    : {}.nChannels: {}", varname, pWaveFormat.nChannels);
+    mainlog->error("    : {}.nSamplesPerSec: {}", varname, pWaveFormat.nSamplesPerSec);
+    mainlog->error("    : {}.nAvgBytesPerSec: {}", varname, pWaveFormat.nAvgBytesPerSec);
+    mainlog->error("    : {}.nBlockAlign: {}", varname, pWaveFormat.nBlockAlign);
+    mainlog->error("    : {}.cbSize: {}", varname, pWaveFormat.cbSize);
+}
+
 std::shared_ptr<IAudioClient>
 createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWaveFormat, int bufferSizeRequest,
                   WASAPIMode mode) {
@@ -32,11 +41,33 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
 
     IAudioClient *pAudioClient_ = nullptr;
     hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void **) &pAudioClient_);
-    if (FAILED(hr) || !pAudioClient_) return nullptr;
+    if (FAILED(hr) || !pAudioClient_) {
+        mainlog->error(L"{} pAudioClient->Activate failed: 0x{:08X}", deviceId, (uint32_t) hr);
+        return nullptr;
+    }
     auto pAudioClient = make_autorelease(pAudioClient_);
 
-    hr = pAudioClient->IsFormatSupported(shareMode, pWaveFormat, nullptr);
-    if (FAILED(hr)) return nullptr;
+    if (mode == WASAPIMode::Event) {
+        hr = pAudioClient->IsFormatSupported(shareMode, pWaveFormat, nullptr);
+        if (FAILED(hr)) {
+            mainlog->error(L"{} pAudioClient->IsFormatSupported failed: 0x{:08X}", deviceId, (uint32_t) hr);
+            return nullptr;
+        }
+    } else {
+        WAVEFORMATEX *pClosestMatch;
+        hr = pAudioClient->IsFormatSupported(shareMode, pWaveFormat, &pClosestMatch);
+        if (hr == S_FALSE) {
+            mainlog->error(L"{} pAudioClient->IsFormatSupported failed: S_FALSE (see pClosestMatch)", deviceId);
+            dumpErrorWaveFormatEx("pWaveFormat", *pWaveFormat);
+            dumpErrorWaveFormatEx("pClosestMatch", *pClosestMatch);
+            CoTaskMemFree(pClosestMatch);
+            return nullptr;
+        }
+        if (FAILED(hr)) {
+            mainlog->error(L"{} pAudioClient->IsFormatSupported failed: 0x{:08X}", deviceId, (uint32_t) hr);
+            return nullptr;
+        }
+    }
 
 
     REFERENCE_TIME defaultBufferDuration, minBufferDuration, bufferDuration;
@@ -100,6 +131,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
 
     if (FAILED(hr)) {
         mainlog->error(L"{} pAudioClient->Initialize failed: 0x{:08X}", deviceId, (uint32_t) hr);
+        dumpErrorWaveFormatEx("pWaveFormat", *pWaveFormat);
         return nullptr;
     }
 
