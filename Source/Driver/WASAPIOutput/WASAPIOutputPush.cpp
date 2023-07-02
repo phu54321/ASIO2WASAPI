@@ -15,7 +15,8 @@
 
 const double m_pi = 3.14159265358979;
 
-const int inBufferSizeMultiplier = 8;
+// WASAPI shared mode keeps its own queue, so it needs some padding to prevent write overflow
+const int outBufferSizeMultiplier = 4;
 
 WASAPIOutputPush::WASAPIOutputPush(
         const std::shared_ptr<IMMDevice> &pDevice,
@@ -27,6 +28,11 @@ WASAPIOutputPush::WASAPIOutputPush(
     SPDLOG_TRACE_FUNC;
 
     _pDeviceId = getDeviceId(pDevice);
+
+    _outBufferSize = bufferSizeRequest;
+
+    // WASAPI shared mode keeps its own queue, so it needs some spacing.
+    bufferSizeRequest *= outBufferSizeMultiplier;
 
     if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, WASAPIMode::Pull, &_waveFormat,
                           &_pAudioClient)) {
@@ -44,7 +50,6 @@ WASAPIOutputPush::WASAPIOutputPush(
         throw AppException("Too low buffer size");
     }
     mainlog->info(L"WASAPIOutputPush: {} - Buffer size {}", _pDeviceId, bufferSize);
-    _outBufferSize = bufferSizeRequest;
 
     IAudioRenderClient *pRenderClient_ = nullptr;
     hr = _pAudioClient->GetService(
@@ -85,7 +90,11 @@ void WASAPIOutputPush::pushSamples(const std::vector<std::vector<short>> &buffer
     BYTE *pData;
     HRESULT hr = _pRenderClient->GetBuffer(_outBufferSize, &pData);
     if (FAILED(hr)) {
-        mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{:08X})", _pDeviceId, (uint32_t)hr);
+        if (hr == AUDCLNT_E_BUFFER_TOO_LARGE) {
+            mainlog->warn(L"{} [++++++++++] Write overflow!", _pDeviceId);
+        } else {
+            mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{:08X})", _pDeviceId, (uint32_t) hr);
+        }
         return;
     }
 
