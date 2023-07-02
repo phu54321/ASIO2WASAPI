@@ -85,11 +85,14 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
                                                  pWaveFormat->nSamplesPerSec      // (frames / s)
         );
     }
+    if (bufferDuration < minBufferDuration) {
+        bufferDuration = minBufferDuration;
+    }
 
 
-    mainlog->debug(L"{} pAudioClient->Initialize: bufferSizeRequest {}, bufferDuration {}", deviceId,
+    mainlog->debug(L"{} pAudioClient->Initialize: bufferSizeRequest {}, bufferDuration {.1f}ms", deviceId,
                    bufferSizeRequest,
-                   bufferDuration);
+                   bufferDuration / 1000.0);
 
     hr = pAudioClient->Initialize(
             shareMode,

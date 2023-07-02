@@ -84,6 +84,8 @@ void RunningState::threadProc(RunningState *state) {
     double lastPollTime = accurateTime();
     double pollInterval = (double) state->_preparedState->_bufferSize / state->_preparedState->_settings.nSampleRate;
     bool shouldPoll = true;
+    auto sleepDuration = 1;
+    if (pollInterval < 0.01) sleepDuration = 0;
 
     while (true) {
         mainlog->trace("[RunningState::threadProc] Locking mutex");
@@ -130,9 +132,12 @@ void RunningState::threadProc(RunningState *state) {
                 shouldPoll = true;
             } else {
                 mainlog->trace("[RunningState::threadProc] Unlock mutex & waiting");
-                state->_notifier.wait_for(lock, 0.5ms, [&]() {
-                    return state->_pollStop || shouldPoll;
-                });
+//                state->_notifier.wait_for(lock, duration, [&]() {
+//                    return state->_pollStop || shouldPoll;
+//                });
+                lock.unlock();
+                Sleep(sleepDuration);
+                lock.lock();
             }
         }
     }
