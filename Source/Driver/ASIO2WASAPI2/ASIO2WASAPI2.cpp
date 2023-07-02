@@ -93,9 +93,9 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
 ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
                                       long *preferredSize, long *granularity) {
     if (!_pImpl) return ASE_NotPresent;
-    if (minSize) *minSize = 32;
+    if (minSize) *minSize = 64;
     if (maxSize) *maxSize = 1024;
-    if (preferredSize) *preferredSize = 1024;
+    if (preferredSize) *preferredSize = 64;
     if (granularity) *granularity = -1;
     return ASE_OK;
 }
