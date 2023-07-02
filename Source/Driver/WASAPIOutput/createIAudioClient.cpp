@@ -68,6 +68,36 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
             pWaveFormat,
             nullptr);
 
+    if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
+        // https://learn.microsoft.com/en-US/windows/win32/api/audioclient/nf-audioclient-iaudioclient-initialize
+        mainlog->debug(L"{} pAudioClient->Initialize: AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED -> re-initializing",
+                       deviceId);
+
+        UINT32 nextHighestAlignedBufferSize = 0;
+        hr = pAudioClient->GetBufferSize(&nextHighestAlignedBufferSize);
+        if (FAILED(hr)) return nullptr;
+        auto alignedBufferDuration = (REFERENCE_TIME) lround(
+                10000.0 * 1000 / pWaveFormat->nSamplesPerSec * nextHighestAlignedBufferSize);
+        mainlog->debug(L"{} nextHighestAlignedBufferSize {}, alignedBufferDuration {}", nextHighestAlignedBufferSize,
+                       alignedBufferDuration);
+
+        pAudioClient = nullptr;
+        hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void **) &pAudioClient_);
+        if (FAILED(hr) || !pAudioClient_) {
+            mainlog->error(L"{} pAudioClient->Activate failed: 0x{:08X}", deviceId, (uint32_t) hr);
+            return nullptr;
+        }
+        pAudioClient = make_autorelease(pAudioClient_);
+
+        hr = pAudioClient->Initialize(
+                shareMode,
+                streamFlags,
+                alignedBufferDuration,
+                alignedBufferDuration,
+                pWaveFormat,
+                nullptr);
+    }
+
     if (FAILED(hr)) {
         mainlog->error(L"{} pAudioClient->Initialize failed: 0x{:08X}", deviceId, (uint32_t) hr);
         return nullptr;
