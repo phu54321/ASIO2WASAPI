@@ -27,9 +27,8 @@ WASAPIOutputEvent::WASAPIOutputEvent(
         const std::shared_ptr<IMMDevice> &pDevice,
         int channelNum,
         int sampleRate,
-        int bufferSizeRequest,
-        std::function<void()> eventCallback)
-        : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate), _eventCallback(eventCallback) {
+        int bufferSizeRequest)
+        : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate) {
 
     SPDLOG_TRACE_FUNC;
     HRESULT hr;
@@ -175,11 +174,6 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     }
 
     SPDLOG_TRACE_FUNC;
-
-    if (_eventCallback) {
-        mainlog->trace(L"{} Pulling data from ASIO side", _pDeviceId);
-        _eventCallback();
-    }
 
     BYTE *pData;
     HRESULT hr = pRenderClient->GetBuffer(_outputBufferSize, &pData);

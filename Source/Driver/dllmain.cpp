@@ -25,6 +25,7 @@
 #include "utils/homeDirFilePath.h"
 #include <spdlog/spdlog.h>
 #include "utils/logger.h"
+#include "utils/accutateTime.h"
 
 
 LONG UnregisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname);
@@ -89,6 +90,7 @@ BOOL WINAPI DllMain(
 
         case DLL_PROCESS_ATTACH:
             initMainLog();
+            initAccurateTime();
             mainlog->info(L"ASIO2WASAPI attached");
             g_hinstDLL = hinstDLL;
             DisableThreadLibraryCalls(hinstDLL);

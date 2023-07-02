@@ -20,14 +20,11 @@ public:
 
     void signalOutputReady();
 
-    void signalPoll();
-
 private:
     void signalStop();
 
     PreparedState *_preparedState;
     bool _isOutputReady = true;
-    bool _shouldPoll = true;
     bool _pollStop = false;
 
     std::mutex _mutex;

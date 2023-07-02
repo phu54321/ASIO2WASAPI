@@ -18,8 +18,7 @@
 
 class WASAPIOutputEvent : public WASAPIOutput {
 public:
-    WASAPIOutputEvent(const std::shared_ptr<IMMDevice> &pDevice, int channelNum, int sampleRate, int bufferSizeRequest,
-                      std::function<void()> eventCallback);
+    WASAPIOutputEvent(const std::shared_ptr<IMMDevice> &pDevice, int channelNum, int sampleRate, int bufferSizeRequest);
 
     ~WASAPIOutputEvent();
 
@@ -58,8 +57,6 @@ private:
 
     HANDLE _stopEvent = nullptr;
     HANDLE _runningEvent = nullptr;
-
-    std::function<void()> _eventCallback;
 };
 
 #endif //ASIO2WASAPI2_WASAPIOUTPUTEVENT_H

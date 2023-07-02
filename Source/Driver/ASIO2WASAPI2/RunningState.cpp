@@ -11,6 +11,10 @@
 
 #include "../WASAPIOutput/WASAPIOutputEvent.h"
 #include "../WASAPIOutput/WASAPIOutputPush.h"
+#include "../utils/accutateTime.h"
+
+using namespace std::chrono_literals;
+
 
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
@@ -23,10 +27,7 @@ RunningState::RunningState(PreparedState *p)
                     device,
                     p->_settings.nChannels,
                     p->_settings.nSampleRate,
-                    p->_bufferSize,
-                    [this]() {
-                        signalPoll();
-                    });
+                    p->_bufferSize);
             _outputList.push_back(std::move(output));
         } else {
             auto output = std::make_unique<WASAPIOutputPush>(
@@ -70,17 +71,6 @@ void RunningState::signalStop() {
     _notifier.notify_all();
 }
 
-void RunningState::signalPoll() {
-    SPDLOG_TRACE_FUNC;
-    {
-        mainlog->trace("[RunningState::signalPoll] locking mutex");
-        std::lock_guard<std::mutex> lock(_mutex);
-        _shouldPoll = true;
-        mainlog->trace("[RunningState::signalPoll] unlocking mutex");
-    }
-    _notifier.notify_all();
-}
-
 void RunningState::threadProc(RunningState *state) {
     auto &_preparedState = state->_preparedState;
     auto bufferSize = state->_preparedState->_settings.bufferSize;
@@ -91,11 +81,17 @@ void RunningState::threadProc(RunningState *state) {
     AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
 
 
+    double lastPollTime = accurateTime();
+    double pollInterval = (double) state->_preparedState->_bufferSize / state->_preparedState->_settings.nSampleRate;
+    bool shouldPoll = true;
+
     while (true) {
         mainlog->trace("[RunningState::threadProc] Locking mutex");
         std::unique_lock<std::mutex> lock(state->_mutex);
+
+        // Timer event
         if (state->_pollStop) break;
-        else if (state->_shouldPoll) {
+        else if (shouldPoll) {
             mainlog->trace("[RunningState::threadProc] _shouldPoll");
             // Wait for output
             if (!state->_isOutputReady) {
@@ -107,7 +103,7 @@ void RunningState::threadProc(RunningState *state) {
             }
             if (state->_pollStop) break;
             state->_isOutputReady = false;
-            state->_shouldPoll = false;
+            shouldPoll = false;
             mainlog->trace("[RunningState::threadProc] unlock mutex after flag set");
             lock.unlock();
 
@@ -124,10 +120,20 @@ void RunningState::threadProc(RunningState *state) {
             _preparedState->_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
             _preparedState->_bufferIndex = 1 - currentBufferIndex;
         } else {
-            mainlog->trace("[RunningState::threadProc] Unlock mutex & waiting");
-            state->_notifier.wait(lock, [state]() {
-                return state->_pollStop || state->_shouldPoll;
-            });
+            auto currentTime = accurateTime();
+            mainlog->trace("checkPollTimer: current {:.6f} last {:.6f} interval {:.6f}",
+                           currentTime, lastPollTime, pollInterval);
+
+            if (currentTime >= lastPollTime + pollInterval) {
+                lastPollTime += pollInterval;
+                mainlog->debug("shouldPoll = true");
+                shouldPoll = true;
+            } else {
+                mainlog->trace("[RunningState::threadProc] Unlock mutex & waiting");
+                state->_notifier.wait_for(lock, 0.5ms, [&]() {
+                    return state->_pollStop || shouldPoll;
+                });
+            }
         }
     }
 }
