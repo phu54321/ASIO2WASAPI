@@ -20,7 +20,7 @@
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
 
-const int inBufferSizeMultiplier = 8;
+const int inBufferSizeMultiplier = 4;
 
 
 WASAPIOutputEvent::WASAPIOutputEvent(
@@ -244,6 +244,3 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
 
     return 0;
 }
-//
-// Created by whyask37 on 2023-07-01.
-//
