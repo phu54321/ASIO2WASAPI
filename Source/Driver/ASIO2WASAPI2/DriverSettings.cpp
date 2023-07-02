@@ -30,6 +30,13 @@ DriverSettings loadDriverSettings() {
         ret.nSampleRate = j.value("sampleRate", 48000);
         ret.bufferSize = j.value("bufferSize", 1024);
 
+        auto logLevel = j.value("logLevel", "debug");
+        if (logLevel == "trace") mainlog->set_level(spdlog::level::trace);
+        if (logLevel == "debug") mainlog->set_level(spdlog::level::debug);
+        if (logLevel == "info") mainlog->set_level(spdlog::level::info);
+        if (logLevel == "warn") mainlog->set_level(spdlog::level::warn);
+        if (logLevel == "error") mainlog->set_level(spdlog::level::err);
+
         if (j["deviceId"].is_string()) {
             ret.deviceIdList.push_back(utf8_to_wstring(j.value("deviceId", "")));
         } else if (j["deviceId"].is_array()) {
