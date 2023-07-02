@@ -19,6 +19,14 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
         return nullptr;
     }
 
+    // WASAPI flags
+    auto shareMode = (mode == WASAPIMode::Event) ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
+    auto streamFlags =
+            (mode == WASAPIMode::Event) ? AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST
+                                        : AUDCLNT_STREAMFLAGS_NOPERSIST;
+
+    ////
+
     HRESULT hr;
     auto deviceId = getDeviceId(pDevice);
 
@@ -27,14 +35,15 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     if (FAILED(hr) || !pAudioClient_) return nullptr;
     auto pAudioClient = make_autorelease(pAudioClient_);
 
-    hr = pAudioClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, pWaveFormat, nullptr);
+    hr = pAudioClient->IsFormatSupported(shareMode, pWaveFormat, nullptr);
     if (FAILED(hr)) return nullptr;
 
 
     REFERENCE_TIME defaultBufferDuration, minBufferDuration, bufferDuration;
     hr = pAudioClient->GetDevicePeriod(&defaultBufferDuration, &minBufferDuration);
     if (FAILED(hr)) return nullptr;
-    mainlog->debug(L"{} - minimum duration {}, default duration {}", deviceId, minBufferDuration, defaultBufferDuration);
+    mainlog->debug(L"{} - minimum duration {}, default duration {}", deviceId, minBufferDuration,
+                   defaultBufferDuration);
 
     if (bufferSizeRequest == BUFFER_SIZE_REQUEST_USEDEFAULT) {
         bufferDuration = defaultBufferDuration;
@@ -50,10 +59,8 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     mainlog->debug(L"pAudioClient->Initialize: device {}, bufferSizeRequest {}, bufferDuration {}", deviceId,
                    bufferSizeRequest,
                    bufferDuration);
-    auto streamFlags = AUDCLNT_STREAMFLAGS_NOPERSIST;
-    if (mode == WASAPIMode::Event) streamFlags |= AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
     hr = pAudioClient->Initialize(
-            AUDCLNT_SHAREMODE_EXCLUSIVE,
+            shareMode,
             streamFlags,
             bufferDuration,
             bufferDuration,
