@@ -42,8 +42,8 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     REFERENCE_TIME defaultBufferDuration, minBufferDuration, bufferDuration;
     hr = pAudioClient->GetDevicePeriod(&defaultBufferDuration, &minBufferDuration);
     if (FAILED(hr)) return nullptr;
-    mainlog->debug(L"{} - minimum duration {}, default duration {}", deviceId, minBufferDuration,
-                   defaultBufferDuration);
+    mainlog->info(L"{} minimum duration {}, default duration {}", deviceId, minBufferDuration,
+                  defaultBufferDuration);
 
     if (bufferSizeRequest == BUFFER_SIZE_REQUEST_USEDEFAULT) {
         bufferDuration = defaultBufferDuration;
@@ -56,9 +56,10 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
 
 
-    mainlog->debug(L"pAudioClient->Initialize: device {}, bufferSizeRequest {}, bufferDuration {}", deviceId,
+    mainlog->debug(L"{} pAudioClient->Initialize: bufferSizeRequest {}, bufferDuration {}", deviceId,
                    bufferSizeRequest,
                    bufferDuration);
+
     hr = pAudioClient->Initialize(
             shareMode,
             streamFlags,
@@ -68,13 +69,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
             nullptr);
 
     if (FAILED(hr)) {
-        mainlog->error(" - pAudioClient->Initialize failed (0:08x})", hr);
-        mainlog->error("    : pWaveFormat->wFormatTag: {}", pWaveFormat->wFormatTag);
-        mainlog->error("    : pWaveFormat->nChannels: {}", pWaveFormat->nChannels);
-        mainlog->error("    : pWaveFormat->nSamplesPerSec: {}", pWaveFormat->nSamplesPerSec);
-        mainlog->error("    : pWaveFormat->nAvgBytesPerSec: {}", pWaveFormat->nAvgBytesPerSec);
-        mainlog->error("    : pWaveFormat->nBlockAlign: {}", pWaveFormat->nBlockAlign);
-        mainlog->error("    : pWaveFormat->cbSize: {}", pWaveFormat->cbSize);
+        mainlog->error(L"{} pAudioClient->Initialize failed: 0x{:08X}", deviceId, (uint32_t) hr);
         return nullptr;
     }
 

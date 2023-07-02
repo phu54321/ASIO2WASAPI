@@ -37,7 +37,7 @@ WASAPIOutputEvent::WASAPIOutputEvent(
 
     if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, WASAPIMode::Event, &_waveFormat,
                           &_pAudioClient)) {
-        mainlog->error(L"Cannot find suitable stream format for output _pDevice (_pDevice ID {})", _pDeviceId);
+        mainlog->error(L"{} Cannot find suitable stream format for output _pDevice", _pDeviceId);
         throw AppException("FindStreamFormat failed");
     }
 
@@ -142,7 +142,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     BYTE *pData;
     HRESULT hr = pRenderClient->GetBuffer(_outBufferSize, &pData);
     if (FAILED(hr)) {
-        mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{0:08X})", _pDeviceId, hr);
+        mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{:08X})", _pDeviceId, (uint32_t)hr);
         return E_FAIL;
     }
 

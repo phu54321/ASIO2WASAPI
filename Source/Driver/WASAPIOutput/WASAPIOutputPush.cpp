@@ -85,7 +85,7 @@ void WASAPIOutputPush::pushSamples(const std::vector<std::vector<short>> &buffer
     BYTE *pData;
     HRESULT hr = _pRenderClient->GetBuffer(_outBufferSize, &pData);
     if (FAILED(hr)) {
-        mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{0:08X})", _pDeviceId, hr);
+        mainlog->error(L"{} _pRenderClient->GetBuffer() failed, (0x{:08X})", _pDeviceId, (uint32_t)hr);
         return;
     }
 
