@@ -112,6 +112,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     const char *fileNames[] = {
             "ASIO2WASAPI2.dll",
+            "LICENSE.txt",
             "UnInstall.exe",
     };
 

@@ -73,5 +73,8 @@
     "xtr1common": "cpp",
     "xtree": "cpp",
     "xutility": "cpp"
-  }
+  },
+  "licenser.license": "GPLv2",
+  "licenser.projectName": "ASIO2WASAPI2",
+  "licenser.author": "Hyunwoo Park"
 }
