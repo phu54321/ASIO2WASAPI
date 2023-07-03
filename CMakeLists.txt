@@ -10,16 +10,17 @@ add_compile_definitions(
 
 #set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-Debug)
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Release mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-Release)
+    set_property(GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 elseif (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     message("RelWithDebInfo mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-RelWithDebInfo)
+    set_property(GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 else ()
     message(FATAL_ERROR "Error: Only Debug/Release mode supported, but got ${CMAKE_BUILD_TYPE}")
 endif ()
