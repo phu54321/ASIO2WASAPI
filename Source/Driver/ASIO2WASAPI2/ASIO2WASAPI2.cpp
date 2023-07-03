@@ -25,6 +25,7 @@
 #include "ASIO2WASAPI2Impl.h"
 #include "../utils/logger.h"
 #include <spdlog/spdlog.h>
+#include <shellapi.h>
 
 
 CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
@@ -189,7 +190,11 @@ ASIOError ASIO2WASAPI2::getLatencies(long *_inputLatency, long *_outputLatency) 
 }
 
 ASIOError ASIO2WASAPI2::controlPanel() {
-    return ASE_NotPresent;
+    ShellExecute(
+            nullptr, nullptr,
+            L"https://github.com/phu54321/ASIO2WASAPI2",
+            nullptr, nullptr, SW_SHOW);
+    return ASE_OK;
 }
 
 ASIOError ASIO2WASAPI2::getChannels(long *numInputChannels, long *numOutputChannels) {
