@@ -42,6 +42,8 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
         : _settings(loadDriverSettings()) {
     SPDLOG_TRACE_FUNC;
 
+    mainlog->info("Starting ASIO2WASAPI2...");
+
     CoInitialize(nullptr);
 
     auto &targetDeviceIdList = _settings.deviceIdList;
@@ -96,6 +98,9 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
 
 ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
     SPDLOG_TRACE_FUNC;
+
+    mainlog->info("Stopping ASIO2WASAPI2...");
+    mainlog->flush();
 
     stop();
     disposeBuffers();
