@@ -2,7 +2,7 @@
 
 #include <spdlog/spdlog.h>
 #include <memory>
-#include "accutateTime.h"
+#include "accurateTime.h"
 
 extern std::unique_ptr<spdlog::logger> mainlog;
 

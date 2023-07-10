@@ -16,11 +16,11 @@
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef ASIO2WASAPI2_ACCUTATETIME_H
-#define ASIO2WASAPI2_ACCUTATETIME_H
+#ifndef ASIO2WASAPI2_ACCURATETIME_H
+#define ASIO2WASAPI2_ACCURATETIME_H
 
 void initAccurateTime();
 
 double accurateTime();
 
-#endif //ASIO2WASAPI2_ACCUTATETIME_H
+#endif //ASIO2WASAPI2_ACCURATETIME_H

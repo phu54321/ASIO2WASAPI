@@ -20,7 +20,7 @@
 #include <chrono>
 #include <math.h>
 
-#include "accutateTime.h"
+#include "accurateTime.h"
 
 static LARGE_INTEGER qpcFreq;
 

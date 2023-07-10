@@ -32,7 +32,7 @@
 
 #include "../WASAPIOutput/WASAPIOutputEvent.h"
 #include "../WASAPIOutput/WASAPIOutputPush.h"
-#include "../utils/accutateTime.h"
+#include "../utils/accurateTime.h"
 
 using namespace std::chrono_literals;
 

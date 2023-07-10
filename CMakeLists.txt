@@ -36,7 +36,7 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/utils/WASAPIUtils.cpp
         Source/Driver/utils/utf8convert.cpp
         Source/Driver/utils/homeDirFilePath.cpp
-        Source/Driver/utils/accutateTime.cpp
+        Source/Driver/utils/accurateTime.cpp
         Source/Driver/MessageWindow/MessageWindow.cpp
 
         Source/Driver/ASIO2WASAPI2/DriverSettings.cpp

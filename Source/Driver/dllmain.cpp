@@ -25,7 +25,7 @@
 #include "utils/homeDirFilePath.h"
 #include <spdlog/spdlog.h>
 #include "utils/logger.h"
-#include "utils/accutateTime.h"
+#include "utils/accurateTime.h"
 
 
 LONG UnregisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname);
