@@ -168,9 +168,16 @@ bool FindStreamFormat(
 
     if (!pDevice) return false;
 
+    mainlog->debug(TEXT("{} FindStreamFormat: nChannels {}, nSampleRate {}, bufferSizeRequest {}, mode {}"),
+                   getDeviceId(pDevice),
+                   nChannels,
+                   nSampleRate,
+                   bufferSizeRequest,
+                   mode == WASAPIMode::Event ? L"Event" : L"Pull");
+
     // create a reasonable channel mask
     DWORD dwChannelMask = (1 << nChannels) - 1;
-    WAVEFORMATEXTENSIBLE waveFormat;
+    WAVEFORMATEXTENSIBLE waveFormat = {0};
 
     // try 16-bit first
     waveFormat.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
