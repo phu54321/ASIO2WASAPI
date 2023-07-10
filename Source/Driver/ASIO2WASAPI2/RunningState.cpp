@@ -112,7 +112,7 @@ void RunningState::threadProc(RunningState *state) {
 
     TIMECAPS tcaps;
     timeGetDevCaps(&tcaps, sizeof(tcaps));
-    timeBeginPeriod(tcaps.wPeriodMin); // 주기를 1ms로 설정
+    timeBeginPeriod(tcaps.wPeriodMin);
     mainlog->info("timeBeginPeriod({})", tcaps.wPeriodMin);
 
     double lastPollTime = accurateTime();
