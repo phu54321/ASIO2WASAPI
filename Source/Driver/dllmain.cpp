@@ -33,8 +33,6 @@ LONG UnregisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *sz
 LONG RegisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname, const char *szasiodesc,
                         const char *szthreadmodel);
 
-HINSTANCE hinstance;
-
 static CFactoryTemplate s_Templates[1] = {
         {L"ASIO2WASAPI2", &CLSID_ASIO2WASAPI2_DRIVER, ASIO2WASAPI2::CreateInstance}};
 static int s_cTemplates = sizeof(s_Templates) / sizeof(s_Templates[0]);
@@ -80,7 +78,7 @@ public:
     };
 };
 
-HINSTANCE g_hinstDLL;
+HINSTANCE g_hInstDLL;
 
 void enableHighPresicionTimer() {
     // For Windows 11: apps require this code to
@@ -119,15 +117,16 @@ BOOL WINAPI DllMain(
     switch (fdwReason) {
 
         case DLL_PROCESS_ATTACH:
+            g_hInstDLL = hinstDLL;
+
             initMainLog();
             initAccurateTime();
             enableHighPresicionTimer();
-            mainlog->info(L"ASIO2WASAPI attached");
-            g_hinstDLL = hinstDLL;
-            DisableThreadLibraryCalls(hinstDLL);
-            hinstance = hinstDLL;
-            InitClasses(TRUE);
 
+            mainlog->info(L"ASIO2WASAPI attached");
+
+            DisableThreadLibraryCalls(hinstDLL);
+            InitClasses(TRUE);
             break;
 
         case DLL_PROCESS_DETACH:
@@ -175,7 +174,7 @@ STDAPI DllCanUnloadNow() {
 
 HRESULT DllRegisterServer() {
     char szDllPathName[MAX_PATH] = {0};
-    GetModuleFileNameA(g_hinstDLL, szDllPathName, MAX_PATH);
+    GetModuleFileNameA(g_hInstDLL, szDllPathName, MAX_PATH);
     LONG rc = RegisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription, szDescription, "Apartment");
 
     if (rc) {
@@ -188,7 +187,7 @@ HRESULT DllRegisterServer() {
 
 HRESULT DllUnregisterServer() {
     char szDllPathName[MAX_PATH] = {0};
-    GetModuleFileNameA(g_hinstDLL, szDllPathName, MAX_PATH);
+    GetModuleFileNameA(g_hInstDLL, szDllPathName, MAX_PATH);
     LONG rc = UnregisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription);
 
     if (rc) {

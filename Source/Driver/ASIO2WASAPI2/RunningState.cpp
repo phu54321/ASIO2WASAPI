@@ -40,6 +40,7 @@ using namespace std::chrono_literals;
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p) {
     SPDLOG_TRACE_FUNC;
+    std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
     for (int i = 0; i < p->_pDeviceList.size(); i++) {
         auto &device = p->_pDeviceList[i];
@@ -49,6 +50,13 @@ RunningState::RunningState(PreparedState *p)
                     p->_settings.nChannels,
                     p->_settings.nSampleRate,
                     p->_bufferSize);
+
+            _msgWindow.setTrayTooltip(fmt::format(
+                    TEXT("Sample rate {}, ASIO input buffer size {}, WASAPI output buffer size {}"),
+                    _preparedState->_settings.nSampleRate,
+                    _preparedState->_settings.bufferSize,
+                output->getOutputBufferSize()));
+
             _outputList.push_back(std::move(output));
         } else {
             auto output = std::make_unique<WASAPIOutputPush>(

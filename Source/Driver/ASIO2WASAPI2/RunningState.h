@@ -26,6 +26,7 @@
 
 #include <Windows.h>
 #include "PreparedState.h"
+#include "../MessageWindow//MessageWindow.h"
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -51,6 +52,7 @@ private:
     std::thread _pollThread;
 
     std::vector<WASAPIOutputPtr> _outputList;
+    MessageWindow _msgWindow;
 
     static void threadProc(RunningState *state);
 };
