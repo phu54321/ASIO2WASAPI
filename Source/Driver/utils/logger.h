@@ -2,23 +2,34 @@
 
 #include <spdlog/spdlog.h>
 #include <memory>
+#include "accutateTime.h"
 
 extern std::unique_ptr<spdlog::logger> mainlog;
+
 void initMainLog();
 
-class FuncTraceHelper {
+class TraceHelper {
 public:
-    FuncTraceHelper(const char *funcname) : _funcname(funcname) {
-        mainlog->trace("Entering {}", funcname);
+    explicit TraceHelper(const char *label) : _label(label) {
+        mainlog->trace("Entering {}", label);
+        _start = accurateTime();
     }
 
-    ~FuncTraceHelper() {
-        mainlog->trace("Leaving {}", _funcname);
+    ~TraceHelper() {
+        end();
+    }
+
+    void end() {
+        if (_label) {
+            mainlog->trace("Leaving {} [{:.6f}s]", _label, accurateTime() - _start);
+            _label = nullptr;
+        }
     }
 
 private:
-    const char *_funcname;
+    const char *_label;
+    double _start;
 };
 
 #define SPDLOG_TRACE_FUNC \
-    FuncTraceHelper _fth(__FUNCTION__)
+    TraceHelper _fth(__FUNCTION__)

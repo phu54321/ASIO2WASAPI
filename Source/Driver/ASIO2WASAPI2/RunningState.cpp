@@ -126,7 +126,7 @@ void RunningState::threadProc(RunningState *state) {
         // Timer event
         if (state->_pollStop) break;
         else if (shouldPoll) {
-            mainlog->trace("[RunningState::threadProc] _shouldPoll");
+            TraceHelper _("[RunningState::threadProc] _shouldPoll");
             // Wait for output
             if (!state->_isOutputReady) {
                 mainlog->trace("[RunningState::threadProc] unlock mutex d/t notifier wait");
