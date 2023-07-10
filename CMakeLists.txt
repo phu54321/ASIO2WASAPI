@@ -37,7 +37,11 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/utils/utf8convert.cpp
         Source/Driver/utils/homeDirFilePath.cpp
         Source/Driver/utils/accurateTime.cpp
+        Source/Driver/utils/hexdump.cpp
+
         Source/Driver/MessageWindow/MessageWindow.cpp
+        Source/Driver/MessageWindow/TrayHandler.cpp
+        Source/Driver/MessageWindow/KeyDownListener.cpp
 
         Source/Driver/ASIO2WASAPI2/DriverSettings.cpp
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.cpp
@@ -52,8 +56,6 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/WASAPIOutput/createIAudioClient.cpp
         Source/Driver/ASIO2WASAPI2/CUnknownImpl.cpp
         Source/Driver/WASAPIOutput/WASAPIOutputPush.cpp
-        Source/Driver/MessageWindow/TrayHandler.cpp
-        Source/Driver/utils/hexdump.cpp
         )
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)

@@ -14,7 +14,9 @@ public:
     MessageWindow();
     ~MessageWindow();
 
-    void setTrayTooltip(const tstring& msg);
+    void setTrayTooltip(const tstring &msg);
+
+    bool popKeyDownTime(double *out);
 
 private:
     std::unique_ptr<MessageWindowImpl> _pImpl;
