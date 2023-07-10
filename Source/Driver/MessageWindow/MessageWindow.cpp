@@ -20,7 +20,7 @@ public:
     bool popKeyDownTime(double *out);
 
 private:
-    static bool RegisterWindowClass(HINSTANCE hInstance, HICON hIcon);
+    static bool RegisterWindowClass(HINSTANCE hInstDLL, HICON hIcon);
 
     std::exception_ptr _threadException = nullptr;
     std::mutex _mutex;
@@ -191,7 +191,8 @@ LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam
             removeTrayIcon();
             PostQuitMessage(0);
             return 0;
-    }
 
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+        default:
+            return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
 }

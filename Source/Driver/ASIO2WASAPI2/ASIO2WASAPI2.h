@@ -39,7 +39,7 @@ struct IAudioRenderClient;
 #include "asiosys.h"
 #include "iasiodrv.h"
 
-extern CLSID CLSID_ASIO2WASAPI2_DRIVER;
+extern const CLSID CLSID_ASIO2WASAPI2_DRIVER;
 const char *const szDescription = "ASIO2WASAPI2";
 
 class ASIO2WASAPI2Impl;

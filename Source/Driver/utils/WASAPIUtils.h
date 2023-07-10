@@ -33,7 +33,7 @@ using IMMDevicePtr = std::shared_ptr<IMMDevice>;
  *           if this returns false, loop ends.
  * @return if loop completed without without interruptions, return true.
  */
-bool iterateAudioEndPoints(std::function<bool(IMMDevicePtr pMMDevice)> cb);
+bool iterateAudioEndPoints(const std::function<bool(IMMDevicePtr pMMDevice)> &cb);
 
 /**
  * Get default output device

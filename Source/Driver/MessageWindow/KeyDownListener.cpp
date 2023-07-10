@@ -3,8 +3,6 @@
 //
 
 #include "KeyDownListener.h"
-#include "../utils/accurateTime.h"
-#include "../utils/logger.h"
 #include <hidusage.h>
 
 void initRawInput(HWND hWnd) {
@@ -15,11 +13,6 @@ void initRawInput(HWND hWnd) {
     rid[0].hwndTarget = hWnd;
     RegisterRawInputDevices(rid, 1, sizeof(rid[0]));
 }
-
-enum KeyDirection {
-    Up,
-    Down
-};
 
 bool processRawInputMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // The official Microsoft examples are pretty terrible about this.

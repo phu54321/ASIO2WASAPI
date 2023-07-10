@@ -26,7 +26,7 @@
 CUnknown *ASIO2WASAPI2::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) {
     SPDLOG_TRACE_FUNC;
     return static_cast<CUnknown *>(new ASIO2WASAPI2(pUnk, phr));
-};
+}
 
 STDMETHODIMP ASIO2WASAPI2::NonDelegatingQueryInterface(REFIID riid, void **ppv) {
     SPDLOG_TRACE_FUNC;

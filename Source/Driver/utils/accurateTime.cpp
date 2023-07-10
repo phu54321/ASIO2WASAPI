@@ -17,9 +17,6 @@
 
 
 #include <Windows.h>
-#include <chrono>
-#include <math.h>
-
 #include "accurateTime.h"
 
 static LARGE_INTEGER qpcFreq;

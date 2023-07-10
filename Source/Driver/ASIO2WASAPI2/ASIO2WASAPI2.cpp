@@ -28,7 +28,7 @@
 #include <shellapi.h>
 #include <spdlog/fmt/fmt.h>
 
-CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
+const CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
 ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
         : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr) {}
@@ -107,21 +107,6 @@ ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
     if (granularity) *granularity = -1;
     return ASE_OK;
 }
-
-static const char *knownChannelNames[] =
-        {
-                "Front left",
-                "Front right",
-                "Front center",
-                "Low frequency",
-                "Back left",
-                "Back right",
-                "Front left of center",
-                "Front right of center",
-                "Back center",
-                "Side left",
-                "Side right",
-        };
 
 ASIOError ASIO2WASAPI2::getChannelInfo(ASIOChannelInfo *info) {
     if (!_pImpl) return ASE_NotPresent;

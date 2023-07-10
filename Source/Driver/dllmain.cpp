@@ -40,7 +40,7 @@ static int s_cTemplates = sizeof(s_Templates) / sizeof(s_Templates[0]);
 static void InitClasses(BOOL bLoading) {
     for (int i = 0; i < s_cTemplates; i++) {
         const CFactoryTemplate *pT = &s_Templates[i];
-        if (pT->m_lpfnInit != NULL) {
+        if (pT->m_lpfnInit != nullptr) {
             (*pT->m_lpfnInit)(bLoading, pT->m_ClsID);
         }
     }
@@ -56,21 +56,19 @@ private:
     static int m_cLocked;
 
 public:
-    CClassFactory(const CFactoryTemplate *);
+    explicit CClassFactory(const CFactoryTemplate *);
 
     // IUnknown
-    STDMETHODIMP QueryInterface(REFIID riid, void **ppv);
+    STDMETHODIMP QueryInterface(REFIID riid, void **ppv) override;
 
-    STDMETHODIMP_(ULONG)
-    AddRef();
+    STDMETHODIMP_(ULONG) AddRef() override;
 
-    STDMETHODIMP_(ULONG)
-    Release();
+    STDMETHODIMP_(ULONG) Release() override;
 
     // IClassFactory
-    STDMETHODIMP CreateInstance(LPUNKNOWN pUnkOuter, REFIID riid, void **pv);
+    STDMETHODIMP CreateInstance(LPUNKNOWN pUnkOuter, REFIID riid, void **pv) override;
 
-    STDMETHODIMP LockServer(BOOL fLock);
+    STDMETHODIMP LockServer(BOOL fLock) override;
 
     // allow DLLGetClassObject to know about global server lock status
     static BOOL IsLocked() {
@@ -80,7 +78,7 @@ public:
 
 HINSTANCE g_hInstDLL;
 
-void enableHighPresicionTimer() {
+void enableHighPrecisionTimer() {
     // For Windows 11: apps require this code to
     // get 1ms timer accuracy when backgrounded.
     PROCESS_POWER_THROTTLING_STATE PowerThrottling;
@@ -110,6 +108,11 @@ void enableHighPresicionTimer() {
     }
 }
 
+//////////////
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+
 BOOL WINAPI DllMain(
         __in HINSTANCE hinstDLL,
         __in DWORD fdwReason,
@@ -121,7 +124,7 @@ BOOL WINAPI DllMain(
 
             initMainLog();
             initAccurateTime();
-            enableHighPresicionTimer();
+            enableHighPrecisionTimer();
 
             mainlog->info(L"ASIO2WASAPI attached");
 
@@ -133,6 +136,8 @@ BOOL WINAPI DllMain(
             InitClasses(FALSE);
             mainlog->info(L"ASIO2WASAPI detaching");
             break;
+
+        default:;
     }
     return TRUE;
 }
@@ -153,7 +158,7 @@ STDAPI DllGetClassObject(REFCLSID rClsID, REFIID riid, void **pv) {
             // template
 
             *pv = (LPVOID) (LPUNKNOWN) new CClassFactory(pT);
-            if (*pv == NULL) {
+            if (*pv == nullptr) {
                 return E_OUTOFMEMORY;
             }
             ((LPUNKNOWN) *pv)->AddRef();
@@ -178,7 +183,7 @@ HRESULT DllRegisterServer() {
     LONG rc = RegisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription, szDescription, "Apartment");
 
     if (rc) {
-        MessageBox(NULL, TEXT("DllRegisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
+        MessageBox(nullptr, TEXT("DllRegisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
         return -1;
     }
 
@@ -191,12 +196,16 @@ HRESULT DllUnregisterServer() {
     LONG rc = UnregisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription);
 
     if (rc) {
-        MessageBox(NULL, TEXT("DllUnregisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
+        MessageBox(nullptr, TEXT("DllUnregisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
         return -1;
     }
 
     return S_OK;
 }
+
+#pragma clang diagnostic pop
+
+////////////////////////////////
 
 // process-wide dll locked state
 int CClassFactory::m_cLocked = 0;
@@ -207,7 +216,7 @@ CClassFactory::CClassFactory(const CFactoryTemplate *pTemplate) {
 }
 
 STDMETHODIMP CClassFactory::QueryInterface(REFIID riid, void **ppv) {
-    *ppv = NULL;
+    *ppv = nullptr;
 
     // any interface on this object is the object pointer.
     if ((riid == IID_IUnknown) || (riid == IID_IClassFactory)) {
@@ -220,14 +229,12 @@ STDMETHODIMP CClassFactory::QueryInterface(REFIID riid, void **ppv) {
     return ResultFromScode(E_NOINTERFACE);
 }
 
-STDMETHODIMP_(ULONG)
-CClassFactory::AddRef() {
+STDMETHODIMP_(ULONG) CClassFactory::AddRef() {
     return ++m_cRef;
 }
 
-STDMETHODIMP_(ULONG)
-CClassFactory::Release() {
-    LONG rc;
+STDMETHODIMP_(ULONG) CClassFactory::Release() {
+    ULONG rc;
 
     if (--m_cRef == 0) {
         delete this;
@@ -241,7 +248,7 @@ CClassFactory::Release() {
 STDMETHODIMP CClassFactory::CreateInstance(LPUNKNOWN pUnkOuter, REFIID riid, void **pv) {
     /* Enforce the normal OLE rules regarding interfaces and delegation */
 
-    if (pUnkOuter != NULL) {
+    if (pUnkOuter != nullptr) {
         if (IsEqualIID(riid, IID_IUnknown) == FALSE) {
             return ResultFromScode(E_NOINTERFACE);
         }
@@ -252,7 +259,7 @@ STDMETHODIMP CClassFactory::CreateInstance(LPUNKNOWN pUnkOuter, REFIID riid, voi
     HRESULT hr = NOERROR;
     CUnknown *pObj = m_pTemplate->CreateInstance(pUnkOuter, &hr);
 
-    if (pObj == NULL) {
+    if (pObj == nullptr) {
         return E_OUTOFMEMORY;
     }
 

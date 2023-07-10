@@ -86,7 +86,7 @@ void WASAPIOutputEvent::start() {
     // Wait for previous wasapi thread to close
     WaitForSingleObject(_runningEvent, INFINITE);
     if (!_stopEvent) {
-        _stopEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+        _stopEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
         CreateThread(nullptr, 0, playThread, this, 0, nullptr);
     }
 }
@@ -262,7 +262,6 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
     CExitEventSetter setter(pDriver->_runningEvent);
 
     auto pAudioClient = pDriver->_pAudioClient;
-    BYTE *pData = nullptr;
 
     hr = CoInitialize(nullptr);
     if (FAILED(hr))

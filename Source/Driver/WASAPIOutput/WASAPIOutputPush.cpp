@@ -28,8 +28,6 @@
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
 
-const double m_pi = 3.14159265358979;
-
 // WASAPI shared mode keeps its own queue, so it needs some padding to prevent write overflow
 const int outBufferSizeMultiplier = 4;
 const int minimumPushBuferSize = 1024;

@@ -54,10 +54,7 @@ public:
 
     ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) const;
 
-    int getBufferSize() const { return _bufferSize; }
-
 private:
-
     DriverSettings _settings;
     ASIOCallbacks *_callbacks;
     std::vector<IMMDevicePtr> _pDeviceList;

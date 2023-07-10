@@ -26,7 +26,7 @@ const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
 
-bool iterateAudioEndPoints(std::function<bool(IMMDevicePtr pMMDevice)> cb) {
+bool iterateAudioEndPoints(const std::function<bool(IMMDevicePtr pMMDevice)> &cb) {
     IMMDeviceEnumerator *pEnumerator_ = nullptr;
     HRESULT hr = CoCreateInstance(
             CLSID_MMDeviceEnumerator, nullptr,
@@ -64,7 +64,6 @@ bool iterateAudioEndPoints(std::function<bool(IMMDevicePtr pMMDevice)> cb) {
 
 IMMDevicePtr getDefaultOutputDevice() {
     IMMDeviceEnumerator *pEnumerator_ = nullptr;
-    DWORD flags = 0;
 
     HRESULT hr = CoCreateInstance(
             CLSID_MMDeviceEnumerator, nullptr,

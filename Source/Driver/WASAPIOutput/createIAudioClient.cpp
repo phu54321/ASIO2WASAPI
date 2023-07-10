@@ -106,7 +106,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
 
     mainlog->debug(L"{} pAudioClient->Initialize: bufferSizeRequest {}, bufferDuration {.1f}ms", deviceId,
                    bufferSizeRequest,
-                   bufferDuration / 1000.0);
+                   (double) bufferDuration / 1000.0);
 
     hr = pAudioClient->Initialize(
             shareMode,
@@ -196,7 +196,7 @@ bool FindStreamFormat(
     auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
     if (pAudioClient) goto Finish;
 
-    //try 24-bit containered next
+    //try 24-bit-in-32bit next
     waveFormat.Samples.wValidBitsPerSample = 24;
     pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
     if (pAudioClient) goto Finish;
