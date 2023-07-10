@@ -126,7 +126,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
         if (FAILED(hr)) return nullptr;
         auto alignedBufferDuration = (REFERENCE_TIME) lround(
                 10000.0 * 1000 / pWaveFormat->nSamplesPerSec * nextHighestAlignedBufferSize);
-        mainlog->debug(L"{} nextHighestAlignedBufferSize {}, alignedBufferDuration {}", nextHighestAlignedBufferSize,
+        mainlog->debug(L"{} nextHighestAlignedBufferSize {}, alignedBufferDuration {}", deviceId, nextHighestAlignedBufferSize,
                        alignedBufferDuration);
 
         pAudioClient = nullptr;
