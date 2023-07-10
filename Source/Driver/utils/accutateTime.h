@@ -23,6 +23,4 @@ void initAccurateTime();
 
 double accurateTime();
 
-void timerSleep(double seconds);
-
 #endif //ASIO2WASAPI2_ACCUTATETIME_H
