@@ -35,6 +35,8 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/utils/logger.cpp
         Source/Driver/utils/WASAPIUtils.cpp
         Source/Driver/utils/utf8convert.cpp
+        Source/Driver/utils/homeDirFilePath.cpp
+        Source/Driver/utils/accutateTime.cpp
 
         Source/Driver/ASIO2WASAPI2/DriverSettings.cpp
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.cpp
@@ -45,10 +47,12 @@ add_library(ASIO2WASAPI2 SHARED
 
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.rc
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.def
+        Source/Driver/WASAPIOutput/iidConstant.cpp
         Source/Driver/WASAPIOutput/createIAudioClient.cpp
         Source/Driver/ASIO2WASAPI2/CUnknownImpl.cpp
-        Source/Driver/utils/homeDirFilePath.cpp
-        Source/Driver/WASAPIOutput/WASAPIOutputPush.cpp Source/Driver/WASAPIOutput/WASAPIOutputPush.h Source/Driver/WASAPIOutput/iidConstant.cpp Source/Driver/utils/accutateTime.cpp Source/Driver/utils/accutateTime.h)
+        Source/Driver/WASAPIOutput/WASAPIOutputPush.cpp
+        Source/Driver/utils/hexdump.cpp
+        )
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)

@@ -31,6 +31,7 @@
 #include "RunningState.h"
 #include "PreparedState.h"
 #include "../utils/logger.h"
+#include "../utils/hexdump.h"
 
 using json = nlohmann::json;
 
@@ -139,7 +140,7 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate sampleRate) {
 ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
     SPDLOG_TRACE_FUNC;
 
-    mainlog->debug(L"setSampleRate: {}", sampleRate);
+    mainlog->debug("setSampleRate: {} ( {} )", sampleRate, hexdump(&sampleRate, sizeof(sampleRate)));
     if (sampleRate == _settings.nSampleRate) return ASE_OK;
 
     auto err = canSampleRate(sampleRate);
