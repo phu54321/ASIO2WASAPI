@@ -43,6 +43,8 @@ public:
      */
     void pushSamples(const std::vector<std::vector<short>> &buffer);
 
+    UINT32 getOutputBufferSize() const { return _outputBufferSize; }
+
 private:
     void start();
 

@@ -26,7 +26,7 @@
 #include "../utils/logger.h"
 #include <spdlog/spdlog.h>
 #include <shellapi.h>
-
+#include <spdlog/fmt/fmt.h>
 
 CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
@@ -66,7 +66,9 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
         return true;
     } catch (AppException &e) {
         // Swallow here...
-        mainlog->error("ASIO2WASAPI2Impl constructor failed: {}", e.what());
+        auto string = fmt::format("ASIO2WASAPI2Impl constructor failed: {}", e.what());
+        mainlog->error(string);
+        MessageBoxA((HWND)sysRef, string.c_str(), "Error", MB_OK);
         return false;
     }
 }
