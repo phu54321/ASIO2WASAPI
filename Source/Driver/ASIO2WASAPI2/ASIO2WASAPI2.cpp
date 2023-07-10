@@ -87,6 +87,11 @@ ASIOError ASIO2WASAPI2::canSampleRate(ASIOSampleRate sampleRate) {
 
 ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
     if (!_pImpl) return ASE_NotPresent;
+    if (sampleRate == 0) {
+        mainlog->debug(L"setSampleRate: 0 (external sync) - we don't have external clock, so ignoring");
+        return ASE_NoClock;
+    }
+
     return _pImpl->setSampleRate(sampleRate);
 }
 
