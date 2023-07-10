@@ -26,14 +26,20 @@
 
 using json = nlohmann::json;
 
+const wchar_t *defaultDevices[] = {
+        L"(default)",
+        L"CABLE Input(VB-Audio Virtual Cable)",
+};
+
 DriverSettings loadDriverSettings() {
     FILE *fp = homeDirFOpen(TEXT("ASIO2WASAPI2.json"), TEXT("rb"));
     if (!fp) {
         // use default
         DriverSettings ret;
         mainlog->info("ASIO2WASAPI2.json not found. Using default settings");
-        ret.deviceIdList.emplace_back(L"(default)");
-        ret.deviceIdList.emplace_back(L"CABLE Input(VB-Audio Virtual Cable)");
+        for (const wchar_t *device: defaultDevices) {
+            ret.deviceIdList.emplace_back(device);
+        }
         return ret;
     }
 
@@ -52,7 +58,11 @@ DriverSettings loadDriverSettings() {
         if (logLevel == "warn") mainlog->set_level(spdlog::level::warn);
         if (logLevel == "error") mainlog->set_level(spdlog::level::err);
 
-        if (j["deviceId"].is_string()) {
+        if (!j.contains("deviceId")) {
+            for (const wchar_t *device: defaultDevices) {
+                ret.deviceIdList.emplace_back(device);
+            }
+        } else if (j["deviceId"].is_string()) {
             ret.deviceIdList.push_back(utf8_to_wstring(j.value("deviceId", "")));
         } else if (j["deviceId"].is_array()) {
             for (const auto &item: j["deviceId"]) {
