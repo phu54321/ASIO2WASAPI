@@ -35,7 +35,7 @@
 
 using json = nlohmann::json;
 
-static const ASIOSampleType sampleType = ASIOSTInt16LSB;
+static const ASIOSampleType sampleType = ASIOSTInt32LSB;
 
 extern HINSTANCE g_hinstDLL;
 

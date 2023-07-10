@@ -64,7 +64,7 @@ private:
 
     int _bufferSize = 0; // in audio frames
     int _bufferIndex = 0;
-    std::vector<std::vector<short>> _buffers[2];
+    std::vector<std::vector<int32_t>> _buffers[2];
 
     ASIOTimeStamp _theSystemTime = {0, 0};
     uint64_t _samplePosition = 0;

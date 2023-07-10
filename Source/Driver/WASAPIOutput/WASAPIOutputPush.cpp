@@ -85,7 +85,7 @@ WASAPIOutputPush::~WASAPIOutputPush() {
 }
 
 
-void WASAPIOutputPush::pushSamples(const std::vector<std::vector<short>> &buffer) {
+void WASAPIOutputPush::pushSamples(const std::vector<std::vector<int32_t>> &buffer) {
     SPDLOG_TRACE_FUNC;
 
     assert (buffer.size() == _channelNum);
@@ -120,14 +120,14 @@ void WASAPIOutputPush::pushSamples(const std::vector<std::vector<short>> &buffer
         auto out = reinterpret_cast<int16_t *>(pData);
         for (int i = 0; i < _outBufferSize; i++) {
             for (unsigned channel = 0; channel < _channelNum; channel++) {
-                *(out++) = buffer[channel][i];
+                *(out++) = (int16_t) (buffer[channel][i] >> 16);
             }
         }
     } else if (sampleSize == 4) {
         auto out = reinterpret_cast<int32_t *>(pData);
         for (int i = 0; i < _outBufferSize; i++) {
             for (unsigned channel = 0; channel < _channelNum; channel++) {
-                *(out++) = (int) buffer[channel][i] << 16;
+                *(out++) = buffer[channel][i];
             }
         }
     }

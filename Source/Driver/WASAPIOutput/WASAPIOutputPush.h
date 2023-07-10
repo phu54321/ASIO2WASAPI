@@ -40,7 +40,7 @@ public:
      * Push samples to ring central queue. This will be printed to asio.
      * @param buffer `sample = buffer[channel][sampleIndex]`
      */
-    void pushSamples(const std::vector<std::vector<short>> &buffer);
+    void pushSamples(const std::vector<std::vector<int32_t>> &buffer);
 
 private:
     int _channelNum;

@@ -41,7 +41,7 @@ public:
      * Push samples to ring central queue. This will be printed to asio.
      * @param buffer `sample = buffer[channel][sampleIndex]`
      */
-    void pushSamples(const std::vector<std::vector<short>> &buffer);
+    void pushSamples(const std::vector<std::vector<int32_t>> &buffer);
 
     UINT32 getOutputBufferSize() const { return _outputBufferSize; }
 
@@ -61,7 +61,7 @@ private:
     UINT32 _inputBufferSize;
     UINT32 _outputBufferSize;
 
-    std::vector<std::vector<short>> _ringBuffer;
+    std::vector<std::vector<int32_t>> _ringBuffer;
     std::mutex _ringBufferMutex;
     size_t _ringBufferSize;
     size_t _ringBufferReadPos = 0;

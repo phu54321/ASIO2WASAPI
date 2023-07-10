@@ -102,7 +102,7 @@ void WASAPIOutputEvent::stop() {
 }
 
 
-void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<short>> &buffer) {
+void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buffer) {
     assert (buffer.size() == _channelNum);
 
     mainlog->debug(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
@@ -215,11 +215,11 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
             if (sampleSize == 2) {
                 for (unsigned channel = 0; channel < _channelNum; channel++) {
                     auto out = reinterpret_cast<int16_t *>(pData) + channel;
-                    short *pStart = _ringBuffer[channel].data() + rp;
-                    short *pEnd = _ringBuffer[channel].data() + (rp + _outputBufferSize) % _ringBufferSize;
-                    short *pWrap = _ringBuffer[channel].data() + _ringBufferSize;
-                    for (short *p = pStart; p != pEnd;) {
-                        *out = *p;
+                    int32_t *pStart = _ringBuffer[channel].data() + rp;
+                    int32_t *pEnd = _ringBuffer[channel].data() + (rp + _outputBufferSize) % _ringBufferSize;
+                    int32_t *pWrap = _ringBuffer[channel].data() + _ringBufferSize;
+                    for (int32_t *p = pStart; p != pEnd;) {
+                        *out = (int16_t) ((*p) >> 16);
                         out += _channelNum;
                         p++;
                         if (p == pWrap) p = _ringBuffer[channel].data();
@@ -228,11 +228,11 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
             } else if (sampleSize == 4) {
                 for (unsigned channel = 0; channel < _channelNum; channel++) {
                     auto out = reinterpret_cast<int32_t *>(pData) + channel;
-                    short *pStart = _ringBuffer[channel].data() + rp;
-                    short *pEnd = _ringBuffer[channel].data() + (rp + _outputBufferSize) % _ringBufferSize;
-                    short *pWrap = _ringBuffer[channel].data() + _ringBufferSize;
-                    for (short *p = pStart; p != pEnd;) {
-                        *out = (int) (*p) << 16;
+                    int32_t *pStart = _ringBuffer[channel].data() + rp;
+                    int32_t *pEnd = _ringBuffer[channel].data() + (rp + _outputBufferSize) % _ringBufferSize;
+                    int32_t *pWrap = _ringBuffer[channel].data() + _ringBufferSize;
+                    for (int32_t *p = pStart; p != pEnd;) {
+                        *out = *p;
                         out += _channelNum;
                         p++;
                         if (p == pWrap) p = _ringBuffer[channel].data();

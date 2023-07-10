@@ -32,7 +32,7 @@ public:
      * Push samples to ring central queue. This will be printed to asio.
      * @param buffer `sample = buffer[channel][sampleIndex]`
      */
-    virtual void pushSamples(const std::vector<std::vector<short>> &buffer) = 0;
+    virtual void pushSamples(const std::vector<std::vector<int32_t>> &buffer) = 0;
 };
 
 using WASAPIOutputPtr = std::shared_ptr<WASAPIOutput>;
