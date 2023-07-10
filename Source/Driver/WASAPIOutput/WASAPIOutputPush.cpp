@@ -115,12 +115,20 @@ void WASAPIOutputPush::pushSamples(const std::vector<std::vector<short>> &buffer
     }
 
     UINT32 sampleSize = _waveFormat.Format.wBitsPerSample / 8;
-    assert(sampleSize == 2);
 
-    auto out = reinterpret_cast<short *>(pData);
-    for (int i = 0; i < _outBufferSize; i++) {
-        for (unsigned channel = 0; channel < _channelNum; channel++) {
-            *(out++) = buffer[channel][i];
+    if (sampleSize == 2) {
+        auto out = reinterpret_cast<int16_t *>(pData);
+        for (int i = 0; i < _outBufferSize; i++) {
+            for (unsigned channel = 0; channel < _channelNum; channel++) {
+                *(out++) = buffer[channel][i];
+            }
+        }
+    } else if (sampleSize == 4) {
+        auto out = reinterpret_cast<int32_t *>(pData);
+        for (int i = 0; i < _outBufferSize; i++) {
+            for (unsigned channel = 0; channel < _channelNum; channel++) {
+                *(out++) = (int) buffer[channel][i] << 16;
+            }
         }
     }
 

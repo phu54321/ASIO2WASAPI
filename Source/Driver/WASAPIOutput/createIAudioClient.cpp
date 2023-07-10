@@ -94,9 +94,9 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
         bufferDuration = defaultBufferDuration;
     } else {
         bufferDuration = (REFERENCE_TIME) lround(10000.0 *                         // (REFERENCE_TIME / ms) *
-                                                                                   1000 *                            // (ms / s) *
-                                                                                   bufferSizeRequest /                      // frames /
-                                                                                   pWaveFormat->nSamplesPerSec      // (frames / s)
+                                                 1000 *                            // (ms / s) *
+                                                 bufferSizeRequest /                      // frames /
+                                                 pWaveFormat->nSamplesPerSec      // (frames / s)
         );
     }
     if (bufferDuration < minBufferDuration) {
@@ -126,7 +126,8 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
         if (FAILED(hr)) return nullptr;
         auto alignedBufferDuration = (REFERENCE_TIME) lround(
                 10000.0 * 1000 / pWaveFormat->nSamplesPerSec * nextHighestAlignedBufferSize);
-        mainlog->debug(L"{} nextHighestAlignedBufferSize {}, alignedBufferDuration {}", deviceId, nextHighestAlignedBufferSize,
+        mainlog->debug(L"{} nextHighestAlignedBufferSize {}, alignedBufferDuration {}", deviceId,
+                       nextHighestAlignedBufferSize,
                        alignedBufferDuration);
 
         pAudioClient = nullptr;
@@ -179,12 +180,13 @@ bool FindStreamFormat(
     DWORD dwChannelMask = (1 << nChannels) - 1;
     WAVEFORMATEXTENSIBLE waveFormat = {0};
 
-    // try 16-bit first
+
+    //try 32-bit first
     waveFormat.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     waveFormat.Format.nChannels = nChannels;
     waveFormat.Format.nSamplesPerSec = nSampleRate;
-    waveFormat.Format.wBitsPerSample = 16;
-    waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample / 8 * waveFormat.Format.nChannels;
+    waveFormat.Format.wBitsPerSample = 32;
+    waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
     waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
     waveFormat.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
     waveFormat.Samples.wValidBitsPerSample = waveFormat.Format.wBitsPerSample;
@@ -192,9 +194,20 @@ bool FindStreamFormat(
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
     auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
-    if (pAudioClient) {
-        goto Finish;
-    }
+    if (pAudioClient) goto Finish;
+
+    //try 24-bit containered next
+    waveFormat.Samples.wValidBitsPerSample = 24;
+    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
+    if (pAudioClient) goto Finish;
+
+    //finally, try 16-bit
+    waveFormat.Format.wBitsPerSample = 16;
+    waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
+    waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
+    waveFormat.Samples.wValidBitsPerSample = waveFormat.Format.wBitsPerSample;
+    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
+    if (pAudioClient) goto Finish;
 
     Finish:
     bool bSuccess = (pAudioClient != nullptr);
