@@ -54,5 +54,5 @@ void initMainLog() {
     }
 
     mainlog = std::make_unique<spdlog::logger>("main_logger", sinks.begin(), sinks.end());
-    mainlog->set_level(spdlog::level::debug);
+    mainlog->set_level(spdlog::level::info);
 }
