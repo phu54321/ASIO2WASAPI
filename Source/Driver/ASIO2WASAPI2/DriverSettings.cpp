@@ -50,6 +50,7 @@ DriverSettings loadDriverSettings() {
         ret.nChannels = j.value("channelCount", 2);
         ret.nSampleRate = j.value("sampleRate", 48000);
         ret.bufferSize = j.value("bufferSize", 1024);
+        ret.clapGain = j.value("clapGain", 0.);
 
         auto logLevel = j.value("logLevel", "debug");
         if (logLevel == "trace") mainlog->set_level(spdlog::level::trace);

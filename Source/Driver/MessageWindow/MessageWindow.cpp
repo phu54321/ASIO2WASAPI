@@ -1,3 +1,21 @@
+// Copyright (C) 2023 Hyunwoo Park
+//
+// This file is part of ASIO2WASAPI2.
+//
+// ASIO2WASAPI2 is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 2 of the License, or
+// (at your option) any later version.
+//
+// ASIO2WASAPI2 is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 #include <Windows.h>
 #include <queue>
 #include "MessageWindow.h"
@@ -17,8 +35,6 @@ public:
 
     void setTrayTooltip(const tstring &str);
 
-    bool popKeyDownTime(double *out);
-
 private:
     static bool RegisterWindowClass(HINSTANCE hInstDLL, HICON hIcon);
 
@@ -26,7 +42,6 @@ private:
     std::mutex _mutex;
     std::thread _thread;
     HWND _hWnd = nullptr;
-    std::queue<double> _keyDownTimeQueue;
 
 private:
     static void threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindowImpl *p);
@@ -47,10 +62,6 @@ MessageWindow::~MessageWindow() = default;
 
 void MessageWindow::setTrayTooltip(const tstring &msg) {
     _pImpl->setTrayTooltip(msg);
-}
-
-bool MessageWindow::popKeyDownTime(double *out) {
-    return _pImpl->popKeyDownTime(out);
 }
 
 /////////////////
@@ -148,7 +159,6 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
     p->_hWnd = hWnd;
 
     createTrayIcon(hWnd, hIcon, TEXT("ASIO2WASAPI2"));
-    initRawInput(hWnd);
 
     MSG msg;
     while (GetMessage(&msg, p->_hWnd, 0, 0)) {
@@ -163,30 +173,9 @@ void MessageWindowImpl::setTrayTooltip(const tstring &str) {
     setTooltip(_hWnd, str.c_str());
 }
 
-bool MessageWindowImpl::popKeyDownTime(double *out) {
-    std::lock_guard<std::mutex> lock(_mutex);
-    if (_keyDownTimeQueue.empty()) return false;
-    *out = _keyDownTimeQueue.front();
-    _keyDownTimeQueue.pop();
-    return true;
-}
 
 LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-        case WM_INPUT:
-            // NOTE: according to experiment, GetMesssageTime doesn't give accurate enough timing.
-            // as it is capped to 15ms accuracy... xD (It doesn't get accurate with timeBeginPeriod)
-            // So as a proxy, we just believe that WndProc will fire ASAP and call accurateTime()
-            // on WndProc.
-            if (processRawInputMessage(hWnd, uMsg, wParam, lParam)) {
-                auto time = accurateTime();
-                mainlog->debug("Keyboard input on time {}", time);
-
-                auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, 0));
-                std::lock_guard<std::mutex> lock(p->_mutex);
-                p->_keyDownTimeQueue.push(time);
-            }
-            return 0;
         case WM_DESTROY:
             removeTrayIcon();
             PostQuitMessage(0);

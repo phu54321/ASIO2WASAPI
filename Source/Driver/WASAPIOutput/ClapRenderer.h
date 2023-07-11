@@ -16,24 +16,29 @@
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ASIO2WASAPI2_KEYDOWNLISTENER_H
-#define ASIO2WASAPI2_KEYDOWNLISTENER_H
+//
+// Created by whyask37 on 2023-07-11.
+//
+
+#ifndef ASIO2WASAPI2_CLAPRENDERER_H
+#define ASIO2WASAPI2_CLAPRENDERER_H
 
 #include <Windows.h>
 #include <vector>
-#include <queue>
 
-class KeyDownListener {
+class ClapRenderer {
 public:
-    KeyDownListener();
+    ClapRenderer(HMODULE hDLL, double gain, int targetSampleRate);
 
-    ~KeyDownListener();
+    ~ClapRenderer() = default;
 
-    int pollKeyPressCount();
+    double getClapSoundLength() const;
+
+    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int gain) const;
 
 private:
-    std::vector<bool> _keyPressed;
-    std::queue<double> _keyDownTimeQueue;
+    std::vector<int32_t> _samples;
+    int _sampleRate;
 };
 
-#endif //ASIO2WASAPI2_KEYDOWNLISTENER_H
+#endif //ASIO2WASAPI2_CLAPRENDERER_H

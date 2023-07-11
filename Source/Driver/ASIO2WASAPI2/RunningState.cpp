@@ -29,6 +29,7 @@
 #include <avrt.h>
 #include <timeapi.h>
 #include <mmsystem.h>
+#include <deque>
 
 #include "../WASAPIOutput/WASAPIOutputEvent.h"
 #include "../WASAPIOutput/WASAPIOutputPush.h"
@@ -36,9 +37,11 @@
 
 using namespace std::chrono_literals;
 
+extern HINSTANCE g_hInstDLL;
 
 RunningState::RunningState(PreparedState *p)
-        : _preparedState(p) {
+        : _preparedState(p),
+          _clapRenderer(g_hInstDLL, p->_settings.clapGain, p->_settings.nSampleRate) {
     SPDLOG_TRACE_FUNC;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -156,7 +159,41 @@ void RunningState::threadProc(RunningState *state) {
     double pollInterval = (double) preparedState->_bufferSize / preparedState->_settings.nSampleRate;
     bool shouldPoll = true;
 
+    const int keyDownQueueSize = 256;
+    struct KeyDownPair {
+        double time = 0;
+        int pressCount = 0;
+    };
+
+    // Fixed-size looping queue
+    // This is intentionally designed to overflow after keyDownQueueSize
+    // to prevent additional allocation
+    std::vector<KeyDownPair> keyDownQueue(keyDownQueueSize);
+    int keyDownQueueIndex = 0;
+
     while (true) {
+        auto currentTime = accurateTime();
+
+        // TODO: put this block somewhere appropriate
+        {
+            // Update keydown queue for clap sound
+            auto pressCount = state->_keyListener.pollKeyPressCount();
+            if (pressCount > 0) {
+                keyDownQueue[keyDownQueueIndex].time = currentTime;
+                keyDownQueue[keyDownQueueIndex].pressCount = pressCount;
+                keyDownQueueIndex = (keyDownQueueIndex + 1) % keyDownQueueSize;
+            }
+
+            // GC old keydown events
+            double cutoffTime = currentTime - state->_clapRenderer.getClapSoundLength();
+            for (int i = 0; i < keyDownQueueSize; i++) {
+                if (keyDownQueue[i].pressCount > 0 && keyDownQueue[i].time < cutoffTime) {
+                    keyDownQueue[i].pressCount = 0;
+                }
+            }
+        }
+
+
         mainlog->trace("[RunningState::threadProc] Locking mutex");
         std::unique_lock<std::mutex> lock(state->_mutex);
 
@@ -200,6 +237,18 @@ void RunningState::threadProc(RunningState *state) {
                 preparedState->_bufferIndex = 1 - currentAsioBufferIndex;
             }
 
+            // Add clap sound
+            {
+                for (int i = 0; i < keyDownQueueSize; i++) {
+                    auto &pair = keyDownQueue[i];
+                    if (pair.pressCount > 0) {
+                        for (size_t ch = 0; ch < nChannels; ch++) {
+                            state->_clapRenderer.render(&outputBuffer[ch], currentTime, pair.time, pair.pressCount);
+                        }
+                    }
+                }
+            }
+
             // TODO: add additional processing
 
             // Rescale & compress output
@@ -211,7 +260,6 @@ void RunningState::threadProc(RunningState *state) {
             }
 
         } else {
-            auto currentTime = accurateTime();
             auto targetTime = lastPollTime + pollInterval;
 
             mainlog->trace("checkPollTimer: current {:.6f} last {:.6f} interval {:.6f}",

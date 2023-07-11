@@ -27,6 +27,8 @@
 #include <Windows.h>
 #include "PreparedState.h"
 #include "../MessageWindow//MessageWindow.h"
+#include "../WASAPIOutput/ClapRenderer.h"
+#include "../MessageWindow/KeyDownListener.h"
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -52,7 +54,9 @@ private:
     std::thread _pollThread;
 
     std::vector<WASAPIOutputPtr> _outputList;
+    ClapRenderer _clapRenderer;
     MessageWindow _msgWindow;
+    KeyDownListener _keyListener;
 
     static void threadProc(RunningState *state);
 };

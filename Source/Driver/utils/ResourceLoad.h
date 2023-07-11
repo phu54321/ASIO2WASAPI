@@ -16,24 +16,15 @@
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ASIO2WASAPI2_KEYDOWNLISTENER_H
-#define ASIO2WASAPI2_KEYDOWNLISTENER_H
+#ifndef ASIO2WASAPI2_RESOURCELOAD_H
+#define ASIO2WASAPI2_RESOURCELOAD_H
 
-#include <Windows.h>
+#include <windows.h>
 #include <vector>
-#include <queue>
 
-class KeyDownListener {
-public:
-    KeyDownListener();
+std::vector<uint8_t> loadUserdataResource(
+        HMODULE hDLL,
+        LPCTSTR resourceIdentifier
+);
 
-    ~KeyDownListener();
-
-    int pollKeyPressCount();
-
-private:
-    std::vector<bool> _keyPressed;
-    std::queue<double> _keyDownTimeQueue;
-};
-
-#endif //ASIO2WASAPI2_KEYDOWNLISTENER_H
+#endif //ASIO2WASAPI2_RESOURCELOAD_H

@@ -27,6 +27,7 @@ struct DriverSettings {
     int nChannels = 2;
     int nSampleRate = 48000;
     int bufferSize = 1024;
+    double clapGain = 0;
     std::vector<std::wstring> deviceIdList;
 };
 

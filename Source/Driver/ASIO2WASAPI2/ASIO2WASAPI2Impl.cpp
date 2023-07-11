@@ -37,8 +37,6 @@ using json = nlohmann::json;
 
 static const ASIOSampleType sampleType = ASIOSTInt32LSB;
 
-extern HINSTANCE g_hinstDLL;
-
 ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
         : _settings(loadDriverSettings()) {
     SPDLOG_TRACE_FUNC;

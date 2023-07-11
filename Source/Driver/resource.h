@@ -1,2 +1,4 @@
-#define IDI_ICON1 101
+#define RT_USERDATA 0x105
 
+#define IDI_ICON1 101
+#define IDR_CLAP_MONO 102
