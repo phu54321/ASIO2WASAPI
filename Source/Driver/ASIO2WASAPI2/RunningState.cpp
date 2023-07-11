@@ -55,7 +55,7 @@ RunningState::RunningState(PreparedState *p)
                     TEXT("Sample rate {}, ASIO input buffer size {}, WASAPI output buffer size {}"),
                     _preparedState->_settings.nSampleRate,
                     _preparedState->_settings.bufferSize,
-                output->getOutputBufferSize()));
+                    output->getOutputBufferSize()));
 
             _outputList.push_back(std::move(output));
         } else {
@@ -100,10 +100,47 @@ void RunningState::signalStop() {
     _notifier.notify_all();
 }
 
+void compress24bitTo32bit(std::vector<std::vector<int32_t>> *outputBuffer) {
+    const int32_t overflowPreventer = 5;
+    const int32_t compressPadding = (1 << 19) - overflowPreventer;
+    const int32_t compressionThresholdHigh =
+            (1 << 23) - compressPadding - overflowPreventer;
+    const int32_t compressionThresholdLow = -compressionThresholdHigh;
+
+    const auto nChannels = outputBuffer->size();
+    const auto bufferSize = outputBuffer->at(0).size();
+
+    for (size_t ch = 0; ch < nChannels; ch++) {
+        auto &channelBuffer = outputBuffer->at(ch);
+        for (size_t i = 0; i < bufferSize; i++) {
+            auto sample = channelBuffer[i];
+            int32_t o;
+            if (sample > compressionThresholdHigh) {
+                auto overflow = sample - compressionThresholdHigh;
+                o = compressionThresholdHigh + (int32_t) round(
+                        compressPadding * (2 / (1 + exp(-overflow / compressPadding)) - 1));
+            } else if (sample < compressionThresholdLow) {
+                auto overflow = sample - compressionThresholdLow;
+                o = compressionThresholdLow + (int32_t) round(
+                        compressPadding * (2 / (1 + exp(-overflow / compressPadding)) - 1));
+            } else {
+                o = sample;
+            }
+            channelBuffer[i] = (o << 8);
+        }
+    }
+}
+
 
 void RunningState::threadProc(RunningState *state) {
-    auto &_preparedState = state->_preparedState;
-    auto bufferSize = state->_preparedState->_settings.bufferSize;
+    auto &preparedState = state->_preparedState;
+    auto bufferSize = preparedState->_settings.bufferSize;
+    auto nChannels = preparedState->_settings.nChannels;
+    std::vector<std::vector<int32_t>> outputBuffer;
+    outputBuffer.resize(preparedState->_settings.nChannels);
+    for (auto &buf: outputBuffer) {
+        buf.resize(preparedState->_bufferSize);
+    }
 
     // Ask MMCSS to temporarily boost the runThread priority
     // to reduce the possibility of glitches while we play.
@@ -116,7 +153,7 @@ void RunningState::threadProc(RunningState *state) {
     mainlog->info("timeBeginPeriod({})", tcaps.wPeriodMin);
 
     double lastPollTime = accurateTime();
-    double pollInterval = (double) state->_preparedState->_bufferSize / state->_preparedState->_settings.nSampleRate;
+    double pollInterval = (double) preparedState->_bufferSize / preparedState->_settings.nSampleRate;
     bool shouldPoll = true;
 
     while (true) {
@@ -141,18 +178,38 @@ void RunningState::threadProc(RunningState *state) {
             mainlog->trace("[RunningState::threadProc] unlock mutex after flag set");
             lock.unlock();
 
-            assert(_preparedState);
-            int currentBufferIndex = _preparedState->_bufferIndex;
-            const auto &currentBuffer = _preparedState->_buffers[currentBufferIndex];
-            mainlog->debug("[RunningState::threadProc] Writing {} samples from buffer {}", bufferSize,
-                           currentBufferIndex);
-            for (auto &output: state->_outputList) {
-                output->pushSamples(currentBuffer);
+            assert(preparedState);
+
+            // Put asio main input.
+            {
+                // Copy data from asio side
+                int currentAsioBufferIndex = preparedState->_bufferIndex;
+                mainlog->debug("[RunningState::threadProc] Writing {} samples from buffer {}", bufferSize,
+                               currentAsioBufferIndex);
+                const auto &asioCurrentBuffer = preparedState->_buffers[currentAsioBufferIndex];
+                for (size_t ch = 0; ch < nChannels; ch++) {
+                    for (size_t i = 0; i < bufferSize; i++) {
+                        int32_t sample = asioCurrentBuffer[ch][i];
+                        sample >>= 8;  // Scale 32bit to 24bit (To prevent overflow in later steps)`
+                        sample -= (sample >> 4);  // multiply 15/16 ( = 0.9375 ) for later compression
+                        outputBuffer[ch][i] = sample;
+                    }
+                }
+                mainlog->debug("[RunningState::threadProc] Switching to buffer {}", 1 - currentAsioBufferIndex);
+                preparedState->_callbacks->bufferSwitch(1 - currentAsioBufferIndex, ASIOTrue);
+                preparedState->_bufferIndex = 1 - currentAsioBufferIndex;
             }
 
-            mainlog->debug("[RunningState::threadProc] Switching to buffer {}", 1 - currentBufferIndex);
-            _preparedState->_callbacks->bufferSwitch(1 - currentBufferIndex, ASIOTrue);
-            _preparedState->_bufferIndex = 1 - currentBufferIndex;
+            // TODO: add additional processing
+
+            // Rescale & compress output
+            compress24bitTo32bit(&outputBuffer);
+
+            // Output
+            for (auto &output: state->_outputList) {
+                output->pushSamples(outputBuffer);
+            }
+
         } else {
             auto currentTime = accurateTime();
             auto targetTime = lastPollTime + pollInterval;
