@@ -19,9 +19,8 @@
 #ifndef ASIO2WASAPI2_KEYDOWNLISTENER_H
 #define ASIO2WASAPI2_KEYDOWNLISTENER_H
 
-#include <Windows.h>
-#include <vector>
-#include <queue>
+#include <thread>
+#include <atomic>
 
 class KeyDownListener {
 public:
@@ -32,8 +31,11 @@ public:
     int pollKeyPressCount();
 
 private:
-    std::vector<bool> _keyPressed;
-    std::queue<double> _keyDownTimeQueue;
+    static void threadProc(KeyDownListener *p);
+
+    std::thread _thread;
+    volatile bool _killThread = false;
+    std::atomic<int> _keyPressCount{0};
 };
 
 #endif //ASIO2WASAPI2_KEYDOWNLISTENER_H

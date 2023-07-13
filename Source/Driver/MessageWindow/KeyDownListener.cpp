@@ -18,16 +18,22 @@
 
 #include "KeyDownListener.h"
 #include "../utils/logger.h"
+#include <Windows.h>
+#include <vector>
 
-KeyDownListener::KeyDownListener() : _keyPressed(256) {
-    std::fill(_keyPressed.begin(), _keyPressed.end(), false);
+KeyDownListener::KeyDownListener() : _thread(threadProc, this) {}
 
-    // There are many pre-pressed keys:
-    // Prefill keyPressed array
-    pollKeyPressCount();
+KeyDownListener::~KeyDownListener() {
+    _killThread = true;
+    _thread.join();
 }
 
-KeyDownListener::~KeyDownListener() = default;
+int KeyDownListener::pollKeyPressCount() {
+    return _keyPressCount.exchange(0);
+}
+
+////
+
 
 static int normalizeKey(int vKey) {
     if (vKey == VK_HOME) return VK_NUMPAD7;
@@ -96,23 +102,40 @@ static bool isValidKey(unsigned char vkCode) {
 }
 
 
-int KeyDownListener::pollKeyPressCount() {
-    SPDLOG_TRACE_FUNC;
+void KeyDownListener::threadProc(KeyDownListener *p) {
+    bool _keyPressed[256] = {false};
+    auto &count = p->_keyPressCount;
+    bool initialRun = true;
 
-    int count = 0;
-    for (int vKey = 0; vKey < 256; vKey++) {
-        auto normalizedVK = normalizeKey(vKey);
-        if (!isValidKey(normalizedVK)) continue;
+    while (!p->_killThread) {
+        mainlog->debug("KeyDownListener threadProc loop");
 
-        int state = GetAsyncKeyState(vKey) & 0x8000;
-        if (state) {
-            if (!_keyPressed[vKey]) {
-                _keyPressed[vKey] = true;
-                count++;
+        /// Rationale of using GetAsyncKeyState
+        /// 1. Raw Input API - Games frequently utilizes them, and getting multiple
+        ///   raw input api concurrently on a game process is quite hard to get reliably.
+        /// 2. Keybaord Hooks - Raw Input API interferes with WH_KEYBOARD_LL things when
+        ///   the hook were held in the same process, so while dll can capture keystroke from
+        ///   any other application, it cannot get one from itself.
+        /// 3. GetKeyboardState - Interferes with message queue of the thread. This only works if
+        ///   WM_KEYDOWN like messages are sent to the current message queue. This also interferes
+        ///   with raw input API
+        /// So while seemingly not-so-efficient and slow, looping all keys through GetAsyncKeyState
+        /// is the most reliable way to get keyboard states
+        for (int vKey = 0; vKey < 256; vKey++) {
+            auto normalizedVK = normalizeKey(vKey);
+            if (!isValidKey(normalizedVK)) continue;
+
+            int state = GetAsyncKeyState(vKey) & 0x8000;
+            if (state) {
+                if (!_keyPressed[vKey]) {
+                    _keyPressed[vKey] = true;
+                    if (!initialRun) count++;
+                }
+            } else {
+                _keyPressed[vKey] = false;
             }
-        } else {
-            _keyPressed[vKey] = false;
         }
+        initialRun = false;
+        Sleep(1);
     }
-    return count;
 }
