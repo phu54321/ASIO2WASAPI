@@ -28,7 +28,7 @@ endif ()
 
 # Main driver
 add_library(ASIO2WASAPI2 SHARED
-        Source/Driver/r8brain_free_src/r8bbase.cpp
+        Source/Driver/lib/r8brain_free_src/r8bbase.cpp
 
         Source/Driver/dllmain.cpp
         Source/Driver/register.cpp
@@ -55,12 +55,12 @@ add_library(ASIO2WASAPI2 SHARED
         Source/Driver/WASAPIOutput/WASAPIOutputEvent.cpp
         Source/Driver/WASAPIOutput/WASAPIOutputPush.cpp
 
-        Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.rc
+        Source/Driver/res/ASIO2WASAPI2.rc
         Source/Driver/ASIO2WASAPI2/ASIO2WASAPI2.def
         Source/Driver/WASAPIOutput/iidConstant.cpp
         Source/Driver/WASAPIOutput/createIAudioClient.cpp
         Source/Driver/ASIO2WASAPI2/CUnknownImpl.cpp
-        )
+        Source/Driver/utils/WaveLoad.cpp Source/Driver/utils/WaveLoad.h)
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)

@@ -16,25 +16,21 @@
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ASIO2WASAPI2_CLAPRENDERER_H
-#define ASIO2WASAPI2_CLAPRENDERER_H
+//
+// Created by whyask37 on 2023-07-14.
+//
 
-#include <Windows.h>
+#ifndef ASIO2WASAPI2_WAVELOAD_H
+#define ASIO2WASAPI2_WAVELOAD_H
+
 #include <vector>
-#include "../utils/WaveLoad.h"
 
-class ClapRenderer {
-public:
-    ClapRenderer(HMODULE hDLL, double gain, int targetSampleRate);
-
-    ~ClapRenderer() = default;
-
-    double getClapSoundLength() const;
-
-    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int gain) const;
-
-private:
-    WaveSound _clapSound;
+struct WaveSound {
+    int sampleRate = 0;
+    std::vector<double> audio;
 };
 
-#endif //ASIO2WASAPI2_CLAPRENDERER_H
+WaveSound loadWaveSound(const std::vector<BYTE> &content, int targetSampleRate);
+
+
+#endif //ASIO2WASAPI2_WAVELOAD_H

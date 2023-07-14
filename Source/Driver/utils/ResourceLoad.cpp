@@ -17,7 +17,7 @@
 //
 
 #include "ResourceLoad.h"
-#include "../resource.h"
+#include "../res/resource.h"
 #include "logger.h"
 
 // Code from https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources

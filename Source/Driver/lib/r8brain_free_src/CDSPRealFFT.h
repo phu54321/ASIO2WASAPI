@@ -27,7 +27,9 @@
 #elif R8B_PFFFT
 #include "pffft.h"
 #elif !R8B_IPP
+
 #include "fft4g.h"
+
 #endif // !R8B_IPP
 
 namespace r8b {
@@ -118,7 +120,7 @@ namespace r8b {
 
 #else // R8B_PFFFT_DOUBLE
 
-            ooura_fft :: rdft( Len, 1, p, wi, wd );
+            ooura_fft::rdft(Len, 1, p, wi, wd);
 
 #endif // R8B_IPP
         }
@@ -146,7 +148,7 @@ namespace r8b {
 
 #else // R8B_PFFFT_DOUBLE
 
-            ooura_fft :: rdft( Len, -1, p, wi, wd );
+            ooura_fft::rdft(Len, -1, p, wi, wd);
 
 #endif // R8B_IPP
 
@@ -411,8 +413,8 @@ namespace r8b {
         PFFFTD_Setup *setup; ///< PFFFTD setup object.
         CFixedBuffer<double> work; ///< Working buffer.
 #else // R8B_PFFFT_DOUBLE
-        CFixedBuffer< int > wi; ///< Working buffer (ints).
-        CFixedBuffer< double > wd; ///< Working buffer (doubles).
+        CFixedBuffer<int> wi; ///< Working buffer (ints).
+        CFixedBuffer<double> wd; ///< Working buffer (doubles).
 #endif // R8B_IPP
 
         /**
@@ -465,7 +467,7 @@ namespace r8b {
 #elif R8B_PFFFT_DOUBLE
                 , InvMulConst(1.0 / Len)
 #else // R8B_PFFFT_DOUBLE
-        , InvMulConst( 2.0 / Len )
+                , InvMulConst(2.0 / Len)
 #endif // R8B_IPP
         {
 #if R8B_IPP
@@ -496,9 +498,9 @@ namespace r8b {
 
 #else // R8B_PFFFT_DOUBLE
 
-            wi.alloc( (int) ceil( 2.0 + sqrt( (double) ( Len >> 1 ))));
-            wi[ 0 ] = 0;
-            wd.alloc( Len >> 1 );
+            wi.alloc((int) ceil(2.0 + sqrt((double) (Len >> 1))));
+            wi[0] = 0;
+            wd.alloc(Len >> 1);
 
 #endif // R8B_IPP
         }

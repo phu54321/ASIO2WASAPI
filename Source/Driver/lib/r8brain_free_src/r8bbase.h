@@ -67,7 +67,7 @@
 
 #if defined( _WIN32 )
 
-#include <windows.h>
+#include <Windows.h>
 
 #else // defined( _WIN32 )
 #include <pthread.h>

@@ -21,7 +21,7 @@
 #include "MessageWindow.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
-#include "../resource.h"
+#include "../res/resource.h"
 #include "TrayHandler.h"
 #include "KeyDownListener.h"
 

@@ -24,7 +24,7 @@
 #include <Windows.h>
 #include <spdlog/spdlog.h>
 #include "ASIO2WASAPI2Impl.h"
-#include "../resource.h"
+#include "../res/resource.h"
 #include "../utils/json.hpp"
 #include "../WASAPIOutput/createIAudioClient.h"
 #include "../utils/raiiUtils.h"
