@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Hyun Woo Park
+// Copyright (C) 2023 Hyunwoo Park
 //
 // This file is part of ASIO2WASAPI2.
 //
@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 
 
@@ -22,7 +23,7 @@
 #include "../utils/utf8convert.h"
 #include "../utils/homeDirFilePath.h"
 #include "../utils/logger.h"
-#include <spdlog/spdlog.h>
+#include "spdlog/spdlog.h"
 
 using json = nlohmann::json;
 
@@ -47,8 +48,8 @@ DriverSettings loadDriverSettings() {
         auto j = json::parse(fp);
 
         DriverSettings ret;
-        ret.nChannels = j.value("channelCount", 2);
-        ret.nSampleRate = j.value("sampleRate", 48000);
+        ret.channelCount = j.value("channelCount", 2);
+        ret.sampleRate = j.value("sampleRate", 48000);
         ret.bufferSize = j.value("bufferSize", 1024);
         ret.clapGain = j.value("clapGain", 0.);
 

@@ -113,7 +113,7 @@ ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputC
     SPDLOG_TRACE_FUNC;
 
     if (numInputChannels) *numInputChannels = 0;
-    if (numOutputChannels) *numOutputChannels = _settings.nChannels;
+    if (numOutputChannels) *numOutputChannels = _settings.channelCount;
     return ASE_OK;
 }
 
@@ -121,16 +121,16 @@ ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
     SPDLOG_TRACE_FUNC;
 
     if (!sampleRate) return ASE_InvalidParameter;
-    *sampleRate = _settings.nSampleRate;
+    *sampleRate = _settings.sampleRate;
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate sampleRate) {
+ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
     SPDLOG_TRACE_FUNC;
 
-    int nSampleRate = static_cast<int>(sampleRate);
+    int sampleRate = static_cast<int>(_sampleRate);
     for (auto &device: _pDeviceList) {
-        if (!FindStreamFormat(device, _settings.nChannels, nSampleRate)) return ASE_NoClock;
+        if (!FindStreamFormat(device, _settings.channelCount, sampleRate)) return ASE_NoClock;
     }
     return ASE_OK;
 }
@@ -139,7 +139,7 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
     SPDLOG_TRACE_FUNC;
 
     mainlog->debug("setSampleRate: {} ( {} )", sampleRate, hexdump(&sampleRate, sizeof(sampleRate)));
-    if (sampleRate == _settings.nSampleRate) return ASE_OK;
+    if (sampleRate == _settings.sampleRate) return ASE_OK;
 
     auto err = canSampleRate(sampleRate);
     if (err != ASE_OK) {
@@ -147,7 +147,7 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
         return err;
     }
 
-    _settings.nSampleRate = (int) sampleRate;
+    _settings.sampleRate = (int) sampleRate;
 
     if (_preparedState) {
         _preparedState->requestReset();
@@ -179,7 +179,7 @@ ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
     SPDLOG_TRACE_FUNC;
 
     if (info->isInput) return ASE_InvalidParameter;
-    if (info->channel < 0 || info->channel >= _settings.nChannels) return ASE_InvalidParameter;
+    if (info->channel < 0 || info->channel >= _settings.channelCount) return ASE_InvalidParameter;
 
     info->type = sampleType;
     info->channelGroup = 0;
@@ -203,10 +203,10 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 
     // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
-    if (numChannels < 0 || numChannels > _settings.nChannels) return ASE_InvalidParameter;
+    if (numChannels < 0 || numChannels > _settings.channelCount) return ASE_InvalidParameter;
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
-        if (info.isInput || info.channelNum < 0 || info.channelNum >= _settings.nChannels)
+        if (info.isInput || info.channelNum < 0 || info.channelNum >= _settings.channelCount)
             return ASE_InvalidMode;
     }
 

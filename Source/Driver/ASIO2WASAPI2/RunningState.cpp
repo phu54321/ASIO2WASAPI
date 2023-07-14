@@ -41,7 +41,7 @@ extern HINSTANCE g_hInstDLL;
 
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p),
-          _clapRenderer(g_hInstDLL, p->_settings.clapGain, p->_settings.nSampleRate) {
+          _clapRenderer(g_hInstDLL, p->_settings.clapGain, p->_settings.sampleRate) {
     SPDLOG_TRACE_FUNC;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -50,13 +50,13 @@ RunningState::RunningState(PreparedState *p)
         if (i == 0) {
             auto output = std::make_unique<WASAPIOutputEvent>(
                     device,
-                    p->_settings.nChannels,
-                    p->_settings.nSampleRate,
+                    p->_settings.channelCount,
+                    p->_settings.sampleRate,
                     p->_bufferSize);
 
             _msgWindow.setTrayTooltip(fmt::format(
                     TEXT("Sample rate {}, ASIO input buffer size {}, WASAPI output buffer size {}"),
-                    _preparedState->_settings.nSampleRate,
+                    _preparedState->_settings.sampleRate,
                     _preparedState->_settings.bufferSize,
                     output->getOutputBufferSize()));
 
@@ -64,8 +64,8 @@ RunningState::RunningState(PreparedState *p)
         } else {
             auto output = std::make_unique<WASAPIOutputPush>(
                     device,
-                    p->_settings.nChannels,
-                    p->_settings.nSampleRate,
+                    p->_settings.channelCount,
+                    p->_settings.sampleRate,
                     p->_bufferSize
             );
             _outputList.push_back(std::move(output));
@@ -110,10 +110,10 @@ void compress24bitTo32bit(std::vector<std::vector<int32_t>> *outputBuffer) {
             (1 << 23) - compressPadding - overflowPreventer;
     const int32_t compressionThresholdLow = -compressionThresholdHigh;
 
-    const auto nChannels = outputBuffer->size();
+    const auto channelCount = outputBuffer->size();
     const auto bufferSize = outputBuffer->at(0).size();
 
-    for (size_t ch = 0; ch < nChannels; ch++) {
+    for (size_t ch = 0; ch < channelCount; ch++) {
         auto &channelBuffer = outputBuffer->at(ch);
         for (size_t i = 0; i < bufferSize; i++) {
             auto sample = channelBuffer[i];
@@ -138,9 +138,9 @@ void compress24bitTo32bit(std::vector<std::vector<int32_t>> *outputBuffer) {
 void RunningState::threadProc(RunningState *state) {
     auto &preparedState = state->_preparedState;
     auto bufferSize = preparedState->_settings.bufferSize;
-    auto nChannels = preparedState->_settings.nChannels;
+    auto channelCount = preparedState->_settings.channelCount;
     std::vector<std::vector<int32_t>> outputBuffer;
-    outputBuffer.resize(preparedState->_settings.nChannels);
+    outputBuffer.resize(preparedState->_settings.channelCount);
     for (auto &buf: outputBuffer) {
         buf.resize(preparedState->_bufferSize);
     }
@@ -156,7 +156,7 @@ void RunningState::threadProc(RunningState *state) {
     mainlog->info("timeBeginPeriod({})", tcaps.wPeriodMin);
 
     double lastPollTime = accurateTime();
-    double pollInterval = (double) preparedState->_bufferSize / preparedState->_settings.nSampleRate;
+    double pollInterval = (double) preparedState->_bufferSize / preparedState->_settings.sampleRate;
     bool shouldPoll = true;
 
     const int keyDownQueueSize = 256;
@@ -224,7 +224,7 @@ void RunningState::threadProc(RunningState *state) {
                 mainlog->debug("[RunningState::threadProc] Writing {} samples from buffer {}", bufferSize,
                                currentAsioBufferIndex);
                 const auto &asioCurrentBuffer = preparedState->_buffers[currentAsioBufferIndex];
-                for (size_t ch = 0; ch < nChannels; ch++) {
+                for (size_t ch = 0; ch < channelCount; ch++) {
                     for (size_t i = 0; i < bufferSize; i++) {
                         int32_t sample = asioCurrentBuffer[ch][i];
                         sample >>= 8;  // Scale 32bit to 24bit (To prevent overflow in later steps)`
@@ -242,7 +242,7 @@ void RunningState::threadProc(RunningState *state) {
                 for (int i = 0; i < keyDownQueueSize; i++) {
                     auto &pair = keyDownQueue[i];
                     if (pair.pressCount > 0) {
-                        for (size_t ch = 0; ch < nChannels; ch++) {
+                        for (size_t ch = 0; ch < channelCount; ch++) {
                             state->_clapRenderer.render(&outputBuffer[ch], currentTime, pair.time, pair.pressCount);
                         }
                     }

@@ -51,9 +51,9 @@ PreparedState::PreparedState(const std::vector<IMMDevicePtr> &pDeviceList, Drive
         : _settings(std::move(settings)), _callbacks(callbacks), _bufferSize(_settings.bufferSize),
           _pDeviceList(pDeviceList) {
     auto bufferSize = _settings.bufferSize;
-    _buffers[0].resize(_settings.nChannels);
-    _buffers[1].resize(_settings.nChannels);
-    for (int i = 0; i < _settings.nChannels; i++) {
+    _buffers[0].resize(_settings.channelCount);
+    _buffers[1].resize(_settings.channelCount);
+    for (int i = 0; i < _settings.channelCount; i++) {
         _buffers[0][i].assign(bufferSize, 0);
         _buffers[1][i].assign(bufferSize, 0);
     }
@@ -62,7 +62,7 @@ PreparedState::PreparedState(const std::vector<IMMDevicePtr> &pDeviceList, Drive
 PreparedState::~PreparedState() = default;
 
 void PreparedState::InitASIOBufferInfo(ASIOBufferInfo *bufferInfos, int infoCount) {
-    for (int i = 0; i < _settings.nChannels; i++) {
+    for (int i = 0; i < _settings.channelCount; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
         info.buffers[0] = _buffers[0].at(info.channelNum).data();
         info.buffers[1] = _buffers[1].at(info.channelNum).data();

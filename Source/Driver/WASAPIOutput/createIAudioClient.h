@@ -32,8 +32,8 @@ enum class WASAPIMode {
 
 bool FindStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
-        int nChannels,
-        int nSampleRate,
+        int channelCount,
+        int sampleCount,
         int bufferSizeRequest = BUFFER_SIZE_REQUEST_USEDEFAULT,
         WASAPIMode mode = WASAPIMode::Event,
         WAVEFORMATEXTENSIBLE *pwfxt = nullptr,

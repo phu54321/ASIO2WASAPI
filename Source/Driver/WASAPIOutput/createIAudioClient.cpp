@@ -26,7 +26,7 @@
 
 static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWaveFormat) {
     mainlog->error("    : {}.wFormatTag: {}", varname, pWaveFormat.wFormatTag);
-    mainlog->error("    : {}.nChannels: {}", varname, pWaveFormat.nChannels);
+    mainlog->error("    : {}.channelCount: {}", varname, pWaveFormat.nChannels);
     mainlog->error("    : {}.nSamplesPerSec: {}", varname, pWaveFormat.nSamplesPerSec);
     mainlog->error("    : {}.nAvgBytesPerSec: {}", varname, pWaveFormat.nAvgBytesPerSec);
     mainlog->error("    : {}.nBlockAlign: {}", varname, pWaveFormat.nBlockAlign);
@@ -158,8 +158,8 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
 
 bool FindStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
-        int nChannels,
-        int nSampleRate,
+        int channelCount,
+        int sampleRate,
         int bufferSizeRequest,
         WASAPIMode mode,
         WAVEFORMATEXTENSIBLE *pwfxt,
@@ -169,22 +169,22 @@ bool FindStreamFormat(
 
     if (!pDevice) return false;
 
-    mainlog->debug(TEXT("{} FindStreamFormat: nChannels {}, nSampleRate {}, bufferSizeRequest {}, mode {}"),
+    mainlog->debug(TEXT("{} FindStreamFormat: channelCount {}, sampleRate {}, bufferSizeRequest {}, mode {}"),
                    getDeviceId(pDevice),
-                   nChannels,
-                   nSampleRate,
+                   channelCount,
+                   sampleRate,
                    bufferSizeRequest,
                    mode == WASAPIMode::Event ? L"Event" : L"Pull");
 
     // create a reasonable channel mask
-    DWORD dwChannelMask = (1 << nChannels) - 1;
+    DWORD dwChannelMask = (1 << channelCount) - 1;
     WAVEFORMATEXTENSIBLE waveFormat = {0};
 
 
     //try 32-bit first
     waveFormat.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-    waveFormat.Format.nChannels = nChannels;
-    waveFormat.Format.nSamplesPerSec = nSampleRate;
+    waveFormat.Format.nChannels = channelCount;
+    waveFormat.Format.nSamplesPerSec = sampleRate;
     waveFormat.Format.wBitsPerSample = 32;
     waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
     waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
