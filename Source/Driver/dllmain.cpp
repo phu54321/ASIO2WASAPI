@@ -22,10 +22,6 @@
 
 #include "COMBaseClasses.h"
 #include "ASIO2WASAPI2/ASIO2WASAPI2.h"
-#include "utils/homeDirFilePath.h"
-#include <spdlog/spdlog.h>
-#include "utils/logger.h"
-#include "utils/accurateTime.h"
 
 
 LONG UnregisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname);
@@ -78,36 +74,6 @@ public:
 
 HINSTANCE g_hInstDLL;
 
-void enableHighPrecisionTimer() {
-    // For Windows 11: apps require this code to
-    // get 1ms timer accuracy when backgrounded.
-    PROCESS_POWER_THROTTLING_STATE PowerThrottling;
-    RtlZeroMemory(&PowerThrottling, sizeof(PowerThrottling));
-    PowerThrottling.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
-    PowerThrottling.ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
-    PowerThrottling.StateMask = 0;
-    if (SetProcessInformation(GetCurrentProcess(),
-                              ProcessPowerThrottling,
-                              &PowerThrottling,
-                              sizeof(PowerThrottling)) == 0) {
-        auto err = GetLastError();
-        TCHAR *message = nullptr;
-        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-                      nullptr,
-                      err,
-                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                      (TCHAR *) &message,
-                      0,
-                      nullptr);
-        mainlog->error(
-                TEXT("SetProcessInformation(~PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION) failed: 0x{:08X} ({})"),
-                err, message);
-        LocalFree(message);
-    } else {
-        mainlog->info("High-precision timeSetEvent enabled");
-    }
-}
-
 //////////////
 
 #pragma clang diagnostic push
@@ -122,19 +88,12 @@ BOOL WINAPI DllMain(
         case DLL_PROCESS_ATTACH:
             g_hInstDLL = hinstDLL;
 
-            initMainLog();
-            initAccurateTime();
-            enableHighPrecisionTimer();
-
-            mainlog->info(L"ASIO2WASAPI attached");
-
             DisableThreadLibraryCalls(hinstDLL);
             InitClasses(TRUE);
             break;
 
         case DLL_PROCESS_DETACH:
             InitClasses(FALSE);
-            mainlog->info(L"ASIO2WASAPI detaching");
             break;
 
         default:;

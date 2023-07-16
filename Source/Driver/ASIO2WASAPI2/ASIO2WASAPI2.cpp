@@ -30,10 +30,47 @@
 
 const CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
-ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
-        : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr) {}
+void enableHighPrecisionTimer() {
+    // For Windows 11: apps require this code to
+    // get 1ms timer accuracy when backgrounded.
+    PROCESS_POWER_THROTTLING_STATE PowerThrottling;
+    RtlZeroMemory(&PowerThrottling, sizeof(PowerThrottling));
+    PowerThrottling.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+    PowerThrottling.ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
+    PowerThrottling.StateMask = 0;
+    if (SetProcessInformation(GetCurrentProcess(),
+                              ProcessPowerThrottling,
+                              &PowerThrottling,
+                              sizeof(PowerThrottling)) == 0) {
+        auto err = GetLastError();
+        TCHAR *message = nullptr;
+        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+                      nullptr,
+                      err,
+                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                      (TCHAR *) &message,
+                      0,
+                      nullptr);
+        mainlog->error(
+                TEXT("SetProcessInformation(~PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION) failed: 0x{:08X} ({})"),
+                err, message);
+        LocalFree(message);
+    } else {
+        mainlog->info("High-precision timeSetEvent enabled");
+    }
+}
 
-ASIO2WASAPI2::~ASIO2WASAPI2() = default;
+ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
+        : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr) {
+    initMainLog();
+    mainlog->info("Starting ASIO2WASAPI");
+    initAccurateTime();
+    enableHighPrecisionTimer();
+}
+
+ASIO2WASAPI2::~ASIO2WASAPI2() {
+    mainlog->info(L"ASIO2WASAPI detaching");
+}
 
 /*  ASIO driver interface implementation
  */
