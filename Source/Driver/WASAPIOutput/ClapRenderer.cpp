@@ -30,7 +30,7 @@
 // with their own things...
 
 
-ClapRenderer::ClapRenderer(HMODULE hDLL, double gain, int targetSampleRate) {
+ClapRenderer::ClapRenderer(HMODULE hDLL, int targetSampleRate) {
     try {
         auto clapSoundWAV = loadUserdataResource(hDLL, MAKEINTRESOURCE(IDR_CLAP_MONO));
         _clapSound = loadWaveSound(clapSoundWAV, targetSampleRate);
@@ -43,7 +43,7 @@ double ClapRenderer::getClapSoundLength() const {
     return (double) _clapSound.audio.size() / (double) _clapSound.sampleRate;
 }
 
-void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int gain) const {
+void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, double gain) const {
     assert(output);
 
     double clapRelTime = (renderTime - clapStartTime);

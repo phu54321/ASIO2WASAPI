@@ -25,13 +25,13 @@
 
 class ClapRenderer {
 public:
-    ClapRenderer(HMODULE hDLL, double gain, int targetSampleRate);
+    ClapRenderer(HMODULE hDLL, int targetSampleRate);
 
     ~ClapRenderer() = default;
 
     double getClapSoundLength() const;
 
-    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int gain) const;
+    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, double gain) const;
 
 private:
     WaveSound _clapSound;

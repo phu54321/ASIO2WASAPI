@@ -41,7 +41,7 @@ extern HINSTANCE g_hInstDLL;
 
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p),
-          _clapRenderer(g_hInstDLL, p->_settings.clapGain, p->_settings.sampleRate) {
+          _clapRenderer(g_hInstDLL, p->_settings.sampleRate) {
     SPDLOG_TRACE_FUNC;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -243,7 +243,7 @@ void RunningState::threadProc(RunningState *state) {
                     auto &pair = keyDownQueue[i];
                     if (pair.pressCount > 0) {
                         for (size_t ch = 0; ch < channelCount; ch++) {
-                            state->_clapRenderer.render(&outputBuffer[ch], currentTime, pair.time, pair.pressCount);
+                            state->_clapRenderer.render(&outputBuffer[ch], currentTime, pair.time, preparedState->_settings.clapGain * pair.pressCount);
                         }
                     }
                 }
