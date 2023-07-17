@@ -160,9 +160,10 @@ void RunningState::threadProc(RunningState *state) {
     bool shouldPoll = true;
 
     const int keyDownQueueSize = 256;
+    const int maxConcurrentKeyCount = 16;
     struct KeyDownPair {
         double time = 0;
-        int pressCount = 0;
+        int eventId[maxConcurrentKeyCount + 1] = {0};  // +1 so that last element is always 0
     };
 
     // Fixed-size looping queue
@@ -179,16 +180,22 @@ void RunningState::threadProc(RunningState *state) {
             // Update keydown queue for clap sound
             auto pressCount = state->_keyListener.pollKeyPressCount();
             if (pressCount > 0) {
-                keyDownQueue[keyDownQueueIndex].time = currentTime;
-                keyDownQueue[keyDownQueueIndex].pressCount = pressCount;
+                if (pressCount > maxConcurrentKeyCount) pressCount = maxConcurrentKeyCount;
+
+                auto &entry = keyDownQueue[keyDownQueueIndex];
+                entry.time = currentTime;
+                for (int i = 0; i < pressCount; i++) {
+                    entry.eventId[i] = rand() + 1;
+                }
+                entry.eventId[pressCount] = 0;
                 keyDownQueueIndex = (keyDownQueueIndex + 1) % keyDownQueueSize;
             }
 
             // GC old keydown events
-            double cutoffTime = currentTime - state->_clapRenderer.getClapSoundLength();
+            double cutoffTime = currentTime - state->_clapRenderer.getMaxClapSoundLength();
             for (int i = 0; i < keyDownQueueSize; i++) {
-                if (keyDownQueue[i].pressCount > 0 && keyDownQueue[i].time < cutoffTime) {
-                    keyDownQueue[i].pressCount = 0;
+                if (keyDownQueue[i].eventId[0] > 0 && keyDownQueue[i].time < cutoffTime) {
+                    keyDownQueue[i].eventId[0] = 0;
                 }
             }
         }
@@ -241,9 +248,17 @@ void RunningState::threadProc(RunningState *state) {
             {
                 for (int i = 0; i < keyDownQueueSize; i++) {
                     auto &pair = keyDownQueue[i];
-                    if (pair.pressCount > 0) {
+                    if (pair.eventId[0] > 0) {
                         for (size_t ch = 0; ch < channelCount; ch++) {
-                            state->_clapRenderer.render(&outputBuffer[ch], currentTime, pair.time, preparedState->_settings.clapGain * pair.pressCount);
+                            for (auto eventId: pair.eventId) {
+                                if (eventId == 0) break;
+                                state->_clapRenderer.render(
+                                        &outputBuffer[ch],
+                                        currentTime,
+                                        pair.time,
+                                        eventId,
+                                        preparedState->_settings.clapGain);
+                            }
                         }
                     }
                 }

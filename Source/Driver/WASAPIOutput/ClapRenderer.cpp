@@ -29,31 +29,72 @@
 /////// IDK the use case, but user MAY replace clap sound resource
 // with their own things...
 
+WaveSound loadWaveResource(HMODULE hDLL, int targetSampleRate, const TCHAR *resName) {
+    auto clapSoundWAV = loadUserdataResource(hDLL, resName);
+    return loadWaveSound(clapSoundWAV, targetSampleRate);
+}
+
+const TCHAR *cherryResNames[] = {
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_01),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_02),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_03),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_04),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_05),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_06),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_07),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_08),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_09),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_10),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_11),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_12),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_13),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_14),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_15),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_16),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_17),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_18),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_19),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_20),
+                MAKEINTRESOURCE(IDR_CLAP_CHERRY_21),
+};
 
 ClapRenderer::ClapRenderer(HMODULE hDLL, int targetSampleRate) {
     try {
-        auto clapSoundWAV = loadUserdataResource(hDLL, MAKEINTRESOURCE(IDR_CLAP_MONO));
-        _clapSound = loadWaveSound(clapSoundWAV, targetSampleRate);
+        double maxTime = 0;
+        for (auto resName: cherryResNames) {
+            auto res = loadWaveResource(hDLL, targetSampleRate, resName);
+            _clapSoundList.push_back(res);
+            double time = (double) res.audio.size() / (double) res.sampleRate;
+            if (time > maxTime) maxTime = time;
+        }
+        _maxClapSoundLength = maxTime;
     } catch (AppException &e) {
         mainlog->error("Cannot load clap sound: {}", e.what());
+        _maxClapSoundLength = 0;
+        _clapSoundList.clear();
     }
 }
 
-double ClapRenderer::getClapSoundLength() const {
-    return (double) _clapSound.audio.size() / (double) _clapSound.sampleRate;
+double ClapRenderer::getMaxClapSoundLength() const {
+    return _maxClapSoundLength;
 }
 
-void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, double gain) const {
+void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int rng,
+                          double gain) const {
     assert(output);
 
+    if (_clapSoundList.empty()) return;
+
+    // Pick one
+    auto &clapSound = _clapSoundList[rng % _clapSoundList.size()];
     double clapRelTime = (renderTime - clapStartTime);
-    int clapStartSamples = (int) round(clapRelTime * _clapSound.sampleRate);
+    int clapStartSamples = (int) round(clapRelTime * clapSound.sampleRate);
     mainlog->trace("clapRelTime {}, clapStartSamples {}", clapRelTime, clapStartSamples);
 
     // Clap hadn't started
-    const auto &samples = _clapSound.audio;
+    const auto &samples = clapSound.audio;
     int32_t *outP = output->data();
-    for (int i = 0; i < output->size(); i++) {
+    for (int i = max(0, -clapStartSamples); i < output->size(); i++) {
         auto inPos = i + clapStartSamples;
         if (inPos < 0) continue;
         else if (inPos >= samples.size()) break;

@@ -21,6 +21,7 @@
 
 #include <Windows.h>
 #include <vector>
+#include <random>
 #include "../utils/WaveLoad.h"
 
 class ClapRenderer {
@@ -29,12 +30,13 @@ public:
 
     ~ClapRenderer() = default;
 
-    double getClapSoundLength() const;
+    double getMaxClapSoundLength() const;
 
-    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, double gain) const;
+    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int rng, double gain) const;
 
 private:
-    WaveSound _clapSound;
+    std::vector<WaveSound> _clapSoundList;
+    double _maxClapSoundLength;
 };
 
 #endif //ASIO2WASAPI2_CLAPRENDERER_H
