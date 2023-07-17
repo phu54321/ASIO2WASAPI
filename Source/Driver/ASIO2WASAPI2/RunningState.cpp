@@ -34,6 +34,7 @@
 #include "../WASAPIOutput/WASAPIOutputEvent.h"
 #include "../WASAPIOutput/WASAPIOutputPush.h"
 #include "../utils/accurateTime.h"
+#include "tracy/Tracy.hpp"
 
 using namespace std::chrono_literals;
 
@@ -42,7 +43,7 @@ extern HINSTANCE g_hInstDLL;
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p),
           _clapRenderer(g_hInstDLL, p->_settings.sampleRate) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
     for (int i = 0; i < p->_pDeviceList.size(); i++) {
@@ -76,16 +77,16 @@ RunningState::RunningState(PreparedState *p)
 }
 
 RunningState::~RunningState() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     signalStop();
     _pollThread.join();
 }
 
 void RunningState::signalOutputReady() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     {
         mainlog->trace("[RunningState::signalOutputReady] locking mutex");
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard lock(_mutex);
         _isOutputReady = true;
         mainlog->trace("[RunningState::signalOutputReady] unlocking mutex");
     }
@@ -93,10 +94,10 @@ void RunningState::signalOutputReady() {
 }
 
 void RunningState::signalStop() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     {
         mainlog->trace("[RunningState::signalStop] locking mutex");
-        std::lock_guard<std::mutex> lock(_mutex);
+        std::lock_guard lock(_mutex);
         _pollStop = true;
         mainlog->trace("[RunningState::signalStop] unlocking mutex");
     }
@@ -104,6 +105,8 @@ void RunningState::signalStop() {
 }
 
 void compress24bitTo32bit(std::vector<std::vector<int32_t>> *outputBuffer) {
+    ZoneScoped;
+
     const int32_t overflowPreventer = 5;
     const int32_t compressPadding = (1 << 19) - overflowPreventer;
     const int32_t compressionThresholdHigh =
@@ -173,6 +176,7 @@ void RunningState::threadProc(RunningState *state) {
     int keyDownQueueIndex = 0;
 
     while (true) {
+        ZoneScopedN("RunningState::threadProc");
         auto currentTime = accurateTime();
 
         // TODO: put this block somewhere appropriate
@@ -202,12 +206,12 @@ void RunningState::threadProc(RunningState *state) {
 
 
         mainlog->trace("[RunningState::threadProc] Locking mutex");
-        std::unique_lock<std::mutex> lock(state->_mutex);
+        std::unique_lock lock(state->_mutex);
 
         // Timer event
         if (state->_pollStop) break;
         else if (shouldPoll) {
-            TraceHelper _("[RunningState::threadProc] _shouldPoll");
+            ZoneScopedN("[RunningState::threadProc] _shouldPoll");
             // Wait for output
             if (!state->_isOutputReady) {
                 mainlog->trace("[RunningState::threadProc] unlock mutex d/t notifier wait");
@@ -226,6 +230,7 @@ void RunningState::threadProc(RunningState *state) {
 
             // Put asio main input.
             {
+                ZoneScopedN("[RunningState::threadProc] _shouldPoll - Polling ASIO data");
                 // Copy data from asio side
                 int currentAsioBufferIndex = preparedState->_bufferIndex;
                 mainlog->debug("[RunningState::threadProc] Writing {} samples from buffer {}", bufferSize,
@@ -246,6 +251,7 @@ void RunningState::threadProc(RunningState *state) {
 
             // Add clap sound
             {
+                ZoneScopedN("[RunningState::threadProc] _shouldPoll - Add clap sound");
                 for (int i = 0; i < keyDownQueueSize; i++) {
                     auto &pair = keyDownQueue[i];
                     if (pair.eventId[0] > 0) {
@@ -270,10 +276,12 @@ void RunningState::threadProc(RunningState *state) {
             compress24bitTo32bit(&outputBuffer);
 
             // Output
-            for (auto &output: state->_outputList) {
-                output->pushSamples(outputBuffer);
+            {
+                ZoneScopedN("[RunningState::threadProc] _shouldPoll - Pushing outputs");
+                for (auto &output: state->_outputList) {
+                    output->pushSamples(outputBuffer);
+                }
             }
-
         } else {
             auto targetTime = lastPollTime + pollInterval;
 

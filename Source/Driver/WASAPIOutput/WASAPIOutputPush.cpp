@@ -27,6 +27,7 @@
 #include "../utils/raiiUtils.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
+#include "tracy/Tracy.hpp"
 
 // WASAPI shared mode keeps its own queue, so it needs some padding to prevent write overflow
 const int outBufferSizeMultiplier = 4;
@@ -39,14 +40,14 @@ WASAPIOutputPush::WASAPIOutputPush(
         int bufferSizeRequest)
         : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate) {
 
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     _pDeviceId = getDeviceId(pDevice);
 
     _outBufferSize = bufferSizeRequest;
 
     // WASAPI shared mode keeps its own queue, so it needs some spacing.
-    bufferSizeRequest = max(bufferSizeRequest * outBufferSizeMultiplier, minimumPushBuferSize);
+    bufferSizeRequest = std::max(bufferSizeRequest * outBufferSizeMultiplier, minimumPushBuferSize);
 
     if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, WASAPIMode::Pull, &_waveFormat,
                           &_pAudioClient)) {
@@ -78,13 +79,13 @@ WASAPIOutputPush::WASAPIOutputPush(
 }
 
 WASAPIOutputPush::~WASAPIOutputPush() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     _pAudioClient->Stop();
 }
 
 
 void WASAPIOutputPush::pushSamples(const std::vector<std::vector<int32_t>> &buffer) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     assert (buffer.size() == _channelNum);
 

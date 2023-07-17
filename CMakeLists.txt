@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 project(ASIO2WASAPI2)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 add_compile_definitions(
         WIN32_LEAN_AND_MEAN
         VC_EXTRALEAN
+        NOMINMAX  # disable min/max macros
 )
 
 #set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -13,17 +14,23 @@ add_compile_definitions(
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-Debug)
+    option(TRACY_ENABLE "" ON)
+    option(TRACY_ON_DEMAND "" ON)
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Release mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-Release)
     set_property(GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    option(TRACY_ENABLE "" OFF)
 elseif (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     message("RelWithDebInfo mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-Release)
     set_property(GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    option(TRACY_ENABLE "" OFF)
 else ()
     message(FATAL_ERROR "Error: Only Debug/Release mode supported, but got ${CMAKE_BUILD_TYPE}")
 endif ()
+
+add_subdirectory(Source/tracy)
 
 
 # Main driver
@@ -65,7 +72,8 @@ add_library(ASIO2WASAPI2 SHARED
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/include)
-target_link_libraries(ASIO2WASAPI2 Avrt.lib winmm.lib)
+target_include_directories(ASIO2WASAPI2 PRIVATE Source/tracy/public)
+target_link_libraries(ASIO2WASAPI2 PUBLIC Tracy::TracyClient Avrt.lib winmm.lib)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     # 64-bit mode

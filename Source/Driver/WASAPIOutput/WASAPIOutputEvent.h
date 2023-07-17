@@ -30,6 +30,7 @@
 #include <functional>
 
 #include "WASAPIOutput.h"
+#include <tracy/Tracy.hpp>
 
 class WASAPIOutputEvent : public WASAPIOutput {
 public:
@@ -62,7 +63,7 @@ private:
     UINT32 _outputBufferSize;
 
     std::vector<std::vector<int32_t>> _ringBuffer;
-    std::mutex _ringBufferMutex;
+    TracyLockable(std::mutex, _ringBufferMutex);
     size_t _ringBufferSize;
     size_t _ringBufferReadPos = 0;
     size_t _ringBufferWritePos = 0;

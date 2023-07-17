@@ -24,6 +24,7 @@
 #include "ASIO2WASAPI2.h"
 #include "ASIO2WASAPI2Impl.h"
 #include "../utils/logger.h"
+#include "tracy/Tracy.hpp"
 #include <spdlog/spdlog.h>
 #include <shellapi.h>
 #include <spdlog/fmt/fmt.h>
@@ -95,7 +96,7 @@ ASIOError ASIO2WASAPI2::future(long selector, void *opt) {
 
 
 ASIOBool ASIO2WASAPI2::init(void *sysRef) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (_pImpl) return true;
     try {
@@ -105,7 +106,7 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
         // Swallow here...
         auto string = fmt::format("ASIO2WASAPI2Impl constructor failed: {}", e.what());
         mainlog->error(string);
-        MessageBoxA((HWND)sysRef, string.c_str(), "Error", MB_OK);
+        MessageBoxA((HWND) sysRef, string.c_str(), "Error", MB_OK);
         return false;
     }
 }
@@ -140,7 +141,7 @@ ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
     if (!_pImpl) return ASE_NotPresent;
     if (minSize) *minSize = 64;
     if (maxSize) *maxSize = 1024;
-    if (preferredSize) *preferredSize = 1024;
+    if (preferredSize) *preferredSize = 64;
     if (granularity) *granularity = -1;
     return ASE_OK;
 }
@@ -156,7 +157,7 @@ ASIOError ASIO2WASAPI2::createBuffers(
         long bufferSize,
         ASIOCallbacks *callbacks) {
 
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->createBuffers(bufferInfos, numChannels, bufferSize, callbacks);
@@ -207,7 +208,7 @@ ASIOError ASIO2WASAPI2::getClockSources(ASIOClockSource *clocks, long *numSource
 }
 
 ASIOError ASIO2WASAPI2::setClockSource(long index) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     return (index == 0) ? ASE_OK : ASE_NotPresent;
 }

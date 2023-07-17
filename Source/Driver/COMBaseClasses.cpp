@@ -19,6 +19,7 @@
 */
 
 #include "COMBaseClasses.h"
+#include <algorithm>
 
 LONG CBaseObject::m_cObjects = 0;
 
@@ -52,7 +53,7 @@ STDMETHODIMP CUnknown::NonDelegatingQueryInterface(REFIID riid, void **ppv) {
 STDMETHODIMP_(ULONG)
 CUnknown::NonDelegatingAddRef() {
     LONG lRef = InterlockedIncrement(&m_cRef);
-    return max(ULONG(lRef), 1ul);
+    return std::max(ULONG(lRef), 1ul);
 }
 
 STDMETHODIMP_(ULONG)
@@ -63,7 +64,7 @@ CUnknown::NonDelegatingRelease() {
         delete this;
         return ULONG(0);
     } else {
-        return max(ULONG(lRef), 1ul);
+        return std::max(ULONG(lRef), 1ul);
     }
 }
 

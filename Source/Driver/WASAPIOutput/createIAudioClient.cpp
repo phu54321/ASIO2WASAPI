@@ -23,6 +23,7 @@
 #include "../utils/logger.h"
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
+#include <tracy/Tracy.hpp>
 
 static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWaveFormat) {
     mainlog->error("    : {}.wFormatTag: {}", varname, pWaveFormat.wFormatTag);
@@ -36,7 +37,7 @@ static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWave
 std::shared_ptr<IAudioClient>
 createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWaveFormat, int bufferSizeRequest,
                   WASAPIMode mode) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (!pDevice || !pWaveFormat) {
         return nullptr;
@@ -165,7 +166,7 @@ bool FindStreamFormat(
         WAVEFORMATEXTENSIBLE *pwfxt,
         std::shared_ptr<IAudioClient> *ppAudioClient) {
 
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (!pDevice) return false;
 

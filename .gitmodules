@@ -1,0 +1,4 @@
+[submodule "Source/tracy"]
+	path = Source/tracy
+	url = https://github.com/wolfpld/tracy
+	branch = 897aec5b062664d2485f4f9a213715d2e527e0ca

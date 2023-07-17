@@ -33,6 +33,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <tracy/Tracy.hpp>
 
 class RunningState {
 public:
@@ -49,8 +50,8 @@ private:
     bool _isOutputReady = true;
     bool _pollStop = false;
 
-    std::mutex _mutex;
-    std::condition_variable _notifier;
+    TracyLockable(std::mutex, _mutex);
+    std::condition_variable_any _notifier;
     std::thread _pollThread;
 
     std::vector<WASAPIOutputPtr> _outputList;

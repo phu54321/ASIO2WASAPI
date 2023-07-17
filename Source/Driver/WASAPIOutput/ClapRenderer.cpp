@@ -37,25 +37,13 @@ WaveSound loadWaveResource(HMODULE hDLL, int targetSampleRate, const TCHAR *resN
 const TCHAR *cherryResNames[] = {
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_01),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_02),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_03),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_04),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_05),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_06),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_07),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_08),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_09),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_10),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_11),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_12),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_13),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_14),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_15),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_16),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_17),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_18),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_19),
                 MAKEINTRESOURCE(IDR_CLAP_CHERRY_20),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_21),
 };
 
 ClapRenderer::ClapRenderer(HMODULE hDLL, int targetSampleRate) {
@@ -94,7 +82,7 @@ void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, doubl
     // Clap hadn't started
     const auto &samples = clapSound.audio;
     int32_t *outP = output->data();
-    for (int i = max(0, -clapStartSamples); i < output->size(); i++) {
+    for (int i = std::max(0, -clapStartSamples); i < output->size(); i++) {
         auto inPos = i + clapStartSamples;
         if (inPos < 0) continue;
         else if (inPos >= samples.size()) break;

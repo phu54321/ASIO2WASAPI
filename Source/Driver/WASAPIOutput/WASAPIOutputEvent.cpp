@@ -32,6 +32,7 @@
 #include "../utils/raiiUtils.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
+#include "tracy/Tracy.hpp"
 
 const int ringBufferSizeMultiplier = 2;
 
@@ -43,7 +44,7 @@ WASAPIOutputEvent::WASAPIOutputEvent(
         int bufferSizeRequest)
         : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate) {
 
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     HRESULT hr;
 
     _pDeviceId = getDeviceId(pDevice);
@@ -74,14 +75,14 @@ WASAPIOutputEvent::WASAPIOutputEvent(
 }
 
 WASAPIOutputEvent::~WASAPIOutputEvent() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     stop();
     WaitForSingleObject(_runningEvent, INFINITE);
 }
 
 void WASAPIOutputEvent::start() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     // Wait for previous wasapi thread to close
     WaitForSingleObject(_runningEvent, INFINITE);
@@ -92,7 +93,7 @@ void WASAPIOutputEvent::start() {
 }
 
 void WASAPIOutputEvent::stop() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (_stopEvent) {
         SetEvent(_stopEvent);
@@ -103,6 +104,8 @@ void WASAPIOutputEvent::stop() {
 
 
 void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buffer) {
+    ZoneScoped;
+
     assert (buffer.size() == _channelNum);
 
     mainlog->debug(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
@@ -121,7 +124,7 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
 
     bool write_overflow = false;
     {
-        std::lock_guard<std::mutex> guard(_ringBufferMutex);
+        std::lock_guard guard(_ringBufferMutex);
         auto &rp = _ringBufferReadPos;
         auto &wp = _ringBufferWritePos;
 
@@ -186,7 +189,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
         return E_INVALIDARG;
     }
 
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     BYTE *pData;
     HRESULT hr = pRenderClient->GetBuffer(_outputBufferSize, &pData);
@@ -203,7 +206,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
     bool skipped = false;
     {
-        std::lock_guard<std::mutex> guard(_ringBufferMutex);
+        std::lock_guard guard(_ringBufferMutex);
         size_t &rp = _ringBufferReadPos;
         size_t &wp = _ringBufferWritePos;
         size_t currentDataLength = (wp - rp + _ringBufferSize) % _ringBufferSize;
@@ -301,8 +304,9 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
 
     HANDLE events[2] = {pDriver->_stopEvent, hEvent.get()};
     while ((WaitForMultipleObjects(2, events, FALSE, INFINITE)) ==
-            (WAIT_OBJECT_0 + 1)) { // the hEvent is signalled and m_hStopPlayThreadEvent is not
+           (WAIT_OBJECT_0 + 1)) { // the hEvent is signalled and m_hStopPlayThreadEvent is not
         // Grab the next empty buffer from the audio _pDevice.
+        ZoneScopedN("WASAPIOutputEvent::playThread");
         pDriver->LoadData(pRenderClient);
     }
 

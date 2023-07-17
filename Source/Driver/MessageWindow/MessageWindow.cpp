@@ -24,6 +24,7 @@
 #include "../res/resource.h"
 #include "TrayHandler.h"
 #include "KeyDownListener.h"
+#include <tracy/Tracy.hpp>
 
 extern HINSTANCE g_hInstDLL;
 
@@ -39,7 +40,7 @@ private:
     static bool RegisterWindowClass(HINSTANCE hInstDLL, HICON hIcon);
 
     std::exception_ptr _threadException = nullptr;
-    std::mutex _mutex;
+    TracyLockable(std::mutex, _mutex);
     std::thread _thread;
     HWND _hWnd = nullptr;
 
@@ -137,7 +138,7 @@ MessageWindowImpl::~MessageWindowImpl() {
 ////////////////////////////////////////////////////////
 
 void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindowImpl *p) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     HWND hWnd = CreateWindow(
             szWndClassName,
@@ -168,7 +169,7 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
 }
 
 void MessageWindowImpl::setTrayTooltip(const tstring &str) {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard lock(_mutex);
 
     setTooltip(_hWnd, str.c_str());
 }

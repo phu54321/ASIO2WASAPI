@@ -32,6 +32,8 @@
 #include "PreparedState.h"
 #include "../utils/logger.h"
 #include "../utils/hexdump.h"
+#include <tracy/Tracy.hpp>
+
 
 using json = nlohmann::json;
 
@@ -39,7 +41,7 @@ static const ASIOSampleType sampleType = ASIOSTInt32LSB;
 
 ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
         : _settings(loadDriverSettings()) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     mainlog->info("Starting ASIO2WASAPI2...");
 
@@ -96,7 +98,7 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
 }
 
 ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     mainlog->info("Stopping ASIO2WASAPI2...");
     mainlog->flush();
@@ -110,7 +112,7 @@ ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
 /////
 
 ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputChannels) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (numInputChannels) *numInputChannels = 0;
     if (numOutputChannels) *numOutputChannels = _settings.channelCount;
@@ -118,7 +120,7 @@ ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputC
 }
 
 ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (!sampleRate) return ASE_InvalidParameter;
     *sampleRate = _settings.sampleRate;
@@ -126,7 +128,7 @@ ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
 }
 
 ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     int sampleRate = static_cast<int>(_sampleRate);
     for (auto &device: _pDeviceList) {
@@ -136,7 +138,7 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
 }
 
 ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     mainlog->debug("setSampleRate: {} ( {} )", sampleRate, hexdump(&sampleRate, sizeof(sampleRate)));
     if (sampleRate == _settings.sampleRate) return ASE_OK;
@@ -176,7 +178,7 @@ static const char *knownChannelNames[] =
         };
 
 ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (info->isInput) return ASE_InvalidParameter;
     if (info->channel < 0 || info->channel >= _settings.channelCount) return ASE_InvalidParameter;
@@ -199,7 +201,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
         long bufferSize,
         ASIOCallbacks *callbacks) {
 
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
@@ -222,7 +224,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 }
 
 ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     stop();
 
     // wait for the play thread to finish
@@ -235,14 +237,14 @@ ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
 ////////////
 
 ASIOError ASIO2WASAPI2Impl::start() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (!_preparedState) return ASE_NotPresent;
     return _preparedState->start() ? ASE_OK : ASE_HWMalfunction;
 }
 
 ASIOError ASIO2WASAPI2Impl::outputReady() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
     if (_preparedState) {
         _preparedState->outputReady();
     }
@@ -251,7 +253,7 @@ ASIOError ASIO2WASAPI2Impl::outputReady() {
 
 
 ASIOError ASIO2WASAPI2Impl::stop() {
-    SPDLOG_TRACE_FUNC;
+    ZoneScoped;
 
     if (_preparedState) {
         _preparedState->stop();
