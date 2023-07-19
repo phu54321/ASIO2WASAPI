@@ -112,18 +112,23 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
                    _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
                    _ringBufferSize, _inputBufferSize, _outputBufferSize);
 
-    if (buffer.size() != _channelNum) {
-        mainlog->error(L"{} Invalid channel count: expected {}, got {}", _pDeviceId, _channelNum, buffer.size());
-        return;
-    }
+    {
+        ZoneScopedN("Validating argument buffer size");
+        if (buffer.size() != _channelNum) {
+            mainlog->error(L"{} Invalid channel count: expected {}, got {}", _pDeviceId, _channelNum, buffer.size());
+            return;
+        }
 
-    if (buffer[0].size() != _inputBufferSize) {
-        mainlog->error(L"{} Invalid chunk length: expected {}, got {}", _pDeviceId, _inputBufferSize, buffer[0].size());
-        return;
+        if (buffer[0].size() != _inputBufferSize) {
+            mainlog->error(L"{} Invalid chunk length: expected {}, got {}", _pDeviceId, _inputBufferSize,
+                           buffer[0].size());
+            return;
+        }
     }
 
     bool write_overflow = false;
     {
+        ZoneScopedN("Buffer copying");
         std::lock_guard guard(_ringBufferMutex);
         auto &rp = _ringBufferReadPos;
         auto &wp = _ringBufferWritePos;
@@ -192,11 +197,16 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     ZoneScoped;
 
     BYTE *pData;
-    HRESULT hr = pRenderClient->GetBuffer(_outputBufferSize, &pData);
-    if (FAILED(hr)) {
-        mainlog->error(L"{} _pRenderClient->GetBuffer({}) failed, (0x{:08X})", _pDeviceId, _outputBufferSize,
-                       (uint32_t) hr);
-        return E_FAIL;
+    HRESULT hr;
+
+    {
+        ZoneScopedN("GetBuffer");
+        hr = pRenderClient->GetBuffer(_outputBufferSize, &pData);
+        if (FAILED(hr)) {
+            mainlog->error(L"{} _pRenderClient->GetBuffer({}) failed, (0x{:08X})", _pDeviceId, _outputBufferSize,
+                           (uint32_t) hr);
+            return E_FAIL;
+        }
     }
 
     UINT32 sampleSize = _waveFormat.Format.wBitsPerSample / 8;
@@ -206,6 +216,8 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
     bool skipped = false;
     {
+        ZoneScopedN("Buffer copying");
+
         std::lock_guard guard(_ringBufferMutex);
         size_t &rp = _ringBufferReadPos;
         size_t &wp = _ringBufferWritePos;
@@ -251,7 +263,10 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
         mainlog->warn(L"{} [----------] Skipped pushing to wasapi", _pDeviceId);
     }
 
-    pRenderClient->ReleaseBuffer(_outputBufferSize, 0);
+    {
+        ZoneScopedN("ReleaseBuffer");
+        pRenderClient->ReleaseBuffer(_outputBufferSize, 0);
+    }
     return S_OK;
 }
 
