@@ -35,14 +35,21 @@
 #include "../WASAPIOutput/WASAPIOutputPush.h"
 #include "../utils/accurateTime.h"
 #include "tracy/Tracy.hpp"
+#include "../res/resource.h"
 
 using namespace std::chrono_literals;
 
 extern HINSTANCE g_hInstDLL;
 
+const int INDEX_KEYDOWN = 0;
+const int INDEX_KEYUP = 1;
+
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p),
-          _clapRenderer(g_hInstDLL, p->_settings.sampleRate) {
+          _clapRenderer(g_hInstDLL, {
+                          MAKEINTRESOURCE(IDR_CLAP_K70_KEYDOWN),
+                          MAKEINTRESOURCE(IDR_CLAP_K70_KEYUP)
+          }, p->_settings.sampleRate) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -162,18 +169,18 @@ void RunningState::threadProc(RunningState *state) {
     double pollInterval = (double) preparedState->_bufferSize / preparedState->_settings.sampleRate;
     bool shouldPoll = true;
 
-    const int keyDownQueueSize = 256;
+    const int clapQueueSize = 256;
     const int maxConcurrentKeyCount = 16;
     struct KeyDownPair {
         double time = 0;
-        int eventId[maxConcurrentKeyCount + 1] = {0};  // +1 so that last element is always 0
+        int eventId[maxConcurrentKeyCount + 1] = {-1};  // +1 so that last element is always 0
     };
 
     // Fixed-size looping queue
     // This is intentionally designed to overflow after keyDownQueueSize
     // to prevent additional allocation
-    std::vector<KeyDownPair> keyDownQueue(keyDownQueueSize);
-    int keyDownQueueIndex = 0;
+    std::vector<KeyDownPair> clapQueue(clapQueueSize);
+    int clapQueueIndex = 0;
 
     while (true) {
         ZoneScopedN("RunningState::threadProc");
@@ -182,24 +189,27 @@ void RunningState::threadProc(RunningState *state) {
         // TODO: put this block somewhere appropriate
         {
             // Update keydown queue for clap sound
-            auto pressCount = state->_keyListener.pollKeyPressCount();
-            if (pressCount > 0) {
-                if (pressCount > maxConcurrentKeyCount) pressCount = maxConcurrentKeyCount;
+            auto pressCount = state->_keyListener.pollKeyEventCount();
+            if (pressCount.keyDown > 0 || pressCount.keyUp) {
+                auto &entry = clapQueue[clapQueueIndex];
+                int j = 0;
 
-                auto &entry = keyDownQueue[keyDownQueueIndex];
                 entry.time = currentTime;
-                for (int i = 0; i < pressCount; i++) {
-                    entry.eventId[i] = rand() + 1;
+                for (int i = 0; i < pressCount.keyDown && j < maxConcurrentKeyCount; i++) {
+                    entry.eventId[j++] = INDEX_KEYDOWN;
                 }
-                entry.eventId[pressCount] = 0;
-                keyDownQueueIndex = (keyDownQueueIndex + 1) % keyDownQueueSize;
+                for (int i = 0; i < pressCount.keyUp && j < maxConcurrentKeyCount; i++) {
+                    entry.eventId[j++] = INDEX_KEYUP;
+                }
+                entry.eventId[j] = -1;
+                clapQueueIndex = (clapQueueIndex + 1) % clapQueueSize;
             }
 
             // GC old keydown events
             double cutoffTime = currentTime - state->_clapRenderer.getMaxClapSoundLength();
-            for (int i = 0; i < keyDownQueueSize; i++) {
-                if (keyDownQueue[i].eventId[0] > 0 && keyDownQueue[i].time < cutoffTime) {
-                    keyDownQueue[i].eventId[0] = 0;
+            for (int i = 0; i < clapQueueSize; i++) {
+                if (clapQueue[i].eventId[0] > 0 && clapQueue[i].time < cutoffTime) {
+                    clapQueue[i].eventId[0] = -1;
                 }
             }
         }
@@ -252,12 +262,12 @@ void RunningState::threadProc(RunningState *state) {
             // Add clap sound
             {
                 ZoneScopedN("[RunningState::threadProc] _shouldPoll - Add clap sound");
-                for (int i = 0; i < keyDownQueueSize; i++) {
-                    auto &pair = keyDownQueue[i];
-                    if (pair.eventId[0] > 0) {
+                for (int i = 0; i < clapQueueSize; i++) {
+                    auto &pair = clapQueue[i];
+                    if (pair.eventId[0] >= 0) {
                         for (size_t ch = 0; ch < channelCount; ch++) {
                             for (auto eventId: pair.eventId) {
-                                if (eventId == 0) break;
+                                if (eventId == -1) break;
                                 state->_clapRenderer.render(
                                         &outputBuffer[ch],
                                         currentTime,

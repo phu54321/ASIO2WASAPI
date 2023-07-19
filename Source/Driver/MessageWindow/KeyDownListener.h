@@ -22,20 +22,26 @@
 #include <thread>
 #include <atomic>
 
+struct KeyEventCount {
+    int keyDown;
+    int keyUp;
+};
+
 class KeyDownListener {
 public:
     KeyDownListener();
 
     ~KeyDownListener();
 
-    int pollKeyPressCount();
+    KeyEventCount pollKeyEventCount();
 
 private:
     static void threadProc(KeyDownListener *p);
 
     std::thread _thread;
     volatile bool _killThread = false;
-    std::atomic<int> _keyPressCount{0};
+    std::atomic<int> _keyDownCount{0};
+    std::atomic<int> _keyUpCount{0};
 };
 
 #endif //ASIO2WASAPI2_KEYDOWNLISTENER_H

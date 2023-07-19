@@ -34,22 +34,10 @@ WaveSound loadWaveResource(HMODULE hDLL, int targetSampleRate, const TCHAR *resN
     return loadWaveSound(clapSoundWAV, targetSampleRate);
 }
 
-const TCHAR *cherryResNames[] = {
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_01),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_02),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_04),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_06),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_09),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_11),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_14),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_16),
-                MAKEINTRESOURCE(IDR_CLAP_CHERRY_20),
-};
-
-ClapRenderer::ClapRenderer(HMODULE hDLL, int targetSampleRate) {
+ClapRenderer::ClapRenderer(HMODULE hDLL, const std::vector<LPCTSTR> &resList, int targetSampleRate) {
     try {
         double maxTime = 0;
-        for (auto resName: cherryResNames) {
+        for (auto resName: resList) {
             auto res = loadWaveResource(hDLL, targetSampleRate, resName);
             _clapSoundList.push_back(res);
             double time = (double) res.audio.size() / (double) res.sampleRate;
@@ -67,14 +55,18 @@ double ClapRenderer::getMaxClapSoundLength() const {
     return _maxClapSoundLength;
 }
 
-void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int rng,
+void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int index,
                           double gain) const {
     assert(output);
 
     if (_clapSoundList.empty()) return;
 
-    // Pick one
-    auto &clapSound = _clapSoundList[rng % _clapSoundList.size()];
+    if (index < 0 || index > _clapSoundList.size()) {
+        mainlog->warn("ClapRender::render called with OOB index {} (range: 0 ~ {})", index, _clapSoundList.size());
+        return;
+    }
+
+    auto &clapSound = _clapSoundList[index];
     double clapRelTime = (renderTime - clapStartTime);
     int clapStartSamples = (int) round(clapRelTime * clapSound.sampleRate);
     mainlog->trace("clapRelTime {}, clapStartSamples {}", clapRelTime, clapStartSamples);

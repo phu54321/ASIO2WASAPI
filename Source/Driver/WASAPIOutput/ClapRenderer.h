@@ -26,13 +26,13 @@
 
 class ClapRenderer {
 public:
-    ClapRenderer(HMODULE hDLL, int targetSampleRate);
+    ClapRenderer(HMODULE hDLL, const std::vector<LPCTSTR> &clapList, int targetSampleRate);
 
     ~ClapRenderer() = default;
 
     double getMaxClapSoundLength() const;
 
-    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int rng, double gain) const;
+    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int index, double gain) const;
 
 private:
     std::vector<WaveSound> _clapSoundList;

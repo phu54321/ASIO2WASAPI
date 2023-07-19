@@ -28,8 +28,11 @@ KeyDownListener::~KeyDownListener() {
     _thread.join();
 }
 
-int KeyDownListener::pollKeyPressCount() {
-    return _keyPressCount.exchange(0);
+KeyEventCount KeyDownListener::pollKeyEventCount() {
+    KeyEventCount kc = {0};
+kc.keyDown =  _keyDownCount.exchange(0);
+kc.keyUp = _keyUpCount.exchange(0);
+        return kc;
 }
 
 ////
@@ -104,7 +107,7 @@ static bool isValidKey(unsigned char vkCode) {
 
 void KeyDownListener::threadProc(KeyDownListener *p) {
     bool _keyPressed[256] = {false};
-    auto &count = p->_keyPressCount;
+    auto &count = p->_keyDownCount;
     bool initialRun = true;
 
     while (!p->_killThread) {
@@ -129,10 +132,13 @@ void KeyDownListener::threadProc(KeyDownListener *p) {
             if (state) {
                 if (!_keyPressed[vKey]) {
                     _keyPressed[vKey] = true;
-                    if (!initialRun) count++;
+                    if (!initialRun) p->_keyDownCount++;
                 }
             } else {
-                _keyPressed[vKey] = false;
+                if (_keyPressed[vKey]) {
+                    _keyPressed[vKey] = false;
+                    if (!initialRun) p->_keyUpCount++;
+                }
             }
         }
         initialRun = false;
