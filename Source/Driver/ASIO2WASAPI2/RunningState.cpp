@@ -53,28 +53,32 @@ RunningState::RunningState(PreparedState *p)
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
-    for (int i = 0; i < p->_pDeviceList.size(); i++) {
-        auto &device = p->_pDeviceList[i];
+    const auto &driverSettings = _preparedState->_settings;
+
+    for (int i = 0; i < _preparedState->_pDeviceList.size(); i++) {
+        auto &device = _preparedState->_pDeviceList[i];
         if (i == 0) {
             auto output = std::make_unique<WASAPIOutputEvent>(
                     device,
-                    p->_settings.channelCount,
-                    p->_settings.sampleRate,
-                    p->_bufferSize);
+                    driverSettings.channelCount,
+                    driverSettings.sampleRate,
+                    _preparedState->_bufferSize);
 
             _msgWindow.setTrayTooltip(fmt::format(
-                    TEXT("Sample rate {}, ASIO input buffer size {}, WASAPI output buffer size {}"),
-                    _preparedState->_settings.sampleRate,
-                    _preparedState->_settings.bufferSize,
-                    output->getOutputBufferSize()));
+                    TEXT("Sample rate {}, ASIO input buffer size {} ({:.2f}ms), WASAPI output buffer size {} ({:.2f}ms)"),
+                    driverSettings.sampleRate,
+                    driverSettings.bufferSize,
+                    1000.0 * driverSettings.bufferSize / driverSettings.sampleRate,
+                    output->getOutputBufferSize(),
+                    1000.0 * output->getOutputBufferSize() / driverSettings.sampleRate));
 
             _outputList.push_back(std::move(output));
         } else {
             auto output = std::make_unique<WASAPIOutputPush>(
                     device,
-                    p->_settings.channelCount,
-                    p->_settings.sampleRate,
-                    p->_bufferSize
+                    driverSettings.channelCount,
+                    driverSettings.sampleRate,
+                    _preparedState->_bufferSize
             );
             _outputList.push_back(std::move(output));
         }
