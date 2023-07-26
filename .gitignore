@@ -601,3 +601,6 @@ CTestTestfile.cmake
 _deps
 cmake-build-*
 build/
+
+# innosetup
+InnoSetup/output

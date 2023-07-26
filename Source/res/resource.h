@@ -1,0 +1,6 @@
+#define RT_USERDATA 0x105
+
+#define IDI_ICON1 101
+
+#define IDR_CLAP_K70_KEYDOWN 1101
+#define IDR_CLAP_K70_KEYUP 1102
