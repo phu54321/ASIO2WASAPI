@@ -32,6 +32,9 @@ std::unique_ptr<spdlog::logger> mainlog;
 #endif
 
 void initMainLog() {
+    static bool inited = false;
+    if (inited) return;
+
     std::vector<spdlog::sink_ptr> sinks;
 
     // See https://github.com/gabime/spdlog/issues/2408
@@ -55,4 +58,6 @@ void initMainLog() {
 
     mainlog = std::make_unique<spdlog::logger>("main_logger", sinks.begin(), sinks.end());
     mainlog->set_level(spdlog::level::info);
+
+    inited = true;
 }
