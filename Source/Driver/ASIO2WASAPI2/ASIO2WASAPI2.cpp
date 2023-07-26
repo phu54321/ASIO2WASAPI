@@ -63,15 +63,13 @@ void enableHighPrecisionTimer() {
 
 ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
         : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr) {
-    initMainLog();
-    mainlog->info("Starting ASIO2WASAPI");
-    initAccurateTime();
-    enableHighPrecisionTimer();
+    // Note: this code is called on DLL_PROCESS_ATTACH, so
+    // this shouldn't really contain any kernel-interacting code.
+
+    // Move additional kernal interacting code to `ASIO2WASAPI2::init`.
 }
 
-ASIO2WASAPI2::~ASIO2WASAPI2() {
-    mainlog->info(L"ASIO2WASAPI detaching");
-}
+ASIO2WASAPI2::~ASIO2WASAPI2() = default;
 
 /*  ASIO driver interface implementation
  */
@@ -97,6 +95,11 @@ ASIOError ASIO2WASAPI2::future(long selector, void *opt) {
 
 ASIOBool ASIO2WASAPI2::init(void *sysRef) {
     ZoneScoped;
+
+    initMainLog();
+    mainlog->info("Starting ASIO2WASAPI");
+    initAccurateTime();
+    enableHighPrecisionTimer();
 
     if (_pImpl) return true;
     try {
