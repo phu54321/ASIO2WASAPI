@@ -23,12 +23,6 @@
 #include "COMBaseClasses.h"
 #include "ASIO2WASAPI2/ASIO2WASAPI2.h"
 
-
-LONG UnregisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname);
-
-LONG RegisterAsioDriver(CLSID clsid, const char *szDllPathName, const char *szregname, const char *szasiodesc,
-                        const char *szthreadmodel);
-
 static CFactoryTemplate s_Templates[1] = {
         {L"ASIO2WASAPI2", &CLSID_ASIO2WASAPI2_DRIVER, ASIO2WASAPI2::CreateInstance}};
 static int s_cTemplates = sizeof(s_Templates) / sizeof(s_Templates[0]);
@@ -134,32 +128,6 @@ STDAPI DllCanUnloadNow() {
     } else {
         return S_OK;
     }
-}
-
-HRESULT DllRegisterServer() {
-    char szDllPathName[MAX_PATH] = {0};
-    GetModuleFileNameA(g_hInstDLL, szDllPathName, MAX_PATH);
-    LONG rc = RegisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription, szDescription, "Apartment");
-
-    if (rc) {
-        MessageBox(nullptr, TEXT("DllRegisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
-        return -1;
-    }
-
-    return S_OK;
-}
-
-HRESULT DllUnregisterServer() {
-    char szDllPathName[MAX_PATH] = {0};
-    GetModuleFileNameA(g_hInstDLL, szDllPathName, MAX_PATH);
-    LONG rc = UnregisterAsioDriver(CLSID_ASIO2WASAPI2_DRIVER, szDllPathName, szDescription);
-
-    if (rc) {
-        MessageBox(nullptr, TEXT("DllUnregisterServer failed!"), TEXT("ASIO2WASAPI2"), MB_OK);
-        return -1;
-    }
-
-    return S_OK;
 }
 
 #pragma clang diagnostic pop
