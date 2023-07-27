@@ -18,6 +18,7 @@
 
 #include <Windows.h>
 #include <queue>
+#include <shellapi.h>
 #include "MessageWindow.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
@@ -25,6 +26,8 @@
 #include "TrayHandler.h"
 #include "KeyDownListener.h"
 #include "tracy/Tracy.hpp"
+#include "../version.h"
+#include "../utils/ResourceLoad.h"
 
 extern HINSTANCE g_hInstDLL;
 
@@ -43,6 +46,7 @@ private:
     TracyLockable(std::mutex, _mutex);
     std::thread _thread;
     HWND _hWnd = nullptr;
+    HWND _hAboutDlg = nullptr;
 
 private:
     static void threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindowImpl *p);
@@ -53,6 +57,14 @@ private:
             WPARAM wParam,
             LPARAM lParam
     );
+
+    static INT_PTR __stdcall AboutDialogProc(
+            HWND hWnd,
+            UINT uMsg,
+            WPARAM wParam,
+            LPARAM lParam
+    );
+
 
 };
 
@@ -162,9 +174,16 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
     createTrayIcon(hWnd, hIcon, TEXT("ASIO2WASAPI2"));
 
     MSG msg;
-    while (GetMessage(&msg, p->_hWnd, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+    BOOL bret;
+    while ((bret = GetMessage(&msg, nullptr, 0, 0)) != 0) {
+        if (bret == -1) {
+            mainlog->error("GetMessage returned 0x{:08X}", bret);
+            break;
+        }
+        if (!IsWindow(p->_hAboutDlg) || !IsDialogMessage(p->_hAboutDlg, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
     }
 }
 
@@ -174,7 +193,6 @@ void MessageWindowImpl::setTrayTooltip(const tstring &str) {
     setTooltip(_hWnd, str.c_str());
 }
 
-
 LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_DESTROY:
@@ -182,7 +200,56 @@ LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam
             PostQuitMessage(0);
             return 0;
 
-        default:
-            return DefWindowProc(hWnd, uMsg, wParam, lParam);
+        case WM_TRAYICON_MSG: {
+            auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, 0));
+            if (wParam == trayIconID && lParam == WM_LBUTTONUP) {
+                if (!p->_hAboutDlg) {
+                    auto hDlg = CreateDialog(g_hInstDLL, MAKEINTRESOURCE(IDD_DIALOG_ABOUT), hWnd, AboutDialogProc);
+                    SetWindowLongPtr(hDlg, DWLP_USER, reinterpret_cast<LONG_PTR>(p));
+                    p->_hAboutDlg = hDlg;
+                    ShowWindow(hDlg, SW_SHOW);
+                }
+                return 0;
+            }
+        }
+            break;
+
+        default:;
     }
+
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
+
+INT_PTR MessageWindowImpl::AboutDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+        case WM_INITDIALOG: {
+            auto licenseTextBuffer = loadUserdataResource(g_hInstDLL, MAKEINTRESOURCE(IDR_LICENSE_TEXT));
+            std::string licenseTextString{licenseTextBuffer.begin(), licenseTextBuffer.end()};
+            SetDlgItemText(hWnd, IDC_VERSION_TEXT, TEXT("ASIO2WASAPI2 ") SPRODUCT_VERSION);
+            SetDlgItemTextA(hWnd, IDC_LICENSE_TEXT, licenseTextString.c_str());
+            return TRUE;
+        }
+
+        case WM_CLOSE: {
+            auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, DWLP_USER));
+            p->_hAboutDlg = nullptr;
+            DestroyWindow(hWnd);
+            return TRUE;
+        }
+
+        case WM_COMMAND: {
+            WORD id = LOWORD(wParam);
+            if (id == IDB_GITHUB) {
+                ShellExecute(
+                        nullptr, nullptr,
+                        L"https://github.com/phu54321/ASIO2WASAPI2",
+                        nullptr, nullptr, SW_SHOW);
+            }
+            return TRUE;
+        }
+
+        default:
+            return FALSE;
+    }
+    return TRUE;
 }

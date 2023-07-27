@@ -37,7 +37,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "..\Build-RelWithDebInfo\x64\ASIO2WASAPI264.dll"; DestDir: "{commonpf64}\{#MyAppName}"; DestName: "ASIO2WASAPI2.dll"; Flags: ignoreversion regserver 64bit; Check: Is64BitInstallMode
-Source: "..\Build-RelWithDebInfo\ASIO2WASAPI2.dll"; DestDir: "{commonpf32}\{#MyAppName}"; Flags: ignoreversion regserver 32bit
+Source: "..\Build-RelWithDebInfo\ASIO2WASAPI2.dll"; DestDir: "{commonpf32}\{#MyAppName}"; Flags: ignoreversion regserver 32bit; Check: not Is64BitInstallMode
+Source: "..\Build-RelWithDebInfo\ASIO2WASAPI2.dll"; DestDir: "{commonpf32}\{#MyAppName}"; Flags: ignoreversion; Check: Is64BitInstallMode
 Source: "..\LICENSE.txt"; DestDir: "{autopf}\{#MyAppName}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

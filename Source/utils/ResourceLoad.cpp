@@ -29,7 +29,7 @@ std::vector<uint8_t> loadUserdataResource(
 
     std::vector<uint8_t> ret;
 
-    auto hRes = FindResource(hDLL, resourceIdentifier, MAKEINTRESOURCE(RT_USERDATA));
+    auto hRes = FindResource(hDLL, resourceIdentifier, TEXT("RT_USERDATA"));
     if (hRes == nullptr) {
         mainlog->error(TEXT("Failed to find resource {}"), resourceIdentifier);
         return ret;

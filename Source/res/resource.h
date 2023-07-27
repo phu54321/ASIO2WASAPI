@@ -1,6 +1,14 @@
-#define RT_USERDATA 0x105
+#ifndef IDC_STATIC
+#define IDC_STATIC (-1)
+#endif
 
-#define IDI_ICON1 101
-
-#define IDR_CLAP_K70_KEYDOWN 1101
-#define IDR_CLAP_K70_KEYUP 1102
+#define IDI_ICON1                               101
+#define IDB_BITMAP_SMALL_LOGO                   104
+#define IDB_BITMAP_ASIO_LOGO                    105
+#define IDD_DIALOG_ABOUT                        107
+#define IDR_LICENSE_TEXT                        109
+#define IDR_CLAP_K70_KEYDOWN                    1101
+#define IDR_CLAP_K70_KEYUP                      1102
+#define IDC_LICENSE_TEXT                        40000
+#define IDC_VERSION_TEXT                        40001
+#define IDB_GITHUB                              40002
