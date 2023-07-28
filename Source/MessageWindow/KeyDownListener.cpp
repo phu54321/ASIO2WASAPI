@@ -30,9 +30,9 @@ KeyDownListener::~KeyDownListener() {
 
 KeyEventCount KeyDownListener::pollKeyEventCount() {
     KeyEventCount kc = {0};
-kc.keyDown =  _keyDownCount.exchange(0);
-kc.keyUp = _keyUpCount.exchange(0);
-        return kc;
+    kc.keyDown = _keyDownCount.exchange(0);
+    kc.keyUp = _keyUpCount.exchange(0);
+    return kc;
 }
 
 ////
@@ -63,10 +63,34 @@ static bool isValidKey(unsigned char vkCode) {
         case VK_HANGEUL:
         case VK_LSHIFT:
         case VK_RSHIFT:
+        case VK_LWIN:
+        case VK_RWIN:
+        case VK_NUMLOCK:
+        case VK_SCROLL:
         case VK_CAPITAL:
         case VK_HANJA:
         case VK_SPACE:
         case VK_APPS:
+        case VK_RETURN:
+        case VK_ESCAPE:
+        case VK_TAB:
+
+        case VK_F1:
+        case VK_F2:
+        case VK_F3:
+        case VK_F4:
+        case VK_F5:
+        case VK_F6:
+        case VK_F7:
+        case VK_F8:
+        case VK_F9:
+        case VK_F10:
+        case VK_F11:
+        case VK_F12:
+        case VK_PAUSE:
+        case VK_PRINT:
+        case VK_DELETE:
+        case VK_BACK:
 
         case VK_OEM_1:
         case VK_OEM_PLUS:
