@@ -105,7 +105,7 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
 
 
-    mainlog->debug(L"{} pAudioClient->Initialize: bufferSizeRequest {}, bufferDuration {.1f}ms", deviceId,
+    mainlog->debug(L"{} pAudioClient->Initialize: bufferSizeRequest {}, bufferDuration {:.1f}ms", deviceId,
                    bufferSizeRequest,
                    (double) bufferDuration / 1000.0);
 
