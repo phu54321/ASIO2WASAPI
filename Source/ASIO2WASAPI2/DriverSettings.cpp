@@ -54,7 +54,8 @@ DriverSettings loadDriverSettings() {
         ret.clapGain = j.value("clapGain", 0.);
         ret.throttleClapThread = j.value("throttleClapThread", true);
 
-        auto logLevel = j.value("logLevel", "debug");
+        // Note:: Declare default log level on logger.cpp
+        auto logLevel = j.value("logLevel", "");
         if (logLevel == "trace") mainlog->set_level(spdlog::level::trace);
         if (logLevel == "debug") mainlog->set_level(spdlog::level::debug);
         if (logLevel == "info") mainlog->set_level(spdlog::level::info);
@@ -78,3 +79,5 @@ DriverSettings loadDriverSettings() {
         throw AppException("JSON parse failed");
     }
 }
+
+0
