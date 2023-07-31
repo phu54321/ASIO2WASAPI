@@ -49,7 +49,8 @@ RunningState::RunningState(PreparedState *p)
           _clapRenderer(g_hInstDLL, {
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYDOWN),
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYUP)
-          }, p->_settings.sampleRate) {
+          }, p->_settings.sampleRate),
+          _keyListener(p->_settings.throttleClapThread) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 

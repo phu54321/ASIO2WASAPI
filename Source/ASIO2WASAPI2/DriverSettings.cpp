@@ -52,6 +52,7 @@ DriverSettings loadDriverSettings() {
         ret.sampleRate = j.value("sampleRate", 48000);
         ret.bufferSize = j.value("bufferSize", 1024);
         ret.clapGain = j.value("clapGain", 0.);
+        ret.throttleClapThread = j.value("throttleClapThread", true);
 
         auto logLevel = j.value("logLevel", "debug");
         if (logLevel == "trace") mainlog->set_level(spdlog::level::trace);

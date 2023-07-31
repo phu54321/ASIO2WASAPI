@@ -21,7 +21,7 @@
 #include <Windows.h>
 #include <vector>
 
-KeyDownListener::KeyDownListener() : _thread(threadProc, this) {}
+KeyDownListener::KeyDownListener(bool cpuThrottle) : _thread(threadProc, this), _cpuThrottle(cpuThrottle) {}
 
 KeyDownListener::~KeyDownListener() {
     _killThread = true;
@@ -131,7 +131,6 @@ static bool isValidKey(unsigned char vkCode) {
 
 void KeyDownListener::threadProc(KeyDownListener *p) {
     bool _keyPressed[256] = {false};
-    auto &count = p->_keyDownCount;
     bool initialRun = true;
 
     while (!p->_killThread) {
@@ -166,6 +165,7 @@ void KeyDownListener::threadProc(KeyDownListener *p) {
             }
         }
         initialRun = false;
-        Sleep(1);
+        if (p->_cpuThrottle) Sleep(1);
+        else Sleep(0);
     }
 }

@@ -29,7 +29,7 @@ struct KeyEventCount {
 
 class KeyDownListener {
 public:
-    KeyDownListener();
+    explicit KeyDownListener(bool cpuThrottle = true);
 
     ~KeyDownListener();
 
@@ -38,6 +38,7 @@ public:
 private:
     static void threadProc(KeyDownListener *p);
 
+    const bool _cpuThrottle;
     std::thread _thread;
     volatile bool _killThread = false;
     std::atomic<int> _keyDownCount{0};
