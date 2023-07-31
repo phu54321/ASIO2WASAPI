@@ -79,5 +79,3 @@ DriverSettings loadDriverSettings() {
         throw AppException("JSON parse failed");
     }
 }
-
-0
