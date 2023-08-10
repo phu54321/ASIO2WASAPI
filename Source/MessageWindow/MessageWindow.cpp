@@ -113,7 +113,7 @@ bool MessageWindowImpl::RegisterWindowClass(HINSTANCE hInstDLL, HICON hIcon) {
 
 MessageWindowImpl::MessageWindowImpl() {
     HINSTANCE hInstDLL = g_hInstDLL;
-    HICON hIcon = LoadIcon(g_hInstDLL, MAKEINTRESOURCE(IDI_ICON1));
+    HICON hIcon = LoadIcon(g_hInstDLL, MAKEINTRESOURCE(IDI_MAINICON));
 
     if (!RegisterWindowClass(hInstDLL, hIcon)) {
         throw AppException("Cannot register ASIO2WASAPI2 Message window");
