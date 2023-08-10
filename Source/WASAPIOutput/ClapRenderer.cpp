@@ -22,6 +22,7 @@
 #include "../utils/logger.h"
 #include "../utils/WaveLoad.h"
 #include "../lib/r8brain_free_src/CDSPResampler.h"
+#include "tracy/Tracy.hpp"
 
 #include <vector>
 #include <mmsystem.h>
@@ -58,6 +59,8 @@ double ClapRenderer::getMaxClapSoundLength() const {
 void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int index,
                           double gain) const {
     assert(output);
+
+    ZoneScoped;
 
     if (_clapSoundList.empty()) return;
 

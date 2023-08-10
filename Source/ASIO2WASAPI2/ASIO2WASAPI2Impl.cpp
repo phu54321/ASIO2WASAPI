@@ -131,8 +131,11 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
     ZoneScoped;
 
     int sampleRate = static_cast<int>(_sampleRate);
-    for (auto &device: _pDeviceList) {
-        if (!FindStreamFormat(device, _settings.channelCount, sampleRate)) return ASE_NoClock;
+    for (int i = 0; i < _pDeviceList.size(); i++) {
+        auto &device = _pDeviceList[i];
+        auto mode = (i == 0) ? WASAPIMode::Event : WASAPIMode::Pull;
+        if (!FindStreamFormat(device, _settings.channelCount, sampleRate, BUFFER_SIZE_REQUEST_USEDEFAULT, mode))
+            return ASE_NoClock;
     }
     return ASE_OK;
 }

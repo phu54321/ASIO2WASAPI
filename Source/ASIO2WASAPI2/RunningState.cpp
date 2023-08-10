@@ -178,7 +178,11 @@ void RunningState::threadProc(RunningState *state) {
     const int maxConcurrentKeyCount = 16;
     struct KeyDownPair {
         double time = 0;
-        int eventId[maxConcurrentKeyCount + 1] = {-1};  // +1 so that last element is always 0
+        int eventId[maxConcurrentKeyCount + 1];  // +1 so that last element is always -1
+
+        KeyDownPair() {
+            std::fill(eventId, eventId + maxConcurrentKeyCount, -1);
+        }
     };
 
     // Fixed-size looping queue
@@ -213,7 +217,7 @@ void RunningState::threadProc(RunningState *state) {
             // GC old keydown events
             double cutoffTime = currentTime - state->_clapRenderer.getMaxClapSoundLength();
             for (int i = 0; i < clapQueueSize; i++) {
-                if (clapQueue[i].eventId[0] > 0 && clapQueue[i].time < cutoffTime) {
+                if (clapQueue[i].eventId[0] >= 0 && clapQueue[i].time < cutoffTime) {
                     clapQueue[i].eventId[0] = -1;
                 }
             }
