@@ -204,7 +204,7 @@ LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam
             auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, 0));
             if (wParam == trayIconID && lParam == WM_LBUTTONUP) {
                 if (!p->_hAboutDlg) {
-                    auto hDlg = CreateDialog(g_hInstDLL, MAKEINTRESOURCE(IDD_DIALOG_ABOUT), hWnd, AboutDialogProc);
+                    auto hDlg = CreateDialog(g_hInstDLL, MAKEINTRESOURCE(IDD_ABOUT), hWnd, AboutDialogProc);
                     SetWindowLongPtr(hDlg, DWLP_USER, reinterpret_cast<LONG_PTR>(p));
                     p->_hAboutDlg = hDlg;
                     ShowWindow(hDlg, SW_SHOW);
