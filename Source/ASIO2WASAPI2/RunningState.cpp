@@ -50,7 +50,8 @@ RunningState::RunningState(PreparedState *p)
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYDOWN),
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYUP)
           }, p->_settings.sampleRate),
-          _keyListener(p->_settings.throttleClapThread) {
+          _throttle(p->_settings.throttle),
+          _keyListener(_throttle) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -63,7 +64,8 @@ RunningState::RunningState(PreparedState *p)
                     device,
                     driverSettings.channelCount,
                     driverSettings.sampleRate,
-                    _preparedState->_bufferSize);
+                    _preparedState->_bufferSize,
+                    _throttle ? 4 : 2);
 
             _msgWindow.setTrayTooltip(fmt::format(
                     TEXT("Sample rate {}, ASIO input buffer size {} ({:.2f}ms), WASAPI output buffer size {} ({:.2f}ms)"),
@@ -192,11 +194,11 @@ void RunningState::threadProc(RunningState *state) {
     int clapQueueIndex = 0;
 
     while (true) {
-        ZoneScopedN("RunningState::threadProc");
         auto currentTime = accurateTime();
 
         // TODO: put this block somewhere appropriate
         {
+            ZoneScopedN("RunningState::threadProc - Keydown queue update");
             // Update keydown queue for clap sound
             auto pressCount = state->_keyListener.pollKeyEventCount();
             if (pressCount.keyDown > 0 || pressCount.keyUp) {
@@ -321,7 +323,8 @@ void RunningState::threadProc(RunningState *state) {
                 while (true) {
                     currentTime = accurateTime();
                     if (currentTime >= targetTime) break;
-                    Sleep(0);
+                    if (state->_throttle) Sleep(1);
+                    else Sleep(0);
                 }
 
                 lock.lock();

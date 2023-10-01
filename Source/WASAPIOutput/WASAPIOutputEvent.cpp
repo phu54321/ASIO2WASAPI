@@ -34,14 +34,13 @@
 #include "../utils/AppException.h"
 #include "tracy/Tracy.hpp"
 
-const int ringBufferSizeMultiplier = 2;
-
 
 WASAPIOutputEvent::WASAPIOutputEvent(
         const std::shared_ptr<IMMDevice> &pDevice,
         int channelNum,
         int sampleRate,
-        int bufferSizeRequest)
+        int bufferSizeRequest,
+        int ringBufferSizeMultiplier)
         : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate) {
 
     ZoneScoped;

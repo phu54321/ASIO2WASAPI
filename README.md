@@ -50,7 +50,7 @@ ASIO2WASAPI2는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가
   "channelCount": 2,
   "bufferSize": 1024,
   "clapGain": 0.5,
-  "throttleClapThread": true
+  "throttle": true
 }
 ```
 
@@ -58,8 +58,9 @@ ASIO2WASAPI2는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가
 - `logLevel`: `"trace" | "debug" | "info" | "warn" | "error"`. Trace를 하면 좀 많이 나옵니다. 기본값은 `"debug"`.
 - `deviceId`: 출력 디바이스 이름 배열. `(default)` 는 기본 출력 디바이스를 뜻합니다.
 - `clapGain`: 클랩사운드 음량 조절. 0.0 ~ 1.0 범위입니다.
-- `throttleClapThread`: 클랩 사운드 재생에 CPU를 좀 덜 씁니다. 0.002초정도 클랩사운드 오차가 발생할 수 있습니다.
-  `false`로 설정할 경우 게임 CPU 사용량 / 게임 렉이 체감 될 정도로 생길 수 있습니다.
+- `throttle`: 전반적으로 CPU를 좀 덜 씁니다. 약간의 사운드 시간 발생할 수 있습니다.
+  `false`로 설정할 경우 게임 CPU 사용량 / 게임 렉이 체감 될 정도로 생길 수 있습니다
+  CPU가 아주아주 충분할 때 `false`로 사용하세요.
   ![CPU usage](./imgs/cpu_usage.png)
 -
 

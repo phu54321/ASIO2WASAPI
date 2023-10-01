@@ -52,7 +52,7 @@ DriverSettings loadDriverSettings() {
         ret.sampleRate = j.value("sampleRate", 48000);
         ret.bufferSize = j.value("bufferSize", 1024);
         ret.clapGain = j.value("clapGain", 0.);
-        ret.throttleClapThread = j.value("throttleClapThread", true);
+        ret.throttle = j.value("throttle", true);
 
         // Note:: Declare default log level on logger.cpp
         auto logLevel = j.value("logLevel", "");

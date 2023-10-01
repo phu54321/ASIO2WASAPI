@@ -28,7 +28,7 @@ struct DriverSettings {
     int sampleRate = 48000;
     int bufferSize = 1024;
     double clapGain = 0;
-    bool throttleClapThread = true;
+    bool throttle = true;
     std::vector<std::wstring> deviceIdList;
 };
 

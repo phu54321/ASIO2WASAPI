@@ -46,6 +46,8 @@ public:
 private:
     void signalStop();
 
+    bool _throttle;
+
     PreparedState *_preparedState;
     bool _isOutputReady = true;
     bool _pollStop = false;

@@ -34,7 +34,8 @@
 
 class WASAPIOutputEvent : public WASAPIOutput {
 public:
-    WASAPIOutputEvent(const std::shared_ptr<IMMDevice> &pDevice, int channelNum, int sampleRate, int bufferSizeRequest);
+    WASAPIOutputEvent(const std::shared_ptr<IMMDevice> &pDevice, int channelNum, int sampleRate, int bufferSizeRequest,
+                      int ringBufferSizeMultiplier);
 
     ~WASAPIOutputEvent();
 
