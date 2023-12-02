@@ -84,3 +84,11 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/x64"
             )
 endif ()
+
+
+# Unit testing
+add_executable(test_main
+        Tests/test_ringbuffer.cpp
+        Tests/test_main.cpp
+)
+
