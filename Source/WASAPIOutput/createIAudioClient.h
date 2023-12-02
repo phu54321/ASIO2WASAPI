@@ -26,16 +26,15 @@
 const int BUFFER_SIZE_REQUEST_USEDEFAULT = -1;
 
 enum class WASAPIMode {
-    Pull,
-    Event
+    Exclusive,
+    Shared
 };
 
 bool FindStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
         int channelCount,
         int sampleCount,
-        int bufferSizeRequest = BUFFER_SIZE_REQUEST_USEDEFAULT,
-        WASAPIMode mode = WASAPIMode::Event,
+        WASAPIMode mode,
         WAVEFORMATEXTENSIBLE *pwfxt = nullptr,
         std::shared_ptr<IAudioClient> *ppAudioClient = nullptr);
 

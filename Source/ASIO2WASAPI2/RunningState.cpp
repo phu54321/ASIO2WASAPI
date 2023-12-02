@@ -32,7 +32,6 @@
 #include <deque>
 
 #include "../WASAPIOutput/WASAPIOutputEvent.h"
-#include "../WASAPIOutput/WASAPIOutputPush.h"
 #include "../utils/accurateTime.h"
 #include "tracy/Tracy.hpp"
 #include "../res/resource.h"
@@ -59,14 +58,16 @@ RunningState::RunningState(PreparedState *p)
 
     for (int i = 0; i < _preparedState->_pDeviceList.size(); i++) {
         auto &device = _preparedState->_pDeviceList[i];
-        if (i == 0) {
-            auto output = std::make_unique<WASAPIOutputEvent>(
-                    device,
-                    driverSettings.channelCount,
-                    driverSettings.sampleRate,
-                    _preparedState->_bufferSize,
-                    _throttle ? 4 : 2);
+        auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
+        auto output = std::make_unique<WASAPIOutputEvent>(
+                device,
+                driverSettings.channelCount,
+                driverSettings.sampleRate,
+                _preparedState->_bufferSize,
+                mode,
+                _throttle ? 4 : 2);
 
+        if (i == 0) {
             _msgWindow.setTrayTooltip(fmt::format(
                     TEXT("Sample rate {}, ASIO input buffer size {} ({:.2f}ms), WASAPI output buffer size {} ({:.2f}ms)"),
                     driverSettings.sampleRate,
@@ -75,16 +76,8 @@ RunningState::RunningState(PreparedState *p)
                     output->getOutputBufferSize(),
                     1000.0 * output->getOutputBufferSize() / driverSettings.sampleRate));
 
-            _outputList.push_back(std::move(output));
-        } else {
-            auto output = std::make_unique<WASAPIOutputPush>(
-                    device,
-                    driverSettings.channelCount,
-                    driverSettings.sampleRate,
-                    _preparedState->_bufferSize
-            );
-            _outputList.push_back(std::move(output));
         }
+        _outputList.push_back(std::move(output));
     }
 
     _pollThread = std::thread(RunningState::threadProc, this);

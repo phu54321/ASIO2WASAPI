@@ -133,8 +133,8 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
     int sampleRate = static_cast<int>(_sampleRate);
     for (int i = 0; i < _pDeviceList.size(); i++) {
         auto &device = _pDeviceList[i];
-        auto mode = (i == 0) ? WASAPIMode::Event : WASAPIMode::Pull;
-        if (!FindStreamFormat(device, _settings.channelCount, sampleRate, BUFFER_SIZE_REQUEST_USEDEFAULT, mode))
+        auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
+        if (!FindStreamFormat(device, _settings.channelCount, sampleRate, mode))
             return ASE_NoClock;
     }
     return ASE_OK;

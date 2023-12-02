@@ -61,7 +61,6 @@ add_library(ASIO2WASAPI2 SHARED
         Source/ASIO2WASAPI2/RunningState.cpp
         Source/WASAPIOutput/ClapRenderer.cpp
         Source/WASAPIOutput/WASAPIOutputEvent.cpp
-        Source/WASAPIOutput/WASAPIOutputPush.cpp
 
         Source/res/ASIO2WASAPI2.rc
         Source/ASIO2WASAPI2/ASIO2WASAPI2.def

@@ -34,9 +34,10 @@ static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWave
     mainlog->error("    : {}.cbSize: {}", varname, pWaveFormat.cbSize);
 }
 
-std::shared_ptr<IAudioClient>
-createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWaveFormat, int bufferSizeRequest,
-                  WASAPIMode mode) {
+std::shared_ptr<IAudioClient> createAudioClient(
+        const std::shared_ptr<IMMDevice> &pDevice,
+        WAVEFORMATEX *pWaveFormat,
+        WASAPIMode mode) {
     ZoneScoped;
 
     if (!pDevice || !pWaveFormat) {
@@ -44,10 +45,8 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
 
     // WASAPI flags
-    auto shareMode = (mode == WASAPIMode::Event) ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
-    auto streamFlags =
-            (mode == WASAPIMode::Event) ? AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST
-                                        : AUDCLNT_STREAMFLAGS_NOPERSIST;
+    auto shareMode = (mode == WASAPIMode::Exclusive) ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
+    auto streamFlags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST;
 
     ////
 
@@ -62,52 +61,31 @@ createAudioClient(const std::shared_ptr<IMMDevice> &pDevice, WAVEFORMATEX *pWave
     }
     auto pAudioClient = make_autorelease(pAudioClient_);
 
-    if (mode == WASAPIMode::Event) {
-        hr = pAudioClient->IsFormatSupported(shareMode, pWaveFormat, nullptr);
-        if (FAILED(hr)) {
-            mainlog->error(L"{} pAudioClient->IsFormatSupported failed: 0x{:08X}", deviceId, (uint32_t) hr);
+    WAVEFORMATEX *closestMatch;
+    hr = pAudioClient->IsFormatSupported(shareMode, pWaveFormat, &closestMatch);
+    if (FAILED(hr)) {
+        mainlog->error(L"{} pAudioClient->IsFormatSupported failed: 0x{:08X}", deviceId, (uint32_t) hr);
+        if (closestMatch) {
+            dumpErrorWaveFormatEx("ClosestMatch", *closestMatch);
+            CoTaskMemFree(closestMatch);
             return nullptr;
         }
+    }
+
+    REFERENCE_TIME bufferDuration;
+    if (mode == WASAPIMode::Exclusive) {
+        REFERENCE_TIME minBufferDuration, defaultDuration;
+        hr = pAudioClient->GetDevicePeriod(&defaultDuration, &minBufferDuration);
+        if (FAILED(hr)) return nullptr;
+        mainlog->info(L"{} minimum duration {} default duration {}", deviceId, minBufferDuration, defaultDuration);
+//        bufferDuration = minBufferDuration;
+        bufferDuration = defaultDuration;
     } else {
-        WAVEFORMATEX *pClosestMatch;
-        hr = pAudioClient->IsFormatSupported(shareMode, pWaveFormat, &pClosestMatch);
-        if (hr == S_FALSE) {
-            mainlog->error(L"{} pAudioClient->IsFormatSupported failed: S_FALSE (see pClosestMatch)", deviceId);
-            dumpErrorWaveFormatEx("pWaveFormat", *pWaveFormat);
-            dumpErrorWaveFormatEx("pClosestMatch", *pClosestMatch);
-            CoTaskMemFree(pClosestMatch);
-            return nullptr;
-        }
-        if (FAILED(hr)) {
-            mainlog->error(L"{} pAudioClient->IsFormatSupported failed: 0x{:08X}", deviceId, (uint32_t) hr);
-            return nullptr;
-        }
+        bufferDuration = 0;
     }
 
-
-    REFERENCE_TIME defaultBufferDuration, minBufferDuration, bufferDuration;
-    hr = pAudioClient->GetDevicePeriod(&defaultBufferDuration, &minBufferDuration);
-    if (FAILED(hr)) return nullptr;
-    mainlog->info(L"{} minimum duration {}, default duration {}", deviceId, minBufferDuration,
-                  defaultBufferDuration);
-
-    if (bufferSizeRequest == BUFFER_SIZE_REQUEST_USEDEFAULT) {
-        bufferDuration = defaultBufferDuration;
-    } else {
-        bufferDuration = (REFERENCE_TIME) lround(10000.0 *                         // (REFERENCE_TIME / ms) *
-                                                 1000 *                            // (ms / s) *
-                                                 bufferSizeRequest /                      // frames /
-                                                 pWaveFormat->nSamplesPerSec      // (frames / s)
-        );
-    }
-    if (bufferDuration < minBufferDuration) {
-        bufferDuration = minBufferDuration;
-    }
-
-
-    mainlog->debug(L"{} pAudioClient->Initialize: bufferSizeRequest {}, bufferDuration {:.1f}ms", deviceId,
-                   bufferSizeRequest,
-                   (double) bufferDuration / 1000.0);
+    mainlog->debug(L"{} pAudioClient->Initialize: bufferDuration {:.1f}ms", deviceId,
+                   (double) bufferDuration / 10000.0);
 
     hr = pAudioClient->Initialize(
             shareMode,
@@ -161,7 +139,6 @@ bool FindStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
         int channelCount,
         int sampleRate,
-        int bufferSizeRequest,
         WASAPIMode mode,
         WAVEFORMATEXTENSIBLE *pwfxt,
         std::shared_ptr<IAudioClient> *ppAudioClient) {
@@ -170,19 +147,20 @@ bool FindStreamFormat(
 
     if (!pDevice) return false;
 
-    mainlog->debug(TEXT("{} FindStreamFormat: channelCount {}, sampleRate {}, bufferSizeRequest {}, mode {}"),
-                   getDeviceId(pDevice),
+    auto deviceId = getDeviceId(pDevice);
+
+    mainlog->debug(TEXT("{} FindStreamFormat: channelCount {}, sampleRate {}, mode {}"),
+                   deviceId,
                    channelCount,
                    sampleRate,
-                   bufferSizeRequest,
-                   mode == WASAPIMode::Event ? L"Event" : L"Pull");
+                   mode == WASAPIMode::Exclusive ? L"Exclusive" : L"Shared");
 
     // create a reasonable channel mask
     DWORD dwChannelMask = (1 << channelCount) - 1;
     WAVEFORMATEXTENSIBLE waveFormat = {0};
 
-
     //try 32-bit first
+    mainlog->debug(TEXT("{} triyng 32bit"), deviceId);
     waveFormat.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     waveFormat.Format.nChannels = channelCount;
     waveFormat.Format.nSamplesPerSec = sampleRate;
@@ -194,20 +172,22 @@ bool FindStreamFormat(
     waveFormat.dwChannelMask = dwChannelMask;
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-    auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
+    auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, mode);
     if (pAudioClient) goto Finish;
 
     //try 24-bit-in-32bit next
+    mainlog->debug(TEXT("{} triyng 24bit-in-32bit"), deviceId);
     waveFormat.Samples.wValidBitsPerSample = 24;
-    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
+    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, mode);
     if (pAudioClient) goto Finish;
 
     //finally, try 16-bit
+    mainlog->debug(TEXT("{} triyng 16bit"), deviceId);
     waveFormat.Format.wBitsPerSample = 16;
     waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
     waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
     waveFormat.Samples.wValidBitsPerSample = waveFormat.Format.wBitsPerSample;
-    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, bufferSizeRequest, mode);
+    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, mode);
     if (pAudioClient) goto Finish;
 
     Finish:

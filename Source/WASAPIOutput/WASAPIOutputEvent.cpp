@@ -39,19 +39,18 @@ WASAPIOutputEvent::WASAPIOutputEvent(
         const std::shared_ptr<IMMDevice> &pDevice,
         int channelNum,
         int sampleRate,
-        int bufferSizeRequest,
+        UINT32 inputBufferSize,
+        WASAPIMode mode,
         int ringBufferSizeMultiplier)
-        : _pDevice(pDevice), _channelNum(channelNum), _sampleRate(sampleRate) {
+        : _pDevice(pDevice), _inputBufferSize(inputBufferSize), _channelNum(channelNum), _sampleRate(sampleRate), _mode(mode) {
 
     ZoneScoped;
     HRESULT hr;
 
     _pDeviceId = getDeviceId(pDevice);
-
-    _inputBufferSize = bufferSizeRequest;
-    if (!FindStreamFormat(pDevice, channelNum, sampleRate, bufferSizeRequest, WASAPIMode::Event, &_waveFormat,
+    if (!FindStreamFormat(pDevice, channelNum, sampleRate, mode, &_waveFormat,
                           &_pAudioClient)) {
-        mainlog->error(L"{} Cannot find suitable stream format for output _pDevice", _pDeviceId);
+        mainlog->error(L"{} Cannot find suitable stream for mat for output _pDevice", _pDeviceId);
         throw AppException("FindStreamFormat failed");
     }
 
@@ -162,11 +161,18 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     BYTE *pData;
     HRESULT hr;
 
+    size_t writeBufferSize = _outputBufferSize;
+    if (_mode == WASAPIMode::Shared) {
+        UINT32 paddingFrames = 0;
+        _pAudioClient->GetCurrentPadding(&paddingFrames);
+        writeBufferSize -= paddingFrames;
+    }
+
     {
         ZoneScopedN("GetBuffer");
-        hr = pRenderClient->GetBuffer(_outputBufferSize, &pData);
+        hr = pRenderClient->GetBuffer(writeBufferSize, &pData);
         if (FAILED(hr)) {
-            mainlog->error(L"{} _pRenderClient->GetBuffer({}) failed, (0x{:08X})", _pDeviceId, _outputBufferSize,
+            mainlog->error(L"{} _pRenderClient->GetBuffer({}) failed, (0x{:08X})", _pDeviceId, writeBufferSize,
                            (uint32_t) hr);
             return E_FAIL;
         }
@@ -177,7 +183,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
     {
         auto &rb0 = _ringBufferList[0];
         mainlog->debug(L"{} LoadData, rp {} wp {} ringSize {} get {}", _pDeviceId, rb0.rp(), rb0.wp(),
-                       rb0.capacity(), _outputBufferSize);
+                       rb0.capacity(), writeBufferSize);
     }
 
     bool skipped = false;
@@ -186,16 +192,16 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
         std::lock_guard guard(_ringBufferMutex);
 
-        if (_ringBufferList[0].size() < _outputBufferSize) {
-            memset(pData, 0, sampleSize * _channelNum * _outputBufferSize);
+        if (_ringBufferList[0].size() < writeBufferSize) {
+            memset(pData, 0, sampleSize * _channelNum * writeBufferSize);
             skipped = true;
         } else {
             for (unsigned ch = 0; ch < _channelNum; ch++) {
-                _ringBufferList[ch].get(_loadDataBuffer.data(), _outputBufferSize);
+                _ringBufferList[ch].get(_loadDataBuffer.data(), writeBufferSize);
                 if (sampleSize == 2) {
                     auto out = reinterpret_cast<int16_t *>(pData) + ch;
                     auto pStart = _loadDataBuffer.data();
-                    auto pEnd = _loadDataBuffer.data() + _outputBufferSize;
+                    auto pEnd = _loadDataBuffer.data() + writeBufferSize;
                     for (auto p = pStart; p != pEnd; p++) {
                         *out = (int16_t) ((*p) >> 16);
                         out += _channelNum;
@@ -203,7 +209,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
                 } else if (sampleSize == 4) {
                     auto out = reinterpret_cast<int32_t *>(pData) + ch;
                     auto pStart = _loadDataBuffer.data();
-                    auto pEnd = _loadDataBuffer.data() + _outputBufferSize;
+                    auto pEnd = _loadDataBuffer.data() + writeBufferSize;
                     for (auto p = pStart; p != pEnd; p++) {
                         *out = *p;
                         out += _channelNum;
@@ -220,7 +226,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
     {
         ZoneScopedN("ReleaseBuffer");
-        pRenderClient->ReleaseBuffer(_outputBufferSize, 0);
+        pRenderClient->ReleaseBuffer(writeBufferSize, 0);
     }
     return S_OK;
 }
