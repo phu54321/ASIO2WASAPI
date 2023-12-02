@@ -110,7 +110,7 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
 
     {
         auto &rb0 = _ringBufferList[0];
-        mainlog->debug(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
+        mainlog->trace(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
                        _pDeviceId, rb0.rp(), rb0.wp(),
                        rb0.capacity(), _inputBufferSize, _outputBufferSize);
     }
