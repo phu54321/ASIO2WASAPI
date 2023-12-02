@@ -24,6 +24,7 @@
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 #include "tracy/Tracy.hpp"
+#include "../ASIO2WASAPI2/DriverSettings.h"
 
 static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWaveFormat) {
     mainlog->error("    : {}.wFormatTag: {}", varname, pWaveFormat.wFormatTag);
@@ -74,12 +75,18 @@ std::shared_ptr<IAudioClient> createAudioClient(
 
     REFERENCE_TIME bufferDuration;
     if (mode == WASAPIMode::Exclusive) {
-        REFERENCE_TIME minBufferDuration, defaultDuration;
-        hr = pAudioClient->GetDevicePeriod(&defaultDuration, &minBufferDuration);
-        if (FAILED(hr)) return nullptr;
-        mainlog->info(L"{} minimum duration {} default duration {}", deviceId, minBufferDuration, defaultDuration);
-//        bufferDuration = minBufferDuration;
-        bufferDuration = defaultDuration;
+        const auto &durationOverride = loadDriverSettings().durationOverride;
+
+        auto it = durationOverride.find(deviceId);
+        if (it != durationOverride.end()) {
+            bufferDuration = it->second;
+        } else {
+            REFERENCE_TIME minBufferDuration, defaultDuration;
+            hr = pAudioClient->GetDevicePeriod(&defaultDuration, &minBufferDuration);
+            if (FAILED(hr)) return nullptr;
+            mainlog->info(L"{} minimum duration {} default duration {}", deviceId, minBufferDuration, defaultDuration);
+            bufferDuration = minBufferDuration;
+        }
     } else {
         bufferDuration = 0;
     }

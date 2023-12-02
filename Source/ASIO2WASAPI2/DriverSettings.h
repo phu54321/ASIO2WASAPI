@@ -22,16 +22,24 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 struct DriverSettings {
+    DriverSettings() {}
+
+    DriverSettings(const DriverSettings &rhs) = delete;
+
+    DriverSettings &operator=(const DriverSettings &rhs) = delete;
+
     int channelCount = 2;
     int sampleRate = 48000;
     int bufferSize = 1024;
     double clapGain = 0;
     bool throttle = true;
     std::vector<std::wstring> deviceIdList;
+    std::map<std::wstring, int> durationOverride;
 };
 
-DriverSettings loadDriverSettings();
+DriverSettings &loadDriverSettings();
 
 #endif //ASIO2WASAPI2_DRIVERSETTINGS_H

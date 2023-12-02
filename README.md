@@ -50,7 +50,10 @@ ASIO2WASAPI2는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가
   "channelCount": 2,
   "bufferSize": 1024,
   "clapGain": 0.5,
-  "throttle": true
+  "throttle": true,
+  "durationOverride": {
+    "{0.0.0.00000000}.{00000000-0000-0000-0000-000000000000}": 50000
+  }
 }
 ```
 
@@ -62,7 +65,9 @@ ASIO2WASAPI2는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가
   `false`로 설정할 경우 게임 CPU 사용량 / 게임 렉이 체감 될 정도로 생길 수 있습니다
   CPU가 아주아주 충분할 때 `false`로 사용하세요.
   ![CPU usage](./imgs/cpu_usage.png)
--
+- `durationOverride`: 특정 디바이스에서 출력이 깨질 경우, 해당 디바이스의 출력 버퍼 사이즈를 강제로 조절할 수 있습니다.
+  로그파일의 `minimum duration {} default duration {}` 파트를 참고하세요. 특정 리얼텍 제품군에서 이 값을 `100000` (10ms)
+  단위로 설정해야하는 경우가 있었습니다.
 
 ## 버그 제보
 

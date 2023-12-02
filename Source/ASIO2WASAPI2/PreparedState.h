@@ -37,7 +37,7 @@ class PreparedState {
     friend class RunningState;
 
 public:
-    PreparedState(const std::vector<IMMDevicePtr> &pDeviceList, DriverSettings settings, ASIOCallbacks *callbacks);
+    PreparedState(const std::vector<IMMDevicePtr> &pDeviceList, ASIOCallbacks *callbacks);
 
     ~PreparedState();
 
@@ -55,7 +55,7 @@ public:
     ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) const;
 
 private:
-    DriverSettings _settings;
+    const DriverSettings &_settings;
     ASIOCallbacks *_callbacks;
     std::vector<IMMDevicePtr> _pDeviceList;
 

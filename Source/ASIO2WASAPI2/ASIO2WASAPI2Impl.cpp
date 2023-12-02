@@ -220,7 +220,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 
     // Allocate!
     _settings.bufferSize = bufferSize;
-    _preparedState = std::make_shared<PreparedState>(_pDeviceList, _settings, callbacks);
+    _preparedState = std::make_shared<PreparedState>(_pDeviceList, callbacks);
     _preparedState->InitASIOBufferInfo(bufferInfos, numChannels);
 
     return ASE_OK;

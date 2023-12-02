@@ -70,7 +70,7 @@ public:
     ASIOError outputReady();
 
 private:
-    DriverSettings _settings{};
+    DriverSettings &_settings;
     std::vector<IMMDevicePtr> _pDeviceList;
     std::shared_ptr<PreparedState> _preparedState;
 };

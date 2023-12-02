@@ -32,22 +32,26 @@ const wchar_t *defaultDevices[] = {
         L"CABLE Input(VB-Audio Virtual Cable)",
 };
 
-DriverSettings loadDriverSettings() {
+DriverSettings &loadDriverSettings() {
+    static bool inited = false;
+    static DriverSettings ret;
+    if (inited) return ret;
+
     FILE *fp = homeDirFOpen(TEXT("ASIO2WASAPI2.json"), TEXT("rb"));
     if (!fp) {
         // use default
-        DriverSettings ret;
         mainlog->info("ASIO2WASAPI2.json not found. Using default settings");
         for (const wchar_t *device: defaultDevices) {
             ret.deviceIdList.emplace_back(device);
         }
+
+        inited = true;
         return ret;
     }
 
     try {
         auto j = json::parse(fp);
 
-        DriverSettings ret;
         ret.channelCount = j.value("channelCount", 2);
         ret.sampleRate = j.value("sampleRate", 48000);
         ret.bufferSize = j.value("bufferSize", 1024);
@@ -73,6 +77,21 @@ DriverSettings loadDriverSettings() {
                 ret.deviceIdList.push_back(utf8_to_wstring(item));
             }
         }
+
+        if (j.contains("durationOverride")) {
+            auto &durationOverride = j["durationOverride"];
+            if (!durationOverride.is_object()) {
+                throw AppException("durationOverride must be an object");
+            }
+
+            for (auto it = durationOverride.begin(); it != durationOverride.end(); ++it) {
+                std::wstring deviceId = utf8_to_wstring(it.key());
+                int override = it.value();
+                ret.durationOverride.insert(std::make_pair(deviceId, override));
+            }
+        }
+
+        inited = true;
         return ret;
     } catch (json::exception &e) {
         mainlog->error("JSON parse failed: {}", e.what());
