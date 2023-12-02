@@ -62,12 +62,12 @@ WASAPIOutputEvent::WASAPIOutputEvent(
     mainlog->info(L"{} WASAPIOutputEvent: - Buffer size: input {}, output {}",
                   _pDeviceId, _inputBufferSize, _outputBufferSize);
 
-    _ringBufferSize = (_inputBufferSize + _outputBufferSize) * ringBufferSizeMultiplier;
-    _ringBuffer.resize(channelNum);
+    size_t ringBufferSize = (_inputBufferSize + _outputBufferSize) * ringBufferSizeMultiplier;
     for (int i = 0; i < channelNum; i++) {
-        _ringBuffer[i].resize(_ringBufferSize);
-        std::fill(_ringBuffer[i].begin(), _ringBuffer[i].end(), 0);
+        _ringBufferList.emplace_back(ringBufferSize);
     }
+
+    _loadDataBuffer.resize(_outputBufferSize);
 
     // TODO: start only when sufficient data is fetched.
     start();
@@ -107,9 +107,14 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
 
     assert (buffer.size() == _channelNum);
 
-    mainlog->debug(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
-                   _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
-                   _ringBufferSize, _inputBufferSize, _outputBufferSize);
+    auto inputSize = buffer[0].size();
+
+    {
+        auto &rb0 = _ringBufferList[0];
+        mainlog->debug(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
+                       _pDeviceId, rb0.rp(), rb0.wp(),
+                       rb0.capacity(), _inputBufferSize, _outputBufferSize);
+    }
 
     {
         ZoneScopedN("Validating argument buffer size");
@@ -128,54 +133,13 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
     bool write_overflow = false;
     {
         ZoneScopedN("Buffer copying");
-        std::lock_guard guard(_ringBufferMutex);
-        auto &rp = _ringBufferReadPos;
-        auto &wp = _ringBufferWritePos;
 
-        if (rp <= wp) {
-            // case 1: -----rp+++++++++++wp-------
-            if (wp + _inputBufferSize <= _ringBufferSize) {
-                // case 1-1 -----rp+++++++++++wp@@@@@wp--
-                for (int ch = 0; ch < _channelNum; ch++) {
-                    memcpy(
-                            _ringBuffer[ch].data() + wp,
-                            buffer[ch].data(),
-                            _inputBufferSize * sizeof(buffer[ch][0]));
-                }
-                wp += _inputBufferSize;
-                if (wp == _ringBufferSize) wp = 0;
-            } else {
-                // case 1-1 @@wp--rp+++++++++++wp@@@@@@@@
-                auto fillToEndSize = _ringBufferSize - wp;
-                auto fillFromStartSize = _inputBufferSize - fillToEndSize;
-                if (fillFromStartSize >= rp) {
-                    write_overflow = true;
-                } else {
-                    for (int ch = 0; ch < _channelNum; ch++) {
-                        memcpy(
-                                _ringBuffer[ch].data() + wp,
-                                buffer[ch].data(),
-                                fillToEndSize * sizeof(buffer[ch][0]));
-                        memcpy(
-                                _ringBuffer[ch].data(),
-                                buffer[ch].data() + fillToEndSize,
-                                fillFromStartSize * sizeof(buffer[ch][0]));
-                    }
-                    wp = fillFromStartSize;
-                }
-            }
+        std::lock_guard guard(_ringBufferMutex);
+        if (_ringBufferList[0].size() + inputSize >= _ringBufferList[0].capacity()) {
+            write_overflow = true;
         } else {
-            // case 2: ++++wp--------------rp++++
-            if (wp + _inputBufferSize >= rp) {
-                write_overflow = true;
-            } else {
-                for (int ch = 0; ch < _channelNum; ch++) {
-                    memcpy(
-                            _ringBuffer[ch].data() + wp,
-                            buffer[ch].data(),
-                            _inputBufferSize * sizeof(buffer[ch][0]));
-                }
-                wp += _inputBufferSize;
+            for (int ch = 0; ch < _channelNum; ch++) {
+                assert(_ringBufferList[ch].push(buffer[ch].data(), inputSize));
             }
         }
     }
@@ -210,50 +174,42 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
     UINT32 sampleSize = _waveFormat.Format.wBitsPerSample / 8;
 
-    mainlog->debug(L"{} LoadData, rp {} wp {} ringSize {}", _pDeviceId, _ringBufferReadPos, _ringBufferWritePos,
-                   _ringBufferSize);
+    {
+        auto &rb0 = _ringBufferList[0];
+        mainlog->debug(L"{} LoadData, rp {} wp {} ringSize {} get {}", _pDeviceId, rb0.rp(), rb0.wp(),
+                       rb0.capacity(), _outputBufferSize);
+    }
 
     bool skipped = false;
     {
         ZoneScopedN("Buffer copying");
 
         std::lock_guard guard(_ringBufferMutex);
-        size_t &rp = _ringBufferReadPos;
-        size_t &wp = _ringBufferWritePos;
-        size_t currentDataLength = (wp - rp + _ringBufferSize) % _ringBufferSize;
 
-        if (currentDataLength < _outputBufferSize) {
+        if (_ringBufferList[0].size() < _outputBufferSize) {
             memset(pData, 0, sampleSize * _channelNum * _outputBufferSize);
             skipped = true;
         } else {
-            if (sampleSize == 2) {
-                for (unsigned channel = 0; channel < _channelNum; channel++) {
-                    auto out = reinterpret_cast<int16_t *>(pData) + channel;
-                    int32_t *pStart = _ringBuffer[channel].data() + rp;
-                    int32_t *pEnd = _ringBuffer[channel].data() + (rp + _outputBufferSize) % _ringBufferSize;
-                    int32_t *pWrap = _ringBuffer[channel].data() + _ringBufferSize;
-                    for (int32_t *p = pStart; p != pEnd;) {
+            for (unsigned ch = 0; ch < _channelNum; ch++) {
+                _ringBufferList[ch].get(_loadDataBuffer.data(), _outputBufferSize);
+                if (sampleSize == 2) {
+                    auto out = reinterpret_cast<int16_t *>(pData) + ch;
+                    auto pStart = _loadDataBuffer.data();
+                    auto pEnd = _loadDataBuffer.data() + _outputBufferSize;
+                    for (auto p = pStart; p != pEnd; p++) {
                         *out = (int16_t) ((*p) >> 16);
                         out += _channelNum;
-                        p++;
-                        if (p == pWrap) p = _ringBuffer[channel].data();
                     }
-                }
-            } else if (sampleSize == 4) {
-                for (unsigned channel = 0; channel < _channelNum; channel++) {
-                    auto out = reinterpret_cast<int32_t *>(pData) + channel;
-                    int32_t *pStart = _ringBuffer[channel].data() + rp;
-                    int32_t *pEnd = _ringBuffer[channel].data() + (rp + _outputBufferSize) % _ringBufferSize;
-                    int32_t *pWrap = _ringBuffer[channel].data() + _ringBufferSize;
-                    for (int32_t *p = pStart; p != pEnd;) {
+                } else if (sampleSize == 4) {
+                    auto out = reinterpret_cast<int32_t *>(pData) + ch;
+                    auto pStart = _loadDataBuffer.data();
+                    auto pEnd = _loadDataBuffer.data() + _outputBufferSize;
+                    for (auto p = pStart; p != pEnd; p++) {
                         *out = *p;
                         out += _channelNum;
-                        p++;
-                        if (p == pWrap) p = _ringBuffer[channel].data();
                     }
                 }
             }
-            rp = (rp + _outputBufferSize) % _ringBufferSize;
         }
     }
 
@@ -321,6 +277,7 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
            (WAIT_OBJECT_0 + 1)) { // the hEvent is signalled and m_hStopPlayThreadEvent is not
         // Grab the next empty buffer from the audio _pDevice.
         ZoneScopedN("WASAPIOutputEvent::playThread");
+//        mainlog->trace("WaitForMultipleObjects");
         pDriver->LoadData(pRenderClient);
     }
 

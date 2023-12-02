@@ -31,6 +31,8 @@
 
 #include "WASAPIOutput.h"
 #include "tracy/Tracy.hpp"
+#include "../utils/RingBuffer.h"
+#include "createIAudioClient.h"
 
 class WASAPIOutputEvent : public WASAPIOutput {
 public:
@@ -63,16 +65,14 @@ private:
     UINT32 _inputBufferSize;
     UINT32 _outputBufferSize;
 
-    std::vector<std::vector<int32_t>> _ringBuffer;
-    TracyLockable(std::mutex, _ringBufferMutex);
-    size_t _ringBufferSize;
-    size_t _ringBufferReadPos = 0;
-    size_t _ringBufferWritePos = 0;
-
     std::shared_ptr<IMMDevice> _pDevice;
     std::shared_ptr<IAudioClient> _pAudioClient;
     std::wstring _pDeviceId;
     WAVEFORMATEXTENSIBLE _waveFormat{};
+
+    std::vector<RingBuffer<int32_t>> _ringBufferList;
+    std::mutex _ringBufferMutex;
+    std::vector<int32_t> _loadDataBuffer;
 
     HANDLE _stopEvent = nullptr;
     HANDLE _runningEvent = nullptr;
