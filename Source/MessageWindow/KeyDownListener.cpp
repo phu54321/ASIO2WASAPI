@@ -134,7 +134,7 @@ void KeyDownListener::threadProc(KeyDownListener *p) {
     bool initialRun = true;
 
     while (!p->_killThread) {
-        mainlog->debug("KeyDownListener threadProc loop");
+//        mainlog->debug("KeyDownListener threadProc loop");
 
         /// Rationale of using GetAsyncKeyState
         /// 1. Raw Input API - Games frequently utilizes them, and getting multiple
