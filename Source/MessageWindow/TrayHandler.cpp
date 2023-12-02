@@ -44,10 +44,11 @@ void setTooltip(HWND hWnd, const TCHAR* szTip) {
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
-void removeTrayIcon() {
+void removeTrayIcon(HWND hWnd) {
     NOTIFYICONDATA nid = {0};
 
     nid.cbSize = sizeof(nid);
     nid.uID = trayIconID;
+    nid.hWnd = hWnd;
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }

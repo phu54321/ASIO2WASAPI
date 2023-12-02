@@ -47,13 +47,9 @@ void initMainLog() {
 
     {
         auto logFileName = homeDirFilePath(TEXT("ASIO2WASAPI2.log"));
-        FILE *rf = tfopen(logFileName.c_str(), TEXT("rb"));
-        if (rf) {
-            fclose(rf);
-            auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFileName, false);
-            file_sink->set_pattern("[%Y%m%d %H:%M:%S.%f] [%l%$] %v");
-            sinks.push_back(file_sink);
-        }
+        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFileName, false);
+        file_sink->set_pattern("[%Y%m%d %H:%M:%S.%f] [%l%$] %v");
+        sinks.push_back(file_sink);
     }
 
     mainlog = std::make_unique<spdlog::logger>("main_logger", sinks.begin(), sinks.end());

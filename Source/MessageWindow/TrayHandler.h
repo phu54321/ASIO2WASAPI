@@ -24,6 +24,7 @@ static const int WM_TRAYICON_MSG = WM_USER + 1143;
 
 void createTrayIcon(HWND hWnd, HICON hIcon, const TCHAR* szTip);
 void setTooltip(HWND hWnd, const TCHAR* szTip);
-void removeTrayIcon();
+
+void removeTrayIcon(HWND hWnd);
 
 #endif //ASIO2WASAPI2_TRAYHANDLER_H
