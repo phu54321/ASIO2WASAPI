@@ -4,6 +4,7 @@ project(ASIO2WASAPI2)
 set(CMAKE_CXX_STANDARD 17)
 
 add_compile_definitions(
+        _SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS
         WIN32_LEAN_AND_MEAN
         VC_EXTRALEAN
         NOMINMAX  # disable min/max macros
