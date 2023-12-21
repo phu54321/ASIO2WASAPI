@@ -28,7 +28,7 @@
 #include <atomic>
 #include "utils/AppException.h"
 #include "WASAPIOutput/WASAPIOutput.h"
-#include "pref/DriverSettings.h"
+#include "pref/UserPref.h"
 
 #include "asiosys.h"
 #include "asio.h"
@@ -71,7 +71,9 @@ public:
     ASIOError outputReady();
 
 private:
-    DriverSettings &_settings;
+    const UserPref &_pref;
+    int _sampleRate = 48000;
+    int _bufferSize = 1024;
     std::vector<IMMDevicePtr> _pDeviceList;
     std::shared_ptr<PreparedState> _preparedState;
 };

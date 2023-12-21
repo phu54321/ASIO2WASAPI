@@ -18,7 +18,7 @@
 
 
 
-#include "DriverSettings.h"
+#include "UserPref.h"
 #include "../utils/json.hpp"
 #include "../utils/utf8convert.h"
 #include "../utils/homeDirFilePath.h"
@@ -32,9 +32,9 @@ const wchar_t *defaultDevices[] = {
         L"CABLE Input(VB-Audio Virtual Cable)",
 };
 
-DriverSettings &loadDriverSettings() {
+UserPref &loadUserSettings() {
     static bool inited = false;
-    static DriverSettings ret;
+    static UserPref ret;
     if (inited) return ret;
 
     FILE *fp = homeDirFOpen(TEXT("ASIO2WASAPI2.json"), TEXT("rb"));
@@ -53,8 +53,6 @@ DriverSettings &loadDriverSettings() {
         auto j = json::parse(fp);
 
         ret.channelCount = j.value("channelCount", 2);
-        ret.sampleRate = j.value("sampleRate", 48000);
-        ret.bufferSize = j.value("bufferSize", 1024);
         ret.clapGain = j.value("clapGain", 0.);
         ret.throttle = j.value("throttle", true);
 

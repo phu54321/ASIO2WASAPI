@@ -24,7 +24,7 @@
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 #include <tracy/Tracy.hpp>
-#include "../pref/DriverSettings.h"
+#include "../pref/UserPref.h"
 
 static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWaveFormat) {
     mainlog->error("    : {}.wFormatTag: {}", varname, pWaveFormat.wFormatTag);
@@ -75,7 +75,7 @@ std::shared_ptr<IAudioClient> createAudioClient(
 
     REFERENCE_TIME bufferDuration;
     if (mode == WASAPIMode::Exclusive) {
-        const auto &durationOverride = loadDriverSettings().durationOverride;
+        const auto &durationOverride = loadUserSettings().durationOverride;
 
         auto it = durationOverride.find(deviceId);
         if (it != durationOverride.end()) {

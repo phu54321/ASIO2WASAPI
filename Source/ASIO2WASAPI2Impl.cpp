@@ -36,14 +36,14 @@ using json = nlohmann::json;
 static const ASIOSampleType sampleType = ASIOSTInt32LSB;
 
 ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
-        : _settings(loadDriverSettings()) {
+        : _pref(loadUserSettings()) {
     ZoneScoped;
 
     mainlog->info("Starting ASIO2WASAPI2...");
 
     CoInitialize(nullptr);
 
-    auto &targetDeviceIdList = _settings.deviceIdList;
+    auto targetDeviceIdList = _pref.deviceIdList;
 
     auto defaultDeviceId = getDeviceId(getDefaultOutputDevice());
     auto devices = getIMMDeviceList();
@@ -68,7 +68,7 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
     std::map<std::wstring, IMMDevicePtr> deviceMap;
     for (int i = 0; i < devices.size(); i++) {
         mainlog->info(L" - Device #{:02d}: {} {}", i, friendlyNameList[i], deviceIdList[i]);
-        for (const auto &id: _settings.deviceIdList) {
+        for (const auto &id: targetDeviceIdList) {
             auto &device = devices[i];
             if (id == deviceIdList[i] || id == friendlyNameList[i]) {
                 mainlog->info("   : Matched");
@@ -78,9 +78,9 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
         }
     }
 
-    // Put _pDeviceList with order of _settings.deviceIdList
+    // Put _pDeviceList with order of targetDeviceIdList
     mainlog->info("Total {} device matched", deviceMap.size());
-    for (const auto &id: _settings.deviceIdList) {
+    for (const auto &id: targetDeviceIdList) {
         auto it = deviceMap.find(id);
         if (it != deviceMap.end()) {
             _pDeviceList.push_back(it->second);
@@ -111,7 +111,7 @@ ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputC
     ZoneScoped;
 
     if (numInputChannels) *numInputChannels = 0;
-    if (numOutputChannels) *numOutputChannels = _settings.channelCount;
+    if (numOutputChannels) *numOutputChannels = _pref.channelCount;
     return ASE_OK;
 }
 
@@ -119,7 +119,7 @@ ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
     ZoneScoped;
 
     if (!sampleRate) return ASE_InvalidParameter;
-    *sampleRate = _settings.sampleRate;
+    *sampleRate = _sampleRate;
     return ASE_OK;
 }
 
@@ -130,7 +130,7 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
     for (int i = 0; i < _pDeviceList.size(); i++) {
         auto &device = _pDeviceList[i];
         auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
-        if (!FindStreamFormat(device, _settings.channelCount, sampleRate, mode))
+        if (!FindStreamFormat(device, _pref.channelCount, sampleRate, mode))
             return ASE_NoClock;
     }
     return ASE_OK;
@@ -140,7 +140,7 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
     ZoneScoped;
 
     mainlog->debug("setSampleRate: {} ( {} )", sampleRate, hexdump(&sampleRate, sizeof(sampleRate)));
-    if (sampleRate == _settings.sampleRate) return ASE_OK;
+    if (sampleRate == _sampleRate) return ASE_OK;
 
     auto err = canSampleRate(sampleRate);
     if (err != ASE_OK) {
@@ -148,7 +148,7 @@ ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
         return err;
     }
 
-    _settings.sampleRate = (int) sampleRate;
+    _sampleRate = (int) sampleRate;
 
     if (_preparedState) {
         _preparedState->requestReset();
@@ -180,7 +180,7 @@ ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
     ZoneScoped;
 
     if (info->isInput) return ASE_InvalidParameter;
-    if (info->channel < 0 || info->channel >= _settings.channelCount) return ASE_InvalidParameter;
+    if (info->channel < 0 || info->channel >= _pref.channelCount) return ASE_InvalidParameter;
 
     info->type = sampleType;
     info->channelGroup = 0;
@@ -204,10 +204,10 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 
     // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
-    if (numChannels < 0 || numChannels > _settings.channelCount) return ASE_InvalidParameter;
+    if (numChannels < 0 || numChannels > _pref.channelCount) return ASE_InvalidParameter;
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
-        if (info.isInput || info.channelNum < 0 || info.channelNum >= _settings.channelCount)
+        if (info.isInput || info.channelNum < 0 || info.channelNum >= _pref.channelCount)
             return ASE_InvalidMode;
     }
 
@@ -215,8 +215,8 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
     disposeBuffers();
 
     // Allocate!
-    _settings.bufferSize = bufferSize;
-    _preparedState = std::make_shared<PreparedState>(_pDeviceList, callbacks);
+    _bufferSize = bufferSize;
+    _preparedState = std::make_shared<PreparedState>(_pDeviceList, _sampleRate, _bufferSize, callbacks);
     _preparedState->InitASIOBufferInfo(bufferInfos, numChannels);
 
     return ASE_OK;
@@ -276,8 +276,8 @@ ASIOError ASIO2WASAPI2Impl::getLatencies(long *_inputLatency, long *_outputLaten
     if (!_preparedState)
         return ASE_NotPresent;
     if (_inputLatency)
-        *_inputLatency = _settings.bufferSize;
+        *_inputLatency = _bufferSize;
     if (_outputLatency)
-        *_outputLatency = 2 * _settings.bufferSize;
+        *_outputLatency = 2 * _bufferSize;
     return ASE_OK;
 }

@@ -46,10 +46,13 @@ ASIOError PreparedState::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tSt
     return ASE_OK;
 }
 
-PreparedState::PreparedState(const std::vector<IMMDevicePtr> &pDeviceList, ASIOCallbacks *callbacks)
-        : _callbacks(callbacks), _bufferSize(_settings.bufferSize), _settings(loadDriverSettings()),
+PreparedState::PreparedState(
+        const std::vector<IMMDevicePtr> &pDeviceList,
+        int sampleRate,
+        int bufferSize,
+        ASIOCallbacks *callbacks
+) : _callbacks(callbacks), _bufferSize(bufferSize), _sampleRate(sampleRate), _settings(loadUserSettings()),
           _pDeviceList(pDeviceList) {
-    auto bufferSize = _settings.bufferSize;
     _buffers[0].resize(_settings.channelCount);
     _buffers[1].resize(_settings.channelCount);
     for (int i = 0; i < _settings.channelCount; i++) {

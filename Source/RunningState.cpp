@@ -48,33 +48,33 @@ RunningState::RunningState(PreparedState *p)
           _clapRenderer(g_hInstDLL, {
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYDOWN),
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYUP)
-          }, p->_settings.sampleRate),
+          }, p->_sampleRate),
           _throttle(p->_settings.throttle),
           _keyListener(_throttle) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
-    const auto &driverSettings = _preparedState->_settings;
+    const auto &driverSettings = p->_settings;
 
-    for (int i = 0; i < _preparedState->_pDeviceList.size(); i++) {
-        auto &device = _preparedState->_pDeviceList[i];
+    for (int i = 0; i < p->_pDeviceList.size(); i++) {
+        auto &device = p->_pDeviceList[i];
         auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
         auto output = std::make_unique<WASAPIOutputEvent>(
                 device,
                 driverSettings.channelCount,
-                driverSettings.sampleRate,
-                _preparedState->_bufferSize,
+                p->_sampleRate,
+                p->_bufferSize,
                 mode,
                 _throttle ? 4 : 2);
 
         if (i == 0) {
             _msgWindow.setTrayTooltip(fmt::format(
                     TEXT("Sample rate {}, ASIO input buffer size {} ({:.2f}ms), WASAPI output buffer size {} ({:.2f}ms)"),
-                    driverSettings.sampleRate,
-                    driverSettings.bufferSize,
-                    1000.0 * driverSettings.bufferSize / driverSettings.sampleRate,
+                    p->_sampleRate,
+                    p->_bufferSize,
+                    1000.0 * p->_bufferSize / p->_sampleRate,
                     output->getOutputBufferSize(),
-                    1000.0 * output->getOutputBufferSize() / driverSettings.sampleRate));
+                    1000.0 * output->getOutputBufferSize() / p->_sampleRate));
 
         }
         _outputList.push_back(std::move(output));
@@ -147,7 +147,7 @@ void compress24bitTo32bit(std::vector<std::vector<int32_t>> *outputBuffer) {
 
 void RunningState::threadProc(RunningState *state) {
     auto &preparedState = state->_preparedState;
-    auto bufferSize = preparedState->_settings.bufferSize;
+    auto bufferSize = preparedState->_bufferSize;
     auto channelCount = preparedState->_settings.channelCount;
     std::vector<std::vector<int32_t>> outputBuffer;
     outputBuffer.resize(preparedState->_settings.channelCount);
@@ -166,7 +166,7 @@ void RunningState::threadProc(RunningState *state) {
     mainlog->info("timeBeginPeriod({})", tcaps.wPeriodMin);
 
     double lastPollTime = accurateTime();
-    double pollInterval = (double) preparedState->_bufferSize / preparedState->_settings.sampleRate;
+    double pollInterval = (double) preparedState->_bufferSize / preparedState->_sampleRate;
     bool shouldPoll = true;
 
     const int clapQueueSize = 256;

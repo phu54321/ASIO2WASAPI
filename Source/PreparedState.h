@@ -37,7 +37,12 @@ class PreparedState {
     friend class RunningState;
 
 public:
-    PreparedState(const std::vector<IMMDevicePtr> &pDeviceList, ASIOCallbacks *callbacks);
+    PreparedState(
+            const std::vector<IMMDevicePtr> &pDeviceList,
+            int sampleRate,
+            int bufferSize,
+            ASIOCallbacks *callbacks
+    );
 
     ~PreparedState();
 
@@ -55,11 +60,12 @@ public:
     ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) const;
 
 private:
-    const DriverSettings &_settings;
+    const UserPref &_settings;
     ASIOCallbacks *_callbacks;
     std::vector<IMMDevicePtr> _pDeviceList;
 
-    int _bufferSize = 0; // in audio frames
+    const int _bufferSize;
+    const int _sampleRate;
     int _bufferIndex = 0;
     std::vector<std::vector<int32_t>> _buffers[2];
 

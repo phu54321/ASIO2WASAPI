@@ -17,29 +17,27 @@
 
 
 
-#ifndef ASIO2WASAPI2_DRIVERSETTINGS_H
-#define ASIO2WASAPI2_DRIVERSETTINGS_H
+#ifndef ASIO2WASAPI2_USERPREF_H
+#define ASIO2WASAPI2_USERPREF_H
 
 #include <string>
 #include <vector>
 #include <map>
 
-struct DriverSettings {
-    DriverSettings() {}
+struct UserPref {
+    UserPref() {}
 
-    DriverSettings(const DriverSettings &rhs) = delete;
+    UserPref(const UserPref &rhs) = delete;
 
-    DriverSettings &operator=(const DriverSettings &rhs) = delete;
+    UserPref &operator=(const UserPref &rhs) = delete;
 
     int channelCount = 2;
-    int sampleRate = 48000;
-    int bufferSize = 1024;
     double clapGain = 0;
     bool throttle = true;
     std::vector<std::wstring> deviceIdList;
     std::map<std::wstring, int> durationOverride;
 };
 
-DriverSettings &loadDriverSettings();
+UserPref &loadUserSettings();
 
-#endif //ASIO2WASAPI2_DRIVERSETTINGS_H
+#endif //ASIO2WASAPI2_USERPREF_H

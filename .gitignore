@@ -142,7 +142,7 @@ _TeamCity*
 
 # AxoCover is a Code Coverage Tool
 .axoCover/*
-!.axoCover/_settings.json
+!.axoCover/_pref.json
 
 # Coverlet is a free, cross platform Code Coverage Tool
 coverage*.json
@@ -184,13 +184,13 @@ publish/
 # Publish Web Output
 *.[Pp]ublish.xml
 *.azurePubxml
-# Note: Comment the next line if you want to checkin your web deploy _settings,
+# Note: Comment the next line if you want to checkin your web deploy _pref,
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
 *.publishproj
 
-# Microsoft Azure Web App publish _settings. Comment the next line if you want to
-# checkin your Azure Web App publish _settings, but sensitive information contained
+# Microsoft Azure Web App publish _pref. Comment the next line if you want to
+# checkin your Azure Web App publish _pref, but sensitive information contained
 # in these scripts will be unencrypted
 PublishScripts/
 
@@ -271,7 +271,7 @@ ServiceFabricBackup/
 # Business Intelligence projects
 *.rdl.data
 *.bim.layout
-*.bim_*._settings
+*.bim_*._pref
 *.rptproj.rsuser
 *- [Bb]ackup.rdl
 *- [Bb]ackup ([0-9]).rdl
@@ -322,7 +322,7 @@ paket-files/
 # FAKE - F# Make
 .fake/
 
-# CodeRush personal _settings
+# CodeRush personal _pref
 .cr/personal
 
 # Python Tools for Visual Studio (PTVS)
@@ -380,7 +380,7 @@ FodyWeavers.xsd
 
 # VS Code files for those working on multiple tools
 .vscode/*
-!.vscode/_settings.json
+!.vscode/_pref.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json

@@ -56,7 +56,7 @@ add_library(ASIO2WASAPI2 SHARED
         Source/MessageWindow/TrayHandler.cpp
         Source/MessageWindow/KeyDownListener.cpp
 
-        Source/pref/DriverSettings.cpp
+        Source/pref/UserPref.cpp
         Source/ASIO2WASAPI2.cpp
         Source/ASIO2WASAPI2Impl.cpp
         Source/PreparedState.cpp
@@ -97,8 +97,8 @@ add_executable(test_main
 
 # gui testing
 add_executable(test_pref_gui
-        Source/pref/DriverSettings.cpp
-        Source/pref/DriverSettingsGUI.cpp
+        Source/pref/UserPref.cpp
+        Source/pref/UserPrefGUI.cpp
         Source/utils/homeDirFilePath.cpp
         Source/utils/logger.cpp
         Source/utils/utf8convert.cpp
