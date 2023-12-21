@@ -12,6 +12,8 @@ add_compile_definitions(
 
 #set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+add_subdirectory(Source/lib/nana-1.7.4)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug mode")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Build-Debug)
@@ -54,7 +56,7 @@ add_library(ASIO2WASAPI2 SHARED
         Source/MessageWindow/TrayHandler.cpp
         Source/MessageWindow/KeyDownListener.cpp
 
-        Source/DriverSettings.cpp
+        Source/pref/DriverSettings.cpp
         Source/ASIO2WASAPI2.cpp
         Source/ASIO2WASAPI2Impl.cpp
         Source/PreparedState.cpp
@@ -69,9 +71,11 @@ add_library(ASIO2WASAPI2 SHARED
         Source/utils/WaveLoad.cpp)
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
-target_include_directories(ASIO2WASAPI2 PRIVATE Source/lib/ASIOSDK/common)
-target_include_directories(ASIO2WASAPI2 PRIVATE Source/include)
-target_include_directories(ASIO2WASAPI2 PRIVATE Source/tracy/public)
+target_include_directories(ASIO2WASAPI2 PRIVATE
+        Source/lib/ASIOSDK/common
+        Source/include
+        Source/tracy/public
+)
 target_link_libraries(ASIO2WASAPI2 PUBLIC Tracy::TracyClient Avrt.lib winmm.lib)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -81,7 +85,7 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
             PROPERTIES
             OUTPUT_NAME "ASIO2WASAPI264"
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/x64"
-            )
+    )
 endif ()
 
 
@@ -91,3 +95,19 @@ add_executable(test_main
         Tests/test_main.cpp
 )
 
+# gui testing
+add_executable(test_pref_gui
+        Source/pref/DriverSettings.cpp
+        Source/pref/DriverSettingsGUI.cpp
+        Source/utils/homeDirFilePath.cpp
+        Source/utils/logger.cpp
+        Source/utils/utf8convert.cpp
+)
+target_include_directories(test_pref_gui PRIVATE
+        Source/include
+        Source/lib/nana-1.7.4/include
+)
+target_compile_definitions(test_pref_gui PUBLIC
+        ASIO2WASAPI_PREFGUI_TEST_MAIN
+)
+target_link_libraries(test_pref_gui PUBLIC nana)

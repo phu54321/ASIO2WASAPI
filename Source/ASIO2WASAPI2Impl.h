@@ -28,7 +28,7 @@
 #include <atomic>
 #include "utils/AppException.h"
 #include "WASAPIOutput/WASAPIOutput.h"
-#include "DriverSettings.h"
+#include "pref/DriverSettings.h"
 
 #include "asiosys.h"
 #include "asio.h"

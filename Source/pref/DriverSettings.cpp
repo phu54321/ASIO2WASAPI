@@ -18,11 +18,11 @@
 
 
 
-#include "ASIO2WASAPI2Impl.h"
-#include "utils/json.hpp"
-#include "utils/utf8convert.h"
-#include "utils/homeDirFilePath.h"
-#include "utils/logger.h"
+#include "DriverSettings.h"
+#include "../utils/json.hpp"
+#include "../utils/utf8convert.h"
+#include "../utils/homeDirFilePath.h"
+#include "../utils/logger.h"
 #include <spdlog/spdlog.h>
 
 using json = nlohmann::json;
