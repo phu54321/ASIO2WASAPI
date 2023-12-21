@@ -22,8 +22,8 @@
 #include "../utils/AppException.h"
 #include <Windows.h>
 #include <tchar.h>
-#include "spdlog/fmt/fmt.h"
-#include "spdlog/fmt/xchar.h"
+#include <spdlog/fmt/fmt.h>
+#include <spdlog/fmt/xchar.h>
 
 using namespace winreg;
 

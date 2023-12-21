@@ -23,7 +23,7 @@
 #include "RunningState.h"
 #include "utils/logger.h"
 #include "utils/raiiUtils.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 #include <utility>
 #include <cassert>
 #include <avrt.h>
@@ -33,7 +33,7 @@
 
 #include "WASAPIOutput/WASAPIOutputEvent.h"
 #include "utils/accurateTime.h"
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 #include "res/resource.h"
 
 using namespace std::chrono_literals;

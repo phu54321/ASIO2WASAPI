@@ -27,12 +27,12 @@
 #include "WASAPIOutput.h"
 #include "WASAPIOutputEvent.h"
 #include "createIAudioClient.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 #include "../utils/WASAPIUtils.h"
 #include "../utils/raiiUtils.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 
 
 WASAPIOutputEvent::WASAPIOutputEvent(

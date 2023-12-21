@@ -22,7 +22,7 @@
 #include "../utils/logger.h"
 #include "../utils/WaveLoad.h"
 #include "../lib/r8brain_free_src/CDSPResampler.h"
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 
 #include <vector>
 #include <mmsystem.h>

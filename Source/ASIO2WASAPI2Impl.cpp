@@ -18,7 +18,7 @@
 
 #include <cstring>
 #include <Windows.h>
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 #include "ASIO2WASAPI2Impl.h"
 #include "res/resource.h"
 #include "utils/json.hpp"
@@ -28,7 +28,7 @@
 #include "PreparedState.h"
 #include "utils/logger.h"
 #include "utils/hexdump.h"
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 
 
 using json = nlohmann::json;

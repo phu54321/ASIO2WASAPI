@@ -30,7 +30,7 @@
 #include <functional>
 
 #include "WASAPIOutput.h"
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 #include "../utils/RingBuffer.h"
 #include "createIAudioClient.h"
 

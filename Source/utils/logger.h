@@ -1,6 +1,6 @@
 #pragma once
 
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 #include <memory>
 #include "accurateTime.h"
 #include "AppException.h"

@@ -33,7 +33,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 
 class RunningState {
 public:

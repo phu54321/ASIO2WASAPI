@@ -25,7 +25,7 @@
 #include "../res/resource.h"
 #include "TrayHandler.h"
 #include "KeyDownListener.h"
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 #include "../version.h"
 #include "../utils/ResourceLoad.h"
 

@@ -19,11 +19,11 @@
 #include "createIAudioClient.h"
 #include "../utils/raiiUtils.h"
 #include "../utils/WASAPIUtils.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 #include "../utils/logger.h"
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
-#include "tracy/Tracy.hpp"
+#include <tracy/Tracy.hpp>
 #include "../DriverSettings.h"
 
 static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWaveFormat) {

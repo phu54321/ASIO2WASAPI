@@ -20,10 +20,10 @@
 #include "ASIO2WASAPI2.h"
 #include "ASIO2WASAPI2Impl.h"
 #include "utils/logger.h"
-#include "tracy/Tracy.hpp"
-#include "spdlog/spdlog.h"
+#include <tracy/Tracy.hpp>
+#include <spdlog/spdlog.h>
 #include <shellapi.h>
-#include "spdlog/fmt/fmt.h"
+#include <spdlog/fmt/fmt.h>
 
 const CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
