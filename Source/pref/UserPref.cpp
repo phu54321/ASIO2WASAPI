@@ -91,3 +91,40 @@ UserPrefPtr loadUserPref() {
         throw AppException("JSON parse failed");
     }
 }
+
+
+void saveUserPref(UserPrefPtr pref, LPCTSTR saveRelPath) {
+    FILE *fp = homeDirFOpen(saveRelPath, TEXT("wb"));
+    if (!fp) {
+        // use default
+        mainlog->error(TEXT("[saveUserPref] homeDirFOpen failed: {}"), saveRelPath);
+        return;
+    }
+
+    json j;
+    j["channelCount"] = pref->channelCount;
+    j["clapGain"] = pref->clapGain;
+    j["throttle"] = pref->throttle;
+
+    // todo: logLevel
+
+    {
+        json jDeviceIdList = json::array();
+        for (const auto &s: pref->deviceIdList) {
+            jDeviceIdList.push_back(wstring_to_utf8(s));
+        }
+        j["deviceId"] = jDeviceIdList;
+    }
+
+    {
+        json jDurationOverride = json::object();
+        for (const auto &p: pref->durationOverride) {
+            jDurationOverride[wstring_to_utf8(p.first)] = p.second;
+        }
+        j["durationOverride"] = jDurationOverride;
+    }
+
+    fputs(j.dump(2).c_str(), fp);
+    fclose(fp);
+    return;
+}

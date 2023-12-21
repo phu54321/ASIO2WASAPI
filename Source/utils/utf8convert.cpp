@@ -17,17 +17,21 @@
 
 
 #include "utf8convert.h"
-#include <codecvt>
-#include <locale>
+#include <Windows.h>
+#include <vector>
 
 // convert UTF-8 string to std::wstring
 std::wstring utf8_to_wstring(const std::string &str) {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-    return myconv.from_bytes(str);
+    int nLen = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.size(), nullptr, 0);
+    std::vector<wchar_t> wb(nLen);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.size(), wb.data(), nLen);
+    return {wb.begin(), wb.end()};
 }
 
 // convert std::wstring to UTF-8 string
 std::string wstring_to_utf8(const std::wstring &str) {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-    return myconv.to_bytes(str);
+    int nLen = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), nullptr, 0, nullptr, nullptr);
+    std::vector<char> mb(nLen);
+    WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), mb.data(), nLen, nullptr, nullptr);
+    return {mb.begin(), mb.end()};
 }

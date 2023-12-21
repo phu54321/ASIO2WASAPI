@@ -96,18 +96,17 @@ add_executable(test_main
 )
 
 # gui testing
-add_executable(test_pref_gui
+add_executable(test_pref_gui WIN32
         Source/pref/UserPref.cpp
         Source/pref/UserPrefGUI.cpp
         Source/utils/homeDirFilePath.cpp
         Source/utils/logger.cpp
         Source/utils/utf8convert.cpp
+        Source/res/ASIO2WASAPI2.rc
 )
 target_include_directories(test_pref_gui PRIVATE
         Source/include
-        Source/lib/nana-1.7.4/include
 )
 target_compile_definitions(test_pref_gui PUBLIC
         ASIO2WASAPI_PREFGUI_TEST_MAIN
 )
-target_link_libraries(test_pref_gui PUBLIC nana)

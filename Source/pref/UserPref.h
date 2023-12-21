@@ -24,6 +24,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <Windows.h>
 
 struct UserPref {
     int channelCount = 2;
@@ -36,5 +37,7 @@ struct UserPref {
 using UserPrefPtr = std::shared_ptr<UserPref>;
 
 UserPrefPtr loadUserPref();
+
+void saveUserPref(UserPrefPtr pref, LPCTSTR saveRelPath = TEXT("ASIO2WASAPI2.json"));
 
 #endif //ASIO2WASAPI2_USERPREF_H
