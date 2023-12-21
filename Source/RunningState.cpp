@@ -49,19 +49,19 @@ RunningState::RunningState(PreparedState *p)
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYDOWN),
                           MAKEINTRESOURCE(IDR_CLAP_K70_KEYUP)
           }, p->_sampleRate),
-          _throttle(p->_settings.throttle),
+          _throttle(p->_pref->throttle),
           _keyListener(_throttle) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
-    const auto &driverSettings = p->_settings;
+    auto driverSettings = p->_pref;
 
     for (int i = 0; i < p->_pDeviceList.size(); i++) {
         auto &device = p->_pDeviceList[i];
         auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
         auto output = std::make_unique<WASAPIOutputEvent>(
                 device,
-                driverSettings.channelCount,
+                driverSettings,
                 p->_sampleRate,
                 p->_bufferSize,
                 mode,
@@ -148,9 +148,9 @@ void compress24bitTo32bit(std::vector<std::vector<int32_t>> *outputBuffer) {
 void RunningState::threadProc(RunningState *state) {
     auto &preparedState = state->_preparedState;
     auto bufferSize = preparedState->_bufferSize;
-    auto channelCount = preparedState->_settings.channelCount;
+    auto channelCount = preparedState->_pref->channelCount;
     std::vector<std::vector<int32_t>> outputBuffer;
-    outputBuffer.resize(preparedState->_settings.channelCount);
+    outputBuffer.resize(preparedState->_pref->channelCount);
     for (auto &buf: outputBuffer) {
         buf.resize(preparedState->_bufferSize);
     }
@@ -277,7 +277,7 @@ void RunningState::threadProc(RunningState *state) {
                                         currentTime,
                                         pair.time,
                                         eventId,
-                                        preparedState->_settings.clapGain);
+                                        preparedState->_pref->clapGain);
                             }
                         }
                     }

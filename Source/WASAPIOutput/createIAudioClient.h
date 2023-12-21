@@ -22,6 +22,7 @@
 #include <memory>
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
+#include "../pref/UserPref.h"
 
 const int BUFFER_SIZE_REQUEST_USEDEFAULT = -1;
 
@@ -32,7 +33,7 @@ enum class WASAPIMode {
 
 bool FindStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
-        int channelCount,
+        UserPrefPtr pref,
         int sampleCount,
         WASAPIMode mode,
         WAVEFORMATEXTENSIBLE *pwfxt = nullptr,

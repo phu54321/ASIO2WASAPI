@@ -32,29 +32,25 @@ const wchar_t *defaultDevices[] = {
         L"CABLE Input(VB-Audio Virtual Cable)",
 };
 
-UserPref &loadUserSettings() {
-    static bool inited = false;
-    static UserPref ret;
-    if (inited) return ret;
-
+UserPrefPtr loadUserPref() {
     FILE *fp = homeDirFOpen(TEXT("ASIO2WASAPI2.json"), TEXT("rb"));
+    auto ret = std::make_shared<UserPref>();
     if (!fp) {
         // use default
         mainlog->info("ASIO2WASAPI2.json not found. Using default settings");
         for (const wchar_t *device: defaultDevices) {
-            ret.deviceIdList.emplace_back(device);
+            ret->deviceIdList.emplace_back(device);
         }
 
-        inited = true;
         return ret;
     }
 
     try {
         auto j = json::parse(fp);
 
-        ret.channelCount = j.value("channelCount", 2);
-        ret.clapGain = j.value("clapGain", 0.);
-        ret.throttle = j.value("throttle", true);
+        ret->channelCount = j.value("channelCount", 2);
+        ret->clapGain = j.value("clapGain", 0.);
+        ret->throttle = j.value("throttle", true);
 
         // Note:: Declare default log level on logger.cpp
         auto logLevel = j.value("logLevel", "");
@@ -66,13 +62,13 @@ UserPref &loadUserSettings() {
 
         if (!j.contains("deviceId")) {
             for (const wchar_t *device: defaultDevices) {
-                ret.deviceIdList.emplace_back(device);
+                ret->deviceIdList.emplace_back(device);
             }
         } else if (j["deviceId"].is_string()) {
-            ret.deviceIdList.push_back(utf8_to_wstring(j.value("deviceId", "")));
+            ret->deviceIdList.push_back(utf8_to_wstring(j.value("deviceId", "")));
         } else if (j["deviceId"].is_array()) {
             for (const auto &item: j["deviceId"]) {
-                ret.deviceIdList.push_back(utf8_to_wstring(item));
+                ret->deviceIdList.push_back(utf8_to_wstring(item));
             }
         }
 
@@ -85,11 +81,10 @@ UserPref &loadUserSettings() {
             for (auto it = durationOverride.begin(); it != durationOverride.end(); ++it) {
                 std::wstring deviceId = utf8_to_wstring(it.key());
                 int override = it.value();
-                ret.durationOverride.insert(std::make_pair(deviceId, override));
+                ret->durationOverride.insert(std::make_pair(deviceId, override));
             }
         }
 
-        inited = true;
         return ret;
     } catch (json::exception &e) {
         mainlog->error("JSON parse failed: {}", e.what());

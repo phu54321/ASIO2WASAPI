@@ -71,7 +71,7 @@ public:
     ASIOError outputReady();
 
 private:
-    const UserPref &_pref;
+    UserPrefPtr _pref;
     int _sampleRate = 48000;
     int _bufferSize = 1024;
     std::vector<IMMDevicePtr> _pDeviceList;

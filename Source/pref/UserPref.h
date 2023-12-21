@@ -23,14 +23,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 struct UserPref {
-    UserPref() {}
-
-    UserPref(const UserPref &rhs) = delete;
-
-    UserPref &operator=(const UserPref &rhs) = delete;
-
     int channelCount = 2;
     double clapGain = 0;
     bool throttle = true;
@@ -38,6 +33,8 @@ struct UserPref {
     std::map<std::wstring, int> durationOverride;
 };
 
-UserPref &loadUserSettings();
+using UserPrefPtr = std::shared_ptr<UserPref>;
+
+UserPrefPtr loadUserPref();
 
 #endif //ASIO2WASAPI2_USERPREF_H

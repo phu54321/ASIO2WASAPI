@@ -41,6 +41,7 @@ public:
             const std::vector<IMMDevicePtr> &pDeviceList,
             int sampleRate,
             int bufferSize,
+            UserPrefPtr pref,
             ASIOCallbacks *callbacks
     );
 
@@ -60,12 +61,12 @@ public:
     ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) const;
 
 private:
-    const UserPref &_settings;
+    const int _bufferSize;
+    const int _sampleRate;
+    UserPrefPtr _pref;
     ASIOCallbacks *_callbacks;
     std::vector<IMMDevicePtr> _pDeviceList;
 
-    const int _bufferSize;
-    const int _sampleRate;
     int _bufferIndex = 0;
     std::vector<std::vector<int32_t>> _buffers[2];
 

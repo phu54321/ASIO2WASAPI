@@ -37,18 +37,19 @@
 
 WASAPIOutputEvent::WASAPIOutputEvent(
         const std::shared_ptr<IMMDevice> &pDevice,
-        int channelNum,
+        UserPrefPtr pref,
         int sampleRate,
         UINT32 inputBufferSize,
         WASAPIMode mode,
         int ringBufferSizeMultiplier)
-        : _pDevice(pDevice), _inputBufferSize(inputBufferSize), _channelNum(channelNum), _sampleRate(sampleRate), _mode(mode) {
+        : _pDevice(pDevice), _inputBufferSize(inputBufferSize), _channelNum(pref->channelCount),
+          _sampleRate(sampleRate), _mode(mode) {
 
     ZoneScoped;
     HRESULT hr;
 
     _pDeviceId = getDeviceId(pDevice);
-    if (!FindStreamFormat(pDevice, channelNum, sampleRate, mode, &_waveFormat,
+    if (!FindStreamFormat(pDevice, pref, sampleRate, mode, &_waveFormat,
                           &_pAudioClient)) {
         mainlog->error(L"{} Cannot find suitable stream for mat for output _pDevice", _pDeviceId);
         throw AppException("FindStreamFormat failed");
@@ -62,7 +63,7 @@ WASAPIOutputEvent::WASAPIOutputEvent(
                   _pDeviceId, _inputBufferSize, _outputBufferSize);
 
     size_t ringBufferSize = (_inputBufferSize + _outputBufferSize) * ringBufferSizeMultiplier;
-    for (int i = 0; i < channelNum; i++) {
+    for (int i = 0; i < _channelNum; i++) {
         _ringBufferList.emplace_back(ringBufferSize);
     }
 

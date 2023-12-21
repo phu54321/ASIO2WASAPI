@@ -36,14 +36,14 @@ using json = nlohmann::json;
 static const ASIOSampleType sampleType = ASIOSTInt32LSB;
 
 ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
-        : _pref(loadUserSettings()) {
+        : _pref(loadUserPref()) {
     ZoneScoped;
 
     mainlog->info("Starting ASIO2WASAPI2...");
 
     CoInitialize(nullptr);
 
-    auto targetDeviceIdList = _pref.deviceIdList;
+    auto targetDeviceIdList = _pref->deviceIdList;
 
     auto defaultDeviceId = getDeviceId(getDefaultOutputDevice());
     auto devices = getIMMDeviceList();
@@ -111,7 +111,7 @@ ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputC
     ZoneScoped;
 
     if (numInputChannels) *numInputChannels = 0;
-    if (numOutputChannels) *numOutputChannels = _pref.channelCount;
+    if (numOutputChannels) *numOutputChannels = _pref->channelCount;
     return ASE_OK;
 }
 
@@ -130,7 +130,7 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
     for (int i = 0; i < _pDeviceList.size(); i++) {
         auto &device = _pDeviceList[i];
         auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
-        if (!FindStreamFormat(device, _pref.channelCount, sampleRate, mode))
+        if (!FindStreamFormat(device, _pref, sampleRate, mode))
             return ASE_NoClock;
     }
     return ASE_OK;
@@ -180,7 +180,7 @@ ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
     ZoneScoped;
 
     if (info->isInput) return ASE_InvalidParameter;
-    if (info->channel < 0 || info->channel >= _pref.channelCount) return ASE_InvalidParameter;
+    if (info->channel < 0 || info->channel >= _pref->channelCount) return ASE_InvalidParameter;
 
     info->type = sampleType;
     info->channelGroup = 0;
@@ -204,10 +204,10 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 
     // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
-    if (numChannels < 0 || numChannels > _pref.channelCount) return ASE_InvalidParameter;
+    if (numChannels < 0 || numChannels > _pref->channelCount) return ASE_InvalidParameter;
     for (int i = 0; i < numChannels; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
-        if (info.isInput || info.channelNum < 0 || info.channelNum >= _pref.channelCount)
+        if (info.isInput || info.channelNum < 0 || info.channelNum >= _pref->channelCount)
             return ASE_InvalidMode;
     }
 
@@ -216,7 +216,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
 
     // Allocate!
     _bufferSize = bufferSize;
-    _preparedState = std::make_shared<PreparedState>(_pDeviceList, _sampleRate, _bufferSize, callbacks);
+    _preparedState = std::make_shared<PreparedState>(_pDeviceList, _sampleRate, _bufferSize, _pref, callbacks);
     _preparedState->InitASIOBufferInfo(bufferInfos, numChannels);
 
     return ASE_OK;

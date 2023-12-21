@@ -50,12 +50,13 @@ PreparedState::PreparedState(
         const std::vector<IMMDevicePtr> &pDeviceList,
         int sampleRate,
         int bufferSize,
+        UserPrefPtr pref,
         ASIOCallbacks *callbacks
-) : _callbacks(callbacks), _bufferSize(bufferSize), _sampleRate(sampleRate), _settings(loadUserSettings()),
-          _pDeviceList(pDeviceList) {
-    _buffers[0].resize(_settings.channelCount);
-    _buffers[1].resize(_settings.channelCount);
-    for (int i = 0; i < _settings.channelCount; i++) {
+) : _callbacks(callbacks), _bufferSize(bufferSize), _sampleRate(sampleRate), _pref(pref),
+    _pDeviceList(pDeviceList) {
+    _buffers[0].resize(_pref->channelCount);
+    _buffers[1].resize(_pref->channelCount);
+    for (int i = 0; i < _pref->channelCount; i++) {
         _buffers[0][i].assign(bufferSize, 0);
         _buffers[1][i].assign(bufferSize, 0);
     }
@@ -64,7 +65,7 @@ PreparedState::PreparedState(
 PreparedState::~PreparedState() = default;
 
 void PreparedState::InitASIOBufferInfo(ASIOBufferInfo *bufferInfos, int infoCount) {
-    for (int i = 0; i < _settings.channelCount; i++) {
+    for (int i = 0; i < _pref->channelCount; i++) {
         ASIOBufferInfo &info = bufferInfos[i];
         info.buffers[0] = _buffers[0].at(info.channelNum).data();
         info.buffers[1] = _buffers[1].at(info.channelNum).data();

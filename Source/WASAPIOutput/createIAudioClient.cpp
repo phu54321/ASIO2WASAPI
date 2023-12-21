@@ -36,6 +36,7 @@ static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWave
 }
 
 std::shared_ptr<IAudioClient> createAudioClient(
+        UserPrefPtr pref,
         const std::shared_ptr<IMMDevice> &pDevice,
         WAVEFORMATEX *pWaveFormat,
         WASAPIMode mode) {
@@ -75,7 +76,7 @@ std::shared_ptr<IAudioClient> createAudioClient(
 
     REFERENCE_TIME bufferDuration;
     if (mode == WASAPIMode::Exclusive) {
-        const auto &durationOverride = loadUserSettings().durationOverride;
+        const auto &durationOverride = pref->durationOverride;
 
         auto it = durationOverride.find(deviceId);
         if (it != durationOverride.end()) {
@@ -144,7 +145,7 @@ std::shared_ptr<IAudioClient> createAudioClient(
 
 bool FindStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
-        int channelCount,
+        UserPrefPtr pref,
         int sampleRate,
         WASAPIMode mode,
         WAVEFORMATEXTENSIBLE *pwfxt,
@@ -155,6 +156,7 @@ bool FindStreamFormat(
     if (!pDevice) return false;
 
     auto deviceId = getDeviceId(pDevice);
+    auto channelCount = pref->channelCount;
 
     mainlog->debug(TEXT("{} FindStreamFormat: channelCount {}, sampleRate {}, mode {}"),
                    deviceId,
@@ -179,13 +181,13 @@ bool FindStreamFormat(
     waveFormat.dwChannelMask = dwChannelMask;
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-    auto pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, mode);
+    auto pAudioClient = createAudioClient(pref, pDevice, (WAVEFORMATEX *) &waveFormat, mode);
     if (pAudioClient) goto Finish;
 
     //try 24-bit-in-32bit next
     mainlog->debug(TEXT("{} triyng 24bit-in-32bit"), deviceId);
     waveFormat.Samples.wValidBitsPerSample = 24;
-    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, mode);
+    pAudioClient = createAudioClient(pref, pDevice, (WAVEFORMATEX *) &waveFormat, mode);
     if (pAudioClient) goto Finish;
 
     //finally, try 16-bit
@@ -194,7 +196,7 @@ bool FindStreamFormat(
     waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
     waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
     waveFormat.Samples.wValidBitsPerSample = waveFormat.Format.wBitsPerSample;
-    pAudioClient = createAudioClient(pDevice, (WAVEFORMATEX *) &waveFormat, mode);
+    pAudioClient = createAudioClient(pref, pDevice, (WAVEFORMATEX *) &waveFormat, mode);
     if (pAudioClient) goto Finish;
 
     Finish:
