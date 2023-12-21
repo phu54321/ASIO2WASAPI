@@ -28,7 +28,7 @@
 #include <vector>
 #include "asiosys.h"
 #include "asio.h"
-#include "../WASAPIOutput/WASAPIOutput.h"
+#include "WASAPIOutput/WASAPIOutput.h"
 #include "ASIO2WASAPI2Impl.h"
 
 class RunningState;

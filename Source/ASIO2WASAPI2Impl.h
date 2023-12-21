@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Hyun Woo Park
+// Copyright (C) 2023 Hyunwoo Park
 //
 // This file is part of ASIO2WASAPI2.
 //
@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 
 
@@ -25,13 +26,13 @@
 #include <Windows.h>
 #include <thread>
 #include <atomic>
-#include "../utils/AppException.h"
-#include "../WASAPIOutput/WASAPIOutput.h"
+#include "utils/AppException.h"
+#include "WASAPIOutput/WASAPIOutput.h"
 #include "DriverSettings.h"
 
 #include "asiosys.h"
 #include "asio.h"
-#include "../utils/WASAPIUtils.h"
+#include "utils/WASAPIUtils.h"
 
 
 struct PreparedState;

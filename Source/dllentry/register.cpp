@@ -16,10 +16,10 @@
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "lib/WinReg.hpp"
-#include "ASIO2WASAPI2/ASIO2WASAPI2.h"
-#include "utils/homeDirFilePath.h"
-#include "utils/AppException.h"
+#include "../lib/WinReg.hpp"
+#include "../ASIO2WASAPI2.h"
+#include "../utils/homeDirFilePath.h"
+#include "../utils/AppException.h"
 #include <Windows.h>
 #include <tchar.h>
 #include "spdlog/fmt/fmt.h"

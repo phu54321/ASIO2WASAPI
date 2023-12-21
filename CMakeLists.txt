@@ -38,9 +38,9 @@ add_subdirectory(Source/tracy)
 add_library(ASIO2WASAPI2 SHARED
         Source/lib/r8brain_free_src/r8bbase.cpp
 
-        Source/dllmain.cpp
-        Source/register.cpp
-        Source/COMBaseClasses.cpp
+        Source/dllentry/dllmain.cpp
+        Source/dllentry/register.cpp
+        Source/dllentry/COMBaseClasses.cpp
 
         Source/utils/logger.cpp
         Source/utils/WASAPIUtils.cpp
@@ -54,23 +54,22 @@ add_library(ASIO2WASAPI2 SHARED
         Source/MessageWindow/TrayHandler.cpp
         Source/MessageWindow/KeyDownListener.cpp
 
-        Source/ASIO2WASAPI2/DriverSettings.cpp
-        Source/ASIO2WASAPI2/ASIO2WASAPI2.cpp
-        Source/ASIO2WASAPI2/ASIO2WASAPI2Impl.cpp
-        Source/ASIO2WASAPI2/PreparedState.cpp
-        Source/ASIO2WASAPI2/RunningState.cpp
+        Source/DriverSettings.cpp
+        Source/ASIO2WASAPI2.cpp
+        Source/ASIO2WASAPI2Impl.cpp
+        Source/PreparedState.cpp
+        Source/RunningState.cpp
         Source/WASAPIOutput/ClapRenderer.cpp
         Source/WASAPIOutput/WASAPIOutputEvent.cpp
 
         Source/res/ASIO2WASAPI2.rc
-        Source/ASIO2WASAPI2/ASIO2WASAPI2.def
+        Source/ASIO2WASAPI2.def
         Source/WASAPIOutput/iidConstant.cpp
         Source/WASAPIOutput/createIAudioClient.cpp
-        Source/ASIO2WASAPI2/CUnknownImpl.cpp
         Source/utils/WaveLoad.cpp)
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
-target_include_directories(ASIO2WASAPI2 PRIVATE Source/ASIOSDK/common)
+target_include_directories(ASIO2WASAPI2 PRIVATE Source/lib/ASIOSDK/common)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/include)
 target_include_directories(ASIO2WASAPI2 PRIVATE Source/tracy/public)
 target_link_libraries(ASIO2WASAPI2 PUBLIC Tracy::TracyClient Avrt.lib winmm.lib)

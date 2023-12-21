@@ -26,9 +26,9 @@
 
 #include <Windows.h>
 #include "PreparedState.h"
-#include "../MessageWindow//MessageWindow.h"
-#include "../WASAPIOutput/ClapRenderer.h"
-#include "../MessageWindow/KeyDownListener.h"
+#include "MessageWindow/MessageWindow.h"
+#include "WASAPIOutput/ClapRenderer.h"
+#include "MessageWindow/KeyDownListener.h"
 #include <atomic>
 #include <thread>
 #include <mutex>

@@ -24,7 +24,7 @@
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
 #include "tracy/Tracy.hpp"
-#include "../ASIO2WASAPI2/DriverSettings.h"
+#include "../DriverSettings.h"
 
 static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWaveFormat) {
     mainlog->error("    : {}.wFormatTag: {}", varname, pWaveFormat.wFormatTag);

@@ -23,8 +23,8 @@
 
 #include "PreparedState.h"
 #include "RunningState.h"
-#include "../utils/WASAPIUtils.h"
-#include "../utils/logger.h"
+#include "utils/WASAPIUtils.h"
+#include "utils/logger.h"
 #include "spdlog/spdlog.h"
 
 static const uint64_t twoRaisedTo32 = UINT64_C(4294967296);
