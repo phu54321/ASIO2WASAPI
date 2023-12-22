@@ -39,6 +39,7 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
         : _pref(loadUserPref()) {
     ZoneScoped;
 
+    mainlog->set_level(_pref->logLevel);
     mainlog->info("Starting ASIO2WASAPI2...");
 
     CoInitialize(nullptr);

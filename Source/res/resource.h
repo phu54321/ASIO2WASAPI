@@ -12,6 +12,7 @@
 #define IDR_CLAP_K70_KEYDOWN                    1101
 #define IDR_CLAP_K70_KEYUP                      1102
 #define IDC_LICENSE_TEXT                        40000
+#define IDC_LOGLEVEL                            40000
 #define IDC_VERSION_TEXT                        40001
 #define IDB_GITHUB                              40002
 #define IDC_CHANNEL_COUNT                       40002

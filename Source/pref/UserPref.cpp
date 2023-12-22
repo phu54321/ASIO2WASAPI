@@ -54,11 +54,11 @@ UserPrefPtr loadUserPref() {
 
         // Note:: Declare default log level on logger.cpp
         auto logLevel = j.value("logLevel", "");
-        if (logLevel == "trace") mainlog->set_level(spdlog::level::trace);
-        if (logLevel == "debug") mainlog->set_level(spdlog::level::debug);
-        if (logLevel == "info") mainlog->set_level(spdlog::level::info);
-        if (logLevel == "warn") mainlog->set_level(spdlog::level::warn);
-        if (logLevel == "error") mainlog->set_level(spdlog::level::err);
+        if (logLevel == "trace") ret->logLevel = spdlog::level::trace;
+        if (logLevel == "debug") ret->logLevel = spdlog::level::debug;
+        if (logLevel == "info") ret->logLevel = spdlog::level::info;
+        if (logLevel == "warn") ret->logLevel = spdlog::level::warn;
+        if (logLevel == "error") ret->logLevel = spdlog::level::err;
 
         if (!j.contains("deviceId")) {
             for (const wchar_t *device: defaultDevices) {
@@ -106,7 +106,24 @@ void saveUserPref(UserPrefPtr pref, LPCTSTR saveRelPath) {
     j["clapGain"] = pref->clapGain;
     j["throttle"] = pref->throttle;
 
-    // todo: logLevel
+    switch (pref->logLevel) {
+        case spdlog::level::trace:
+            j["logLevel"] = "trace";
+            break;
+        case spdlog::level::debug:
+            j["logLevel"] = "debug";
+            break;
+        case spdlog::level::info:
+            j["logLevel"] = "info";
+            break;
+        case spdlog::level::warn:
+            j["logLevel"] = "warn";
+            break;
+        case spdlog::level::err:
+            j["logLevel"] = "error";
+            break;
+        default:;
+    }
 
     {
         json jDeviceIdList = json::array();

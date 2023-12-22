@@ -27,6 +27,14 @@
 #include <windowsx.h>
 #include <CommCtrl.h>
 
+static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> errorLevels = {
+        {spdlog::level::err,   TEXT("error")},
+        {spdlog::level::warn,  TEXT("warning")},
+        {spdlog::level::info,  TEXT("info")},
+        {spdlog::level::debug, TEXT("debug")},
+        {spdlog::level::trace, TEXT("trace")},
+};
+
 INT_PTR UserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_INITDIALOG: {
@@ -36,6 +44,15 @@ INT_PTR UserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
             auto hThrottleCheckbox = GetDlgItem(hWnd, IDC_THROTTLE);
             Button_SetCheck(hThrottleCheckbox, pref->throttle ? BST_CHECKED : BST_UNCHECKED);
+
+            auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
+            for (int i = 0; i < errorLevels.size(); i++) {
+                const auto &p = errorLevels[i];
+                mainlog->info("cb_addstring {}", ComboBox_AddString(hLogLevel, p.second));
+                if (pref->logLevel == p.first) {
+                    ComboBox_SetCurSel(hLogLevel, i);
+                }
+            }
 
             auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
             for (const auto &s: pref->deviceIdList) {
@@ -75,6 +92,12 @@ INT_PTR UserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                         auto hThrottleCheckbox = GetDlgItem(hWnd, IDC_THROTTLE);
                         auto checked = Button_GetCheck(hThrottleCheckbox);
                         pref->throttle = (checked == BST_CHECKED);
+
+                        auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
+                        auto errorLevelSel = ComboBox_GetCurSel(hLogLevel);
+                        if (errorLevelSel != CB_ERR) {
+                            pref->logLevel = errorLevels[errorLevelSel].first;
+                        }
 
                         pref->deviceIdList.clear();
                         auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);

@@ -25,11 +25,13 @@
 #include <map>
 #include <memory>
 #include <Windows.h>
+#include <spdlog/spdlog.h>
 
 struct UserPref {
     int channelCount = 2;
     double clapGain = 0;
     bool throttle = true;
+    spdlog::level::level_enum logLevel = spdlog::level::info;
     std::vector<std::wstring> deviceIdList;
     std::map<std::wstring, int> durationOverride;
 };
