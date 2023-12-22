@@ -105,7 +105,7 @@ CAPTION "Output Device Latency Editor"
 FONT 8, "Ms Shell Dlg"
 {
     LTEXT           "Each row should be formatted as ""[device id]: [duration(100ns unit)]""", 0, 7, 7, 216, 9, SS_LEFT, WS_EX_LEFT
-    EDITTEXT        IDC_TEXTEDIT, 7, 21, 286, 116, ES_AUTOHSCROLL | ES_MULTILINE, WS_EX_LEFT
+    EDITTEXT        IDC_TEXTEDIT, 7, 21, 286, 116, ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN, WS_EX_LEFT
     DEFPUSHBUTTON   "OK", IDOK, 188, 139, 50, 14, 0, WS_EX_LEFT
     PUSHBUTTON      "Cancel", IDCANCEL, 243, 139, 50, 14, 0, WS_EX_LEFT
 }

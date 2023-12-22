@@ -71,7 +71,7 @@ INT_PTR DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
             SetWindowTextW(hDeviceList, deviceNameBuffer->c_str());
 
-            return TRUE;
+            return FALSE;
         }
 
         case WM_CLOSE:
