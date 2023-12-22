@@ -9,10 +9,12 @@
 #define IDD_ABOUT                               112
 #define IDD_USERPREF_EDIT                       116
 #define IDD_USERPREF_OUTPUT_DEVICE              118
+#define IDD_OUTPUT_LATENCY_OVERRIDE_EDIT        123
 #define IDR_CLAP_K70_KEYDOWN                    1101
 #define IDR_CLAP_K70_KEYUP                      1102
 #define IDC_LICENSE_TEXT                        40000
 #define IDC_LOGLEVEL                            40000
+#define IDC_TEXTEDIT                            40000
 #define IDB_DEVICELIST_ADD                      40001
 #define IDC_VERSION_TEXT                        40001
 #define IDB_GITHUB                              40002
@@ -24,3 +26,4 @@
 #define IDB_DEVICELIST_DOWN                     40006
 #define IDB_DEVICELIST_UP                       40007
 #define IDB_DEVICELIST_REMOVE                   40008
+#define IDB_OUTPUT_LATENCY_OVERRIDE             40009

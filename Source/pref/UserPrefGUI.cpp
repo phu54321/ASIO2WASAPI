@@ -28,6 +28,8 @@
 #include <spdlog/fmt/fmt.h>
 #include <windowsx.h>
 #include <CommCtrl.h>
+#include <sstream>
+#include <regex>
 
 static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> errorLevels = {
         {spdlog::level::err,   TEXT("error")},
@@ -73,10 +75,12 @@ INT_PTR DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         }
 
         case WM_CLOSE:
+            EndDialog(hWnd, FALSE);
+            return TRUE;
+
         case WM_COMMAND: {
             WORD id = LOWORD(wParam);
             switch (id) {
-
                 case IDCANCEL:
                     EndDialog(hWnd, FALSE);
                     return TRUE;
@@ -106,12 +110,85 @@ INT_PTR DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     }
 }
 
+std::wstring trim(std::wstring str) {
+    str.erase(str.find_last_not_of(' ') + 1);         //suffixing spaces
+    str.erase(0, str.find_first_not_of(' '));       //prefixing spaces
+    return str;
+}
+
+INT_PTR DlgUserPrefDurationOverrideEditProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+        case WM_INITDIALOG: {
+            auto prefPtr = reinterpret_cast<UserPrefPtr *>(lParam);
+            SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR) prefPtr);
+
+            std::wstringstream wss;
+            auto &pref = *prefPtr;
+            for (const auto &it: pref->durationOverride) {
+                wss << it.first << L": " << it.second << L"\r\n";
+            }
+
+            auto hTextEdit = GetDlgItem(hWnd, IDC_TEXTEDIT);
+            SetWindowTextW(hTextEdit, wss.str().c_str());
+
+            return TRUE;
+        }
+
+        case WM_CLOSE:
+            EndDialog(hWnd, FALSE);
+            return TRUE;
+
+        case WM_COMMAND: {
+            WORD id = LOWORD(wParam);
+            switch (id) {
+                case IDCANCEL:
+                    EndDialog(hWnd, FALSE);
+                    return TRUE;
+
+                case IDOK: {
+                    auto prefPtr = reinterpret_cast<UserPrefPtr *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+                    auto &pref = *prefPtr;
+                    auto hTextEdit = GetDlgItem(hWnd, IDC_TEXTEDIT);
+                    auto text = getWndText(hTextEdit);
+                    text = std::regex_replace(text, std::wregex(L"\r"), L"");
+
+                    std::map<std::wstring, int> table;
+                    std::wregex r(L"^(.+):\\s*(\\d+)$");
+
+                    auto itBegin = std::wsregex_iterator(text.begin(), text.end(), r);
+                    auto itEnd = std::wsregex_iterator();
+                    for (auto i = itBegin; i != itEnd; ++i) {
+                        const auto &sm = *i;
+                        auto deviceId = trim(sm[1].str());
+                        auto duration = std::stoi(sm[2].str());
+                        table[deviceId] = duration;
+                    }
+
+                    pref->durationOverride = table;
+                    EndDialog(hWnd, TRUE);
+                    return TRUE;
+                }
+                default:
+                    return FALSE;
+            }
+        }
+
+
+        default:
+            return FALSE;
+    }
+}
+
 INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     auto hInstance = (HINSTANCE) GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
 
     switch (uMsg) {
         case WM_INITDIALOG: {
             auto pref = loadUserPref();
+            // Convert to raw pointer to be stored on GWLP_USERDATA
+            auto prefPtr = new UserPrefPtr(pref);
+            SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR) prefPtr);
+
             SetDlgItemInt(hWnd, IDC_CHANNEL_COUNT, pref->channelCount, FALSE);
             SetDlgItemInt(hWnd, IDC_CLAP_GAIN, (int) round(pref->clapGain * 100), FALSE);
 
@@ -139,17 +216,22 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
             return TRUE;
         }
 
-        case WM_DESTROY:
+        case WM_DESTROY: {
+            auto prefPtr = reinterpret_cast<UserPrefPtr *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+            delete prefPtr;
+            SetWindowLongPtr(hWnd, GWLP_USERDATA, 0);
+
             // TODO: remove postquitmessage.
             PostQuitMessage(0);
             return TRUE;
+        }
 
         case WM_COMMAND: {
             WORD id = LOWORD(wParam);
             switch (id) {
                 case IDOK: {
                     bool ok = false;
-                    auto pref = loadUserPref();
+                    auto pref = *reinterpret_cast<UserPrefPtr *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
                     do {
                         BOOL success;
                         auto channelCount = GetDlgItemInt(hWnd, IDC_CHANNEL_COUNT, &success, FALSE);
@@ -257,6 +339,12 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                         }
                     }
                     break;
+                }
+
+                case IDB_OUTPUT_LATENCY_OVERRIDE: {
+                    auto prefPtr = reinterpret_cast<UserPrefPtr *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+                    DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_OUTPUT_LATENCY_OVERRIDE_EDIT), hWnd,
+                                   DlgUserPrefDurationOverrideEditProc, (LPARAM) prefPtr);
                 }
             }
             return TRUE;
