@@ -102,6 +102,7 @@ add_executable(test_pref_gui WIN32
         Source/utils/homeDirFilePath.cpp
         Source/utils/logger.cpp
         Source/utils/utf8convert.cpp
+        Source/utils/WASAPIUtils.cpp
         Source/res/ASIO2WASAPI2.rc
 )
 target_include_directories(test_pref_gui PRIVATE

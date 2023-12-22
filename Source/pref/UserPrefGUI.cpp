@@ -23,6 +23,7 @@
 
 #include "./UserPref.h"
 #include "../res/resource.h"
+#include "../utils/WASAPIUtils.h"
 #include <spdlog/fmt/fmt.h>
 #include <windowsx.h>
 #include <CommCtrl.h>
@@ -35,7 +36,80 @@ static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> errorLevels =
         {spdlog::level::trace, TEXT("trace")},
 };
 
-INT_PTR UserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LPCWSTR listSeparator = L"----------------";
+
+INT_PTR DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+        case WM_INITDIALOG: {
+            auto deviceNameBuffer = reinterpret_cast<std::wstring *>(lParam);
+            SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR) deviceNameBuffer);
+
+            auto devices = getIMMDeviceList();
+            auto hDeviceList = GetDlgItem(hWnd, IDC_DEVICE);
+            std::vector<std::wstring> candidates;
+
+            candidates.emplace_back(L"(default)");
+            candidates.emplace_back(listSeparator);
+
+            for (const auto &d: devices) {
+                auto friendlyName = getDeviceFriendlyName(d);
+                candidates.emplace_back(friendlyName);
+            }
+
+            candidates.emplace_back(listSeparator);
+            for (const auto &d: devices) {
+                auto deviceId = getDeviceId(d);
+                candidates.emplace_back(deviceId);
+            }
+
+            for (const auto &c: candidates) {
+                LRESULT id = SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) c.c_str());
+                if (*deviceNameBuffer == c) ComboBox_SetCurSel(hDeviceList, id);
+            }
+
+            return TRUE;
+        }
+
+        case WM_CLOSE:
+        case WM_COMMAND: {
+            WORD id = LOWORD(wParam);
+            switch (id) {
+
+                case IDCANCEL:
+                    EndDialog(hWnd, FALSE);
+                    return TRUE;
+
+                case IDOK: {
+                    auto deviceNameBuffer = reinterpret_cast<std::wstring *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+                    auto hDeviceList = GetDlgItem(hWnd, IDC_DEVICE);
+                    std::vector<wchar_t> deviceSelectedBuf(GetWindowTextLengthW(hDeviceList) + 1);
+                    GetWindowTextW(hDeviceList, deviceSelectedBuf.data(), deviceSelectedBuf.size());
+
+                    std::wstring deviceSelected{deviceSelectedBuf.begin(), deviceSelectedBuf.end()};
+
+                    if (!deviceSelected.empty() && deviceSelected != listSeparator) {
+                        *deviceNameBuffer = deviceSelected;
+                        EndDialog(hWnd, TRUE);
+                    } else {
+                        EndDialog(hWnd, FALSE);
+                    }
+                    return TRUE;
+                }
+                default:
+                    return FALSE;
+            }
+        }
+
+
+        default:
+            return FALSE;
+    }
+}
+
+INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    auto hInstance = (HINSTANCE) GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
+
     switch (uMsg) {
         case WM_INITDIALOG: {
             auto pref = loadUserPref();
@@ -48,7 +122,7 @@ INT_PTR UserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
             for (int i = 0; i < errorLevels.size(); i++) {
                 const auto &p = errorLevels[i];
-                mainlog->info("cb_addstring {}", ComboBox_AddString(hLogLevel, p.second));
+                ComboBox_AddString(hLogLevel, p.second);
                 if (pref->logLevel == p.first) {
                     ComboBox_SetCurSel(hLogLevel, i);
                 }
@@ -123,6 +197,20 @@ INT_PTR UserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
                     break;
                 }
+
+                case IDCANCEL:
+                    DestroyWindow(hWnd);
+                    break;
+
+                case IDB_DEVICELIST_ADD: {
+                    std::wstring deviceName;
+                    if (DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_USERPREF_OUTPUT_DEVICE), hWnd,
+                                       DlgUserPrefOutputDeviceProc, (LPARAM) &deviceName)) {
+                        auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
+                        SendMessageW(hOutputDeviceList, LB_ADDSTRING, 0, (LPARAM) deviceName.c_str());
+                    }
+                    break;
+                }
             }
             return TRUE;
         }
@@ -134,8 +222,10 @@ INT_PTR UserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 
 void driverSettingsGUIThread() {
+    CoInitialize(nullptr);
+
     auto hInstance = GetModuleHandle(nullptr);
-    auto hDlg = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_USERPREF_EDIT), nullptr, UserPrefEditWndProc);
+    auto hDlg = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_USERPREF_EDIT), nullptr, DlgUserPrefEditWndProc);
 
     MSG msg;
     BOOL bret;

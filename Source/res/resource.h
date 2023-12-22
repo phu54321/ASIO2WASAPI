@@ -13,6 +13,7 @@
 #define IDR_CLAP_K70_KEYUP                      1102
 #define IDC_LICENSE_TEXT                        40000
 #define IDC_LOGLEVEL                            40000
+#define IDB_DEVICELIST_ADD                      40001
 #define IDC_VERSION_TEXT                        40001
 #define IDB_GITHUB                              40002
 #define IDC_CHANNEL_COUNT                       40002
@@ -20,6 +21,6 @@
 #define IDC_OUTPUT_DEVICE_LIST                  40003
 #define IDC_THROTTLE                            40004
 #define IDC_CLAP_GAIN                           40005
-#define IDC_DEVICELIST_ADD                      40007
-#define IDC_DEVICELIST_DOWN                     40008
-#define IDC_DEVICELIST_UP                       40009
+#define IDB_DEVICELIST_DOWN                     40006
+#define IDB_DEVICELIST_UP                       40007
+#define IDB_DEVICELIST_REMOVE                   40008
