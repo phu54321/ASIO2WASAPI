@@ -180,7 +180,6 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                         }
 
                         ok = true;
-                        break;
                     } while (false);
 
                     if (ok) {
@@ -213,14 +212,32 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                     if (curSel != LB_ERR) {
                         SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
                     }
+                    break;
                 }
 
                 case IDB_DEVICELIST_UP: {
                     auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                     auto curSel = ListBox_GetCurSel(hOutputDeviceList);
-                    if (curSel != LB_ERR) {
+                    if (curSel != LB_ERR && curSel != 0) {
+                        auto content = ListBox_GetWString(hOutputDeviceList, curSel);
                         SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
+                        SendMessageW(hOutputDeviceList, LB_INSERTSTRING, curSel - 1, (LPARAM) content.c_str());
+                        ListBox_SetCurSel(hOutputDeviceList, curSel - 1);
                     }
+                    break;
+                }
+
+                case IDB_DEVICELIST_DOWN: {
+                    auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
+                    auto curSel = ListBox_GetCurSel(hOutputDeviceList);
+                    auto listLen = ListBox_GetCount(hOutputDeviceList);
+                    if (curSel != LB_ERR && curSel != listLen - 1) {
+                        auto content = ListBox_GetWString(hOutputDeviceList, curSel);
+                        SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
+                        SendMessageW(hOutputDeviceList, LB_INSERTSTRING, curSel + 1, (LPARAM) content.c_str());
+                        ListBox_SetCurSel(hOutputDeviceList, curSel + 1);
+                    }
+                    break;
                 }
 
                 case IDC_OUTPUT_DEVICE_LIST: {
@@ -233,11 +250,13 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                                 if (DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_USERPREF_OUTPUT_DEVICE), hWnd,
                                                    DlgUserPrefOutputDeviceProc, (LPARAM) &deviceName)) {
                                     SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
-                                    SendMessageW(hOutputDeviceList, LB_ADDSTRING, curSel, (LPARAM) deviceName.c_str());
+                                    SendMessageW(hOutputDeviceList, LB_INSERTSTRING, curSel,
+                                                 (LPARAM) deviceName.c_str());
                                 }
                             }
                         }
                     }
+                    break;
                 }
             }
             return TRUE;
