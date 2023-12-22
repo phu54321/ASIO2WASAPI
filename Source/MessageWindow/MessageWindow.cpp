@@ -18,6 +18,7 @@
 
 #include <Windows.h>
 #include <queue>
+#include <set>
 #include <shellapi.h>
 #include "MessageWindow.h"
 #include "../utils/logger.h"
@@ -28,6 +29,7 @@
 #include <tracy/Tracy.hpp>
 #include "../version.h"
 #include "../utils/ResourceLoad.h"
+#include "../pref/UserPrefGUI.h"
 
 extern HINSTANCE g_hInstDLL;
 
@@ -46,7 +48,7 @@ private:
     TracyLockable(std::mutex, _mutex);
     std::thread _thread;
     HWND _hWnd = nullptr;
-    HWND _hAboutDlg = nullptr;
+    std::set<HWND> _hDlgSet;
 
 private:
     static void threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindowImpl *p);
@@ -180,10 +182,17 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
             mainlog->error("GetMessage returned 0x{:08X}", bret);
             break;
         }
-        if (!IsWindow(p->_hAboutDlg) || !IsDialogMessage(p->_hAboutDlg, &msg)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+        bool dlgMsgProcessed = false;
+        for (auto &dlg: p->_hDlgSet) {
+            if (IsDialogMessage(dlg, &msg)) {
+                dlgMsgProcessed = true;
+                break;
+            }
         }
+        if (dlgMsgProcessed) continue;
+
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
 }
 
@@ -193,6 +202,10 @@ void MessageWindowImpl::setTrayTooltip(const tstring &str) {
     setTooltip(_hWnd, str.c_str());
 }
 
+const int MENU_PREFERENCE = 0x101;
+const int MENU_ABOUT = 0x103;
+
+
 LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_DESTROY:
@@ -201,18 +214,58 @@ LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam
             return 0;
 
         case WM_TRAYICON_MSG: {
-            auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, 0));
-            if (wParam == trayIconID && lParam == WM_LBUTTONUP) {
-                if (!p->_hAboutDlg) {
-                    auto hDlg = CreateDialog(g_hInstDLL, MAKEINTRESOURCE(IDD_ABOUT), hWnd, AboutDialogProc);
-                    SetWindowLongPtr(hDlg, DWLP_USER, reinterpret_cast<LONG_PTR>(p));
-                    p->_hAboutDlg = hDlg;
-                    ShowWindow(hDlg, SW_SHOW);
+            if (wParam == trayIconID) {
+                if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP) {
+                    auto hMenu = CreateMenu();
+                    AppendMenu(hMenu, MF_STRING, MENU_ABOUT, TEXT("About"));
+                    AppendMenu(hMenu, MF_STRING, MENU_PREFERENCE, TEXT("Preference"));
+
+                    auto hMenubar = CreateMenu();
+                    AppendMenu(hMenubar, MF_POPUP, (UINT_PTR) hMenu, TEXT("Menu"));
+
+                    auto hPopupMenu = GetSubMenu(hMenubar, 0);
+                    POINT pt;
+                    GetCursorPos(&pt);
+                    SetForegroundWindow(hWnd);
+                    TrackPopupMenu(hPopupMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd,
+                                   NULL);
+                    SetForegroundWindow(hWnd);
+                    PostMessage(hWnd, WM_NULL, 0, 0);
+
+                    DestroyMenu(hMenu);
+                    DestroyMenu(hMenubar);
+                    return 0;
                 }
+            }
+            break;
+        }
+
+        case WM_COMMAND: {
+            auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, 0));
+            auto wmId = LOWORD(wParam);
+            if (wmId == MENU_ABOUT) {
+                auto hDlg = CreateDialog(g_hInstDLL, MAKEINTRESOURCE(IDD_ABOUT), hWnd, AboutDialogProc);
+                ShowWindow(hDlg, SW_SHOW);
+                p->_hDlgSet.insert(hDlg);
+                return 0;
+            } else if (wmId == MENU_PREFERENCE) {
+                auto hDlg = createUserPrefEditDialog(g_hInstDLL, hWnd);
+                ShowWindow(hDlg, SW_SHOW);
+                p->_hDlgSet.insert(hDlg);
                 return 0;
             }
-        }
             break;
+        }
+
+        case WM_USER_REMOVEDLG: {
+            auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, 0));
+            auto &dlgSet = p->_hDlgSet;
+            auto it = dlgSet.find((HWND) lParam);
+            if (it != dlgSet.end()) {
+                dlgSet.erase(it);
+            }
+            return 0;
+        }
 
         default:;
     }
@@ -231,8 +284,10 @@ INT_PTR MessageWindowImpl::AboutDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
         }
 
         case WM_CLOSE: {
-            auto p = reinterpret_cast<MessageWindowImpl *>(GetWindowLongPtr(hWnd, DWLP_USER));
-            p->_hAboutDlg = nullptr;
+            auto parentWindow = (HWND) GetWindowLongPtr(hWnd, GWLP_HWNDPARENT);
+            if (parentWindow) {
+                SendMessage(parentWindow, WM_USER_REMOVEDLG, 0, (LPARAM) hWnd);
+            }
             DestroyWindow(hWnd);
             return TRUE;
         }

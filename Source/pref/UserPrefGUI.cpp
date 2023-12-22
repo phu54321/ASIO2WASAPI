@@ -25,13 +25,14 @@
 
 #include "./UserPref.h"
 #include "../res/resource.h"
+#include "../MessageWindow/MessageWindow.h"
 #include <spdlog/fmt/fmt.h>
 #include <windowsx.h>
 #include <CommCtrl.h>
 #include <sstream>
 #include <regex>
 
-static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> errorLevels = {
+static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> g_errorLevels = {
         {spdlog::level::err,   TEXT("error")},
         {spdlog::level::warn,  TEXT("warning")},
         {spdlog::level::info,  TEXT("info")},
@@ -196,8 +197,8 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
             Button_SetCheck(hThrottleCheckbox, pref->throttle ? BST_CHECKED : BST_UNCHECKED);
 
             auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
-            for (int i = 0; i < errorLevels.size(); i++) {
-                const auto &p = errorLevels[i];
+            for (int i = 0; i < g_errorLevels.size(); i++) {
+                const auto &p = g_errorLevels[i];
                 ComboBox_AddString(hLogLevel, p.second);
                 if (pref->logLevel == p.first) {
                     ComboBox_SetCurSel(hLogLevel, i);
@@ -221,8 +222,10 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
             delete prefPtr;
             SetWindowLongPtr(hWnd, GWLP_USERDATA, 0);
 
-            // TODO: remove postquitmessage.
-            PostQuitMessage(0);
+            auto parentWindow = (HWND) GetWindowLongPtr(hWnd, GWLP_HWNDPARENT);
+            if (parentWindow) {
+                SendMessage(parentWindow, WM_USER_REMOVEDLG, 0, (LPARAM) hWnd);
+            }
             return TRUE;
         }
 
@@ -251,7 +254,7 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                         auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
                         auto errorLevelSel = ComboBox_GetCurSel(hLogLevel);
                         if (errorLevelSel != CB_ERR) {
-                            pref->logLevel = errorLevels[errorLevelSel].first;
+                            pref->logLevel = g_errorLevels[errorLevelSel].first;
                         }
 
                         pref->deviceIdList.clear();
@@ -265,7 +268,7 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                     } while (false);
 
                     if (ok) {
-                        saveUserPref(pref, TEXT("test.json"));
+                        saveUserPref(pref);
                         DestroyWindow(hWnd);
                     } else {
                         MessageBox(hWnd, TEXT("Error parsing preference"), TEXT("ERROR"), MB_OK);
@@ -356,11 +359,19 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 }
 
 
-void driverSettingsGUIThread() {
-    CoInitialize(nullptr);
+HWND createUserPrefEditDialog(HINSTANCE hInstance, HWND hwndParent = nullptr) {
+    return CreateDialog(hInstance, MAKEINTRESOURCE(IDD_USERPREF_EDIT), hwndParent, DlgUserPrefEditWndProc);
+}
 
-    auto hInstance = GetModuleHandle(nullptr);
-    auto hDlg = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_USERPREF_EDIT), nullptr, DlgUserPrefEditWndProc);
+
+#ifdef ASIO2WASAPI_PREFGUI_TEST_MAIN
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   PSTR lpCmdLine, int nCmdShow) {
+    CoInitialize(nullptr);
+    initMainLog();
+
+    auto hDlg = createUserPrefEditDialog(hInstance, nullptr);
 
     MSG msg;
     BOOL bret;
@@ -373,17 +384,12 @@ void driverSettingsGUIThread() {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+        if(hDlg && !IsWindow(hDlg)) {
+            PostQuitMessage(0);
+            hDlg = nullptr;
+        }
     }
-}
 
-#ifdef ASIO2WASAPI_PREFGUI_TEST_MAIN
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-                   PSTR lpCmdLine, int nCmdShow) {
-    initMainLog();
-
-    std::thread t(driverSettingsGUIThread);
-    t.join();
     return 0;
 }
 

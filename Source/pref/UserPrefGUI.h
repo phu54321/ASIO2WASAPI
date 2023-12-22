@@ -16,27 +16,15 @@
 // along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#pragma once
+//
+// Created by whyask37 on 2023-12-23.
+//
+
+#ifndef ASIO2WASAPI2_USERPREFGUI_H
+#define ASIO2WASAPI2_USERPREFGUI_H
 
 #include <Windows.h>
-#include <mutex>
-#include <functional>
-#include <map>
-#include <memory>
-#include "../utils/homeDirFilePath.h"
 
-class MessageWindowImpl;
+HWND createUserPrefEditDialog(HINSTANCE hInstance, HWND hwndParent = nullptr);
 
-const int WM_USER_REMOVEDLG = WM_USER + 12;
-
-class MessageWindow {
-public:
-    MessageWindow();
-
-    ~MessageWindow();
-
-    void setTrayTooltip(const tstring &msg);
-
-private:
-    std::unique_ptr<MessageWindowImpl> _pImpl;
-};
+#endif //ASIO2WASAPI2_USERPREFGUI_H

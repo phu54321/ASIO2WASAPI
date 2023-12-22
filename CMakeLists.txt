@@ -55,6 +55,7 @@ add_library(ASIO2WASAPI2 SHARED
         Source/MessageWindow/KeyDownListener.cpp
 
         Source/pref/UserPref.cpp
+        Source/pref/UserPrefGUI.cpp
         Source/ASIO2WASAPI2.cpp
         Source/ASIO2WASAPI2Impl.cpp
         Source/PreparedState.cpp
@@ -68,7 +69,7 @@ add_library(ASIO2WASAPI2 SHARED
         Source/WASAPIOutput/createIAudioClient.cpp
         Source/utils/WaveLoad.cpp
         Source/utils/dlgGetText.cpp
-        Source/utils/dlgGetText.h)
+)
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
 target_include_directories(ASIO2WASAPI2 PRIVATE
@@ -97,15 +98,15 @@ add_executable(test_main
 
 # gui testing
 add_executable(test_pref_gui WIN32
-        Source/pref/UserPref.cpp
+        Source/res/ASIO2WASAPI2.rc
         Source/pref/UserPrefGUI.cpp
+
+        Source/utils/dlgGetText.cpp
+        Source/pref/UserPref.cpp
         Source/utils/homeDirFilePath.cpp
         Source/utils/logger.cpp
         Source/utils/utf8convert.cpp
         Source/utils/WASAPIUtils.cpp
-        Source/res/ASIO2WASAPI2.rc
-        Source/utils/dlgGetText.cpp
-        Source/utils/dlgGetText.h
 )
 target_include_directories(test_pref_gui PRIVATE
         Source/include
