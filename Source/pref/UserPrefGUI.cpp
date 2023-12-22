@@ -20,10 +20,11 @@
 
 #include "../utils/dpiRaii.h"
 #include "../utils/logger.h"
+#include "../utils/WASAPIUtils.h"
+#include "../utils/dlgGetText.h"
 
 #include "./UserPref.h"
 #include "../res/resource.h"
-#include "../utils/WASAPIUtils.h"
 #include <spdlog/fmt/fmt.h>
 #include <windowsx.h>
 #include <CommCtrl.h>
@@ -63,9 +64,10 @@ INT_PTR DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
             }
 
             for (const auto &c: candidates) {
-                LRESULT id = SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) c.c_str());
-                if (*deviceNameBuffer == c) ComboBox_SetCurSel(hDeviceList, id);
+                SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) c.c_str());
             }
+
+            SetWindowTextW(hDeviceList, deviceNameBuffer->c_str());
 
             return TRUE;
         }
@@ -83,10 +85,7 @@ INT_PTR DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
                     auto deviceNameBuffer = reinterpret_cast<std::wstring *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
                     auto hDeviceList = GetDlgItem(hWnd, IDC_DEVICE);
-                    std::vector<wchar_t> deviceSelectedBuf(GetWindowTextLengthW(hDeviceList) + 1);
-                    GetWindowTextW(hDeviceList, deviceSelectedBuf.data(), deviceSelectedBuf.size());
-
-                    std::wstring deviceSelected{deviceSelectedBuf.begin(), deviceSelectedBuf.end()};
+                    auto deviceSelected = getWndText(hDeviceList);
 
                     if (!deviceSelected.empty() && deviceSelected != listSeparator) {
                         *deviceNameBuffer = deviceSelected;
@@ -177,11 +176,7 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                         auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                         int lbCount = SendMessage(hOutputDeviceList, LB_GETCOUNT, 0, 0);
                         for (int i = 0; i < lbCount; i++) {
-                            auto sLen = SendMessageW(hOutputDeviceList, LB_GETTEXTLEN, i, 0);
-                            std::vector<wchar_t> buf(sLen + 1);
-                            SendMessageW(hOutputDeviceList, LB_GETTEXT, i, (LPARAM) buf.data());
-                            buf[sLen] = 0;
-                            pref->deviceIdList.push_back(buf.data());
+                            pref->deviceIdList.push_back(ListBox_GetWString(hOutputDeviceList, i));
                         }
 
                         ok = true;
@@ -210,6 +205,39 @@ INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                         SendMessageW(hOutputDeviceList, LB_ADDSTRING, 0, (LPARAM) deviceName.c_str());
                     }
                     break;
+                }
+
+                case IDB_DEVICELIST_REMOVE: {
+                    auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
+                    auto curSel = ListBox_GetCurSel(hOutputDeviceList);
+                    if (curSel != LB_ERR) {
+                        SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
+                    }
+                }
+
+                case IDB_DEVICELIST_UP: {
+                    auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
+                    auto curSel = ListBox_GetCurSel(hOutputDeviceList);
+                    if (curSel != LB_ERR) {
+                        SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
+                    }
+                }
+
+                case IDC_OUTPUT_DEVICE_LIST: {
+                    auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
+                    switch (HIWORD(wParam)) {
+                        case LBN_DBLCLK: {
+                            auto curSel = ListBox_GetCurSel(hOutputDeviceList);
+                            if (curSel != LB_ERR) {
+                                auto deviceName = ListBox_GetWString(hOutputDeviceList, curSel);
+                                if (DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_USERPREF_OUTPUT_DEVICE), hWnd,
+                                                   DlgUserPrefOutputDeviceProc, (LPARAM) &deviceName)) {
+                                    SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
+                                    SendMessageW(hOutputDeviceList, LB_ADDSTRING, curSel, (LPARAM) deviceName.c_str());
+                                }
+                            }
+                        }
+                    }
                 }
             }
             return TRUE;

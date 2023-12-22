@@ -68,7 +68,9 @@ add_library(ASIO2WASAPI2 SHARED
         Source/ASIO2WASAPI2.def
         Source/WASAPIOutput/iidConstant.cpp
         Source/WASAPIOutput/createIAudioClient.cpp
-        Source/utils/WaveLoad.cpp)
+        Source/utils/WaveLoad.cpp
+        Source/utils/dlgGetText.cpp
+        Source/utils/dlgGetText.h)
 
 target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
 target_include_directories(ASIO2WASAPI2 PRIVATE
@@ -104,6 +106,8 @@ add_executable(test_pref_gui WIN32
         Source/utils/utf8convert.cpp
         Source/utils/WASAPIUtils.cpp
         Source/res/ASIO2WASAPI2.rc
+        Source/utils/dlgGetText.cpp
+        Source/utils/dlgGetText.h
 )
 target_include_directories(test_pref_gui PRIVATE
         Source/include
