@@ -139,7 +139,8 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
             write_overflow = true;
         } else {
             for (int ch = 0; ch < _channelNum; ch++) {
-                assert(_ringBufferList[ch].push(buffer[ch].data(), inputSize));
+                auto res = _ringBufferList[ch].push(buffer[ch].data(), inputSize);
+                assert(res);
             }
         }
     }
