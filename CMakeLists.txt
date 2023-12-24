@@ -77,7 +77,10 @@ target_include_directories(ASIO2WASAPI2 PRIVATE
         Source/include
         Source/tracy/public
 )
-target_link_libraries(ASIO2WASAPI2 PUBLIC Tracy::TracyClient Avrt.lib winmm.lib)
+target_link_libraries(ASIO2WASAPI2 PUBLIC Avrt.lib winmm.lib)
+if (TRACY_ENABLE)
+    target_link_libraries(ASIO2WASAPI2 PUBLIC Tracy::TracyClient)
+endif ()
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     # 64-bit mode
