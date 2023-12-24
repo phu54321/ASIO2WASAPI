@@ -1,19 +1,19 @@
 // Copyright (C) 2023 Hyunwoo Park
 //
-// This file is part of ASIO2WASAPI2.
+// This file is part of trgkASIO.
 //
-// ASIO2WASAPI2 is free software: you can redistribute it and/or modify
+// trgkASIO is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
 //
-// ASIO2WASAPI2 is distributed in the hope that it will be useful,
+// trgkASIO is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+// along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #pragma once
@@ -35,16 +35,16 @@ struct IAudioRenderClient;
 #include "asiosys.h"
 #include "iasiodrv.h"
 
-extern const CLSID CLSID_ASIO2WASAPI2_DRIVER;
-const char *const szDescription = "ASIO2WASAPI2";
+extern const CLSID CLSID_TRGKASIO_DRIVER;
+const char *const szDescription = "TrgkASIO";
 
-class ASIO2WASAPI2Impl;
+class TrgkASIOImpl;
 
-class ASIO2WASAPI2 : public IASIO, public CUnknown {
+class TrgkASIO : public IASIO, public CUnknown {
 public:
-    ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr);
+    TrgkASIO(LPUNKNOWN pUnk, HRESULT *phr);
 
-    ~ASIO2WASAPI2();
+    ~TrgkASIO();
 
     // CUnknown
     STDMETHODIMP QueryInterface(REFIID riid, void **ppv) override {
@@ -107,5 +107,5 @@ public:
     ASIOError outputReady() override;
 
 private:
-    std::unique_ptr<ASIO2WASAPI2Impl> _pImpl;
+    std::unique_ptr<TrgkASIOImpl> _pImpl;
 };

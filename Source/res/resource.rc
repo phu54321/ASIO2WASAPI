@@ -41,11 +41,11 @@ IDB_BITMAP_SMALL_LOGO BITMAP         ".\\small_logo.bmp"
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_ABOUT DIALOG 0, 0, 400, 300
 STYLE DS_3DLOOK | DS_CENTER | DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
-CAPTION "About ASIO2WASAPI2"
+CAPTION "About trgkASIO"
 FONT 8, "Ms Shell Dlg"
 {
     CONTROL         IDB_BITMAP_SMALL_LOGO, 0, WC_STATIC, SS_BITMAP, 39, 12, 86, 79, WS_EX_LEFT
-    CTEXT           "ASIO2WASAPI2 {version}", IDC_VERSION_TEXT, 17, 97, 130, 9, SS_CENTER, WS_EX_LEFT
+    CTEXT           "trgkASIO {version}", IDC_VERSION_TEXT, 17, 97, 130, 9, SS_CENTER, WS_EX_LEFT
     CTEXT           "Copyright (c) 2023 Park Hyunwoo", 0, 27, 108, 107, 9, SS_CENTER, WS_EX_LEFT
     CTEXT           "Copyright (c) 2017 Lev Minkovsky", 0, 27, 120, 108, 9, SS_CENTER, WS_EX_LEFT
     CTEXT           "This program follows GPL 2.0 License", 0, 21, 131, 120, 9, SS_CENTER, WS_EX_LEFT
@@ -74,7 +74,7 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_USERPREF_EDIT DIALOG 0, 0, 199, 268
 STYLE DS_3DLOOK | DS_CENTER | DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
 EXSTYLE WS_EX_WINDOWEDGE
-CAPTION "ASIO2WASAPI2 Config"
+CAPTION "trgkASIO Config"
 FONT 8, "Ms Shell Dlg"
 {
     EDITTEXT        IDC_CHANNEL_COUNT, 83, 7, 38, 12, ES_AUTOHSCROLL | ES_NUMBER, WS_EX_LEFT
@@ -138,10 +138,10 @@ VS_VERSION_INFO VERSIONINFO
     {
         BLOCK "040904B0"
         {
-            VALUE "FileDescription", "ASIO2WASAPI2 ASIO Driver"
+            VALUE "FileDescription", "trgkASIO ASIO Driver"
             VALUE "FileVersion", "23.7.25.1017"
             VALUE "LegalCopyright", "GPL v3, Original by Lev Minkovsky, modified by Hyunwoo Park"
-            VALUE "ProductName", "ASIO2WASAPI2 Universal ASIO Driver"
+            VALUE "ProductName", "trgkASIO Universal ASIO Driver"
             VALUE "ProductVersion", "23.7.25.1017"
         }
     }

@@ -1,23 +1,23 @@
 // Copyright (C) 2023 Hyunwoo Park
 //
-// This file is part of ASIO2WASAPI2.
+// This file is part of trgkASIO.
 //
-// ASIO2WASAPI2 is free software: you can redistribute it and/or modify
+// trgkASIO is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
 //
-// ASIO2WASAPI2 is distributed in the hope that it will be useful,
+// trgkASIO is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+// along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #include "../lib/WinReg.hpp"
-#include "../ASIO2WASAPI2.h"
+#include "../TrgkASIO.h"
 #include "../utils/homeDirFilePath.h"
 #include "../utils/AppException.h"
 #include <Windows.h>
@@ -38,11 +38,11 @@ const int ERRSREG_CHAR_TO_MULTIBYTE = DEV_ERR_SELFREG - 4;
 
 extern HINSTANCE g_hInstDLL;
 
-// Convert CLSID_ASIO2WASAPI2_DRIVER to tstring
+// Convert CLSID_TRGKASIO_DRIVER to tstring
 static tstring GetCLSIDString() {
     tstring clsIdString;
     LPOLESTR oClsId = nullptr;
-    LONG rc = (LONG) StringFromCLSID(CLSID_ASIO2WASAPI2_DRIVER, &oClsId);
+    LONG rc = (LONG) StringFromCLSID(CLSID_TRGKASIO_DRIVER, &oClsId);
     if (rc != S_OK) {
         throw AppException("StringFromCLSID failed!");
     }
@@ -71,7 +71,7 @@ HRESULT DllRegisterServer() {
         OutputDebugString(msg.c_str());
 
         RegKey key{HKEY_CLASSES_ROOT, keyRoot};
-        key.SetStringValue(TEXT("Description"), TEXT("ASIO2WASAPI2"));
+        key.SetStringValue(TEXT("Description"), TEXT("trgkASIO"));
     }
 
     {
@@ -85,13 +85,13 @@ HRESULT DllRegisterServer() {
     }
 
     {
-        auto keyRoot = TEXT("SOFTWARE\\ASIO\\ASIO2WASAPI2");
+        auto keyRoot = TEXT("SOFTWARE\\ASIO\\trgkASIO");
         auto msg = fmt::format(TEXT("Touching HKLM\\{}"), keyRoot);
         OutputDebugString(msg.c_str());
 
         RegKey key{HKEY_LOCAL_MACHINE, keyRoot};
         key.SetStringValue(TEXT("CLSID"), clsIdString);
-        key.SetStringValue(TEXT("Description"), TEXT("ASIO2WASAPI2"));
+        key.SetStringValue(TEXT("Description"), TEXT("trgkASIO"));
     }
 
     OutputDebugString(TEXT("Done!"));
@@ -99,7 +99,7 @@ HRESULT DllRegisterServer() {
 }
 
 HRESULT DllUnregisterServer() {
-    // Convert CLSID_ASIO2WASAPI2_DRIVER to tstring
+    // Convert CLSID_TRGKASIO_DRIVER to tstring
     auto clsIdString = GetCLSIDString();
 
     //
@@ -110,7 +110,7 @@ HRESULT DllUnregisterServer() {
 
     {
         RegKey key{HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\ASIO")};
-        key.DeleteTree(TEXT("ASIO2WASAPI2"));
+        key.DeleteTree(TEXT("trgkASIO"));
     }
 
     return S_OK;

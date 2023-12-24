@@ -1,19 +1,19 @@
 // Copyright (C) 2023 Hyunwoo Park
 //
-// This file is part of ASIO2WASAPI2.
+// This file is part of trgkASIO.
 //
-// ASIO2WASAPI2 is free software: you can redistribute it and/or modify
+// trgkASIO is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
 //
-// ASIO2WASAPI2 is distributed in the hope that it will be useful,
+// trgkASIO is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+// along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #include <Windows.h>
@@ -81,7 +81,7 @@ void MessageWindow::setTrayTooltip(const tstring &msg) {
 
 /////////////////
 
-static const TCHAR *szWndClassName = TEXT("ASIO2WASAPI2MessageWindow");
+static const TCHAR *szWndClassName = TEXT("TrgkASIOMessageWindow");
 
 bool MessageWindowImpl::RegisterWindowClass(HINSTANCE hInstDLL, HICON hIcon) {
     static std::recursive_mutex _staticMutex;
@@ -104,10 +104,10 @@ bool MessageWindowImpl::RegisterWindowClass(HINSTANCE hInstDLL, HICON hIcon) {
         wc.lpszClassName = szWndClassName;
 
         if (!RegisterClass(&wc)) {
-            mainlog->error("Cannot register ASIO2WASAPI2MessageWindow class");
+            mainlog->error("Cannot register TrgkASIOMessageWindow class");
         } else {
-            initialized = true;
         }
+        initialized = true;
         return initialized;
     }
     return initialized;
@@ -118,7 +118,7 @@ MessageWindowImpl::MessageWindowImpl() {
     HICON hIcon = LoadIcon(g_hInstDLL, MAKEINTRESOURCE(IDI_MAINICON));
 
     if (!RegisterWindowClass(hInstDLL, hIcon)) {
-        throw AppException("Cannot register ASIO2WASAPI2 Message window");
+        throw AppException("Cannot register TrgkASIO Message window");
     }
 
     // Create main thread
@@ -139,7 +139,7 @@ MessageWindowImpl::MessageWindowImpl() {
         }
     }
     if (!_hWnd) {
-        throw AppException("Cannot create ASIO2WASAPI2 Message window");
+        throw AppException("Cannot create TrgkASIO Message window");
     }
 }
 
@@ -156,7 +156,7 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
 
     HWND hWnd = CreateWindow(
             szWndClassName,
-            TEXT("ASIO2WASAPI2 Message Handler Window"),
+            TEXT("TrgkASIO Message Handler Window"),
             0,
             0, 0, 0, 0,
             HWND_MESSAGE,
@@ -167,13 +167,13 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
 
     if (!hWnd) {
         mainlog->error("Cannot create message handler window");
-        p->_threadException = std::make_exception_ptr(AppException("Cannot create ASIO2WASAPI2 Message window"));
+        p->_threadException = std::make_exception_ptr(AppException("Cannot create TrgkASIO Message window"));
         return;
     }
     SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(p));
     p->_hWnd = hWnd;
 
-    createTrayIcon(hWnd, hIcon, TEXT("ASIO2WASAPI2"));
+    createTrayIcon(hWnd, hIcon, TEXT("TrgkASIO"));
 
     MSG msg;
     BOOL bret;
@@ -278,7 +278,7 @@ INT_PTR MessageWindowImpl::AboutDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
         case WM_INITDIALOG: {
             auto licenseTextBuffer = loadUserdataResource(g_hInstDLL, MAKEINTRESOURCE(IDR_LICENSE_TEXT));
             std::string licenseTextString{licenseTextBuffer.begin(), licenseTextBuffer.end()};
-            SetDlgItemText(hWnd, IDC_VERSION_TEXT, TEXT("ASIO2WASAPI2 ") SPRODUCT_VERSION);
+            SetDlgItemText(hWnd, IDC_VERSION_TEXT, TEXT("TrgkASIO ") SPRODUCT_VERSION);
             SetDlgItemTextA(hWnd, IDC_LICENSE_TEXT, licenseTextString.c_str());
             return TRUE;
         }
@@ -297,7 +297,7 @@ INT_PTR MessageWindowImpl::AboutDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
             if (id == IDB_GITHUB) {
                 ShellExecute(
                         nullptr, nullptr,
-                        L"https://github.com/phu54321/ASIO2WASAPI2",
+                        L"https://github.com/phu54321/TrgkASIO",
                         nullptr, nullptr, SW_SHOW);
             }
             return TRUE;

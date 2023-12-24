@@ -1,11 +1,11 @@
-# ASIO2WASAPI2
+# trgkASIO
 
-ASIO2WASAPI2는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가상ASIO를 사용하면서 [VB-Audio Virtual Audio Cable](https://vb-audio.com/Cable/) 같은
+trgkASIO는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가상ASIO를 사용하면서 [VB-Audio Virtual Audio Cable](https://vb-audio.com/Cable/) 같은
 프로그램을 활용해 소리를 OBS/반디캠 등으로 녹음할 수 있습니다.
 
 ## 설치방법
 
-[Releases](https://github.com/phu54321/ASIO2WASAPI2/releases/) 폴더에서 가장 최근 릴리즈를 다운받아서 `Install.exe` 를 관리자 권한으로 실행하면 설치가
+[Releases](https://github.com/phu54321/TrgkASIO/releases/) 폴더에서 가장 최근 릴리즈를 다운받아서 `Install.exe` 를 관리자 권한으로 실행하면 설치가
 끝납니다.
 
 추가적으로 ASIO를 녹음하려면 [VB-Audio 사이트](https://vb-audio.com/Cable/)로 가서 Virtual Audio Cable을 설치하시면 됩니다.
@@ -23,18 +23,18 @@ ASIO2WASAPI2는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가
 
 ![DJMAX 설정화면](imgs/djmax_settings.png)
 
-위와 같이 재생 장치를 `ASIO2WASAPI2` 로 설정하면 됩니다. `오디오 버퍼 사이즈 설정` 은 원하시는 대로 하세요.
+위와 같이 재생 장치를 `TrgkASIO` 로 설정하면 됩니다. `오디오 버퍼 사이즈 설정` 은 원하시는 대로 하세요.
 
 ## 사용방법 (EZ2ON)
 
 ![EZ2ON 설정화면](imgs/ez2on_settings.png)
 
-위와 같이 사운드 출력 장치를 `ASIO: ASIO2WASAPI2` 로 해두시면 됩니다. `사운드 버퍼` 는 원하시는대로 낮추세요.
+위와 같이 사운드 출력 장치를 `ASIO: TrgkASIO` 로 해두시면 됩니다. `사운드 버퍼` 는 원하시는대로 낮추세요.
 
 ## 전문가 설정
 
-- 로그는 `C:\Users\[사용자 이름]\ASIO2WASAPI2.log` 가 이미 있는 경우에, 해당 경로에 적힙니다.
-- 프로그램 설정은 `C:\Users\[사용자 이름]\ASIO2WASAPI2.json` 으로 할 수 있습니다.
+- 로그는 `C:\Users\[사용자 이름]\TrgkASIO.log` 가 이미 있는 경우에, 해당 경로에 적힙니다.
+- 프로그램 설정은 `C:\Users\[사용자 이름]\TrgkASIO.json` 으로 할 수 있습니다.
 
 설정 파일은 이렇게 쓰면 됩니다.
 
@@ -72,7 +72,7 @@ ASIO2WASAPI2는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가
 ## 버그 제보
 
 - `logLevel`을 `trace` 로 설정해두고
-- `ASIO2WASAPI2.log` 파일을 뽑으신 뒤에
+- `TrgkASIO.log` 파일을 뽑으신 뒤에
 - 해당 파일 첨부해서 issues 에 열어주세요
 
 I'm okay with English, so feel free to leave issues even if you don't know Korean.
@@ -82,7 +82,7 @@ I'm okay with English, so feel free to leave issues even if you don't know Korea
 
 ## 코드 라이선스 (License)
 
-> NOTE: The license below only applies to the source code of ASIO2WASAPI2 itself. the
+> NOTE: The license below only applies to the source code of TrgkASIO itself. the
 > ASIO trademark and ASIO SDK are subject to specific license terms; see
 > "Steinberg ASIO Licensing Agreement" in the ASIO SDK.
 >

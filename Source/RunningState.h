@@ -1,28 +1,28 @@
-/*  ASIO2WASAPI2 Universal ASIO Driver
+/*  trgkASIO Universal ASIO Driver
 
     Copyright (C) 2017 Lev Minkovsky
     Copyright (C) 2023 Hyunwoo Park (phu54321@naver.com) - modifications
 
-    This file is part of ASIO2WASAPI2.
+    This file is part of trgkASIO.
 
-    ASIO2WASAPI2 is free software; you can redistribute it and/or modify
+    trgkASIO is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
 
-    ASIO2WASAPI2 is distributed in the hope that it will be useful,
+    trgkASIO is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with ASIO2WASAPI2; if not, write to the Free Software
+    along with trgkASIO; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 
-#ifndef ASIO2WASAPI2_RUNNINGSTATE_H
-#define ASIO2WASAPI2_RUNNINGSTATE_H
+#ifndef TRGKASIO_RUNNINGSTATE_H
+#define TRGKASIO_RUNNINGSTATE_H
 
 #include <Windows.h>
 #include "PreparedState.h"
@@ -64,4 +64,4 @@ private:
     static void threadProc(RunningState *state);
 };
 
-#endif //ASIO2WASAPI2_RUNNINGSTATE_H
+#endif //TRGKASIO_RUNNINGSTATE_H

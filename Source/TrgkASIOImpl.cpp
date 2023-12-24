@@ -1,25 +1,25 @@
 // Copyright (C) 2023 Hyunwoo Park
 //
-// This file is part of ASIO2WASAPI2.
+// This file is part of trgkASIO.
 //
-// ASIO2WASAPI2 is free software: you can redistribute it and/or modify
+// trgkASIO is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
 //
-// ASIO2WASAPI2 is distributed in the hope that it will be useful,
+// trgkASIO is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+// along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #include <cstring>
 #include <Windows.h>
 #include <spdlog/spdlog.h>
-#include "ASIO2WASAPI2Impl.h"
+#include "TrgkASIOImpl.h"
 #include "res/resource.h"
 #include "utils/json.hpp"
 #include "WASAPIOutput/createIAudioClient.h"
@@ -35,12 +35,12 @@ using json = nlohmann::json;
 
 static const ASIOSampleType sampleType = ASIOSTInt32LSB;
 
-ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
+TrgkASIOImpl::TrgkASIOImpl(void *sysRef)
         : _pref(loadUserPref()) {
     ZoneScoped;
 
     mainlog->set_level(_pref->logLevel);
-    mainlog->info("Starting ASIO2WASAPI2...");
+    mainlog->info("Starting trgkASIOImpl...");
 
     CoInitialize(nullptr);
 
@@ -94,10 +94,10 @@ ASIO2WASAPI2Impl::ASIO2WASAPI2Impl(void *sysRef)
     }
 }
 
-ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
+TrgkASIOImpl::~TrgkASIOImpl() {
     ZoneScoped;
 
-    mainlog->info("Stopping ASIO2WASAPI2...");
+    mainlog->info("Stopping trgkASIO...");
     mainlog->flush();
 
     stop();
@@ -108,7 +108,7 @@ ASIO2WASAPI2Impl::~ASIO2WASAPI2Impl() {
 
 /////
 
-ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputChannels) {
+ASIOError TrgkASIOImpl::getChannels(long *numInputChannels, long *numOutputChannels) {
     ZoneScoped;
 
     if (numInputChannels) *numInputChannels = 0;
@@ -116,7 +116,7 @@ ASIOError ASIO2WASAPI2Impl::getChannels(long *numInputChannels, long *numOutputC
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
+ASIOError TrgkASIOImpl::getSampleRate(ASIOSampleRate *sampleRate) {
     ZoneScoped;
 
     if (!sampleRate) return ASE_InvalidParameter;
@@ -124,7 +124,7 @@ ASIOError ASIO2WASAPI2Impl::getSampleRate(ASIOSampleRate *sampleRate) {
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
+ASIOError TrgkASIOImpl::canSampleRate(ASIOSampleRate _sampleRate) {
     ZoneScoped;
 
     int sampleRate = static_cast<int>(_sampleRate);
@@ -137,7 +137,7 @@ ASIOError ASIO2WASAPI2Impl::canSampleRate(ASIOSampleRate _sampleRate) {
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2Impl::setSampleRate(ASIOSampleRate sampleRate) {
+ASIOError TrgkASIOImpl::setSampleRate(ASIOSampleRate sampleRate) {
     ZoneScoped;
 
     mainlog->debug("setSampleRate: {} ( {} )", sampleRate, hexdump(&sampleRate, sizeof(sampleRate)));
@@ -177,7 +177,7 @@ static const char *knownChannelNames[] =
                 "Side right",
         };
 
-ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
+ASIOError TrgkASIOImpl::getChannelInfo(ASIOChannelInfo *info) {
     ZoneScoped;
 
     if (info->isInput) return ASE_InvalidParameter;
@@ -195,7 +195,7 @@ ASIOError ASIO2WASAPI2Impl::getChannelInfo(ASIOChannelInfo *info) {
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2Impl::createBuffers(
+ASIOError TrgkASIOImpl::createBuffers(
         ASIOBufferInfo *bufferInfos,
         long numChannels,
         long bufferSize,
@@ -223,7 +223,7 @@ ASIOError ASIO2WASAPI2Impl::createBuffers(
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
+ASIOError TrgkASIOImpl::disposeBuffers() {
     ZoneScoped;
     stop();
 
@@ -236,14 +236,14 @@ ASIOError ASIO2WASAPI2Impl::disposeBuffers() {
 
 ////////////
 
-ASIOError ASIO2WASAPI2Impl::start() {
+ASIOError TrgkASIOImpl::start() {
     ZoneScoped;
 
     if (!_preparedState) return ASE_NotPresent;
     return _preparedState->start() ? ASE_OK : ASE_HWMalfunction;
 }
 
-ASIOError ASIO2WASAPI2Impl::outputReady() {
+ASIOError TrgkASIOImpl::outputReady() {
     ZoneScoped;
     if (_preparedState) {
         _preparedState->outputReady();
@@ -252,7 +252,7 @@ ASIOError ASIO2WASAPI2Impl::outputReady() {
 }
 
 
-ASIOError ASIO2WASAPI2Impl::stop() {
+ASIOError TrgkASIOImpl::stop() {
     ZoneScoped;
 
     if (_preparedState) {
@@ -266,14 +266,14 @@ ASIOError ASIO2WASAPI2Impl::stop() {
 // auxillary functions
 
 
-ASIOError ASIO2WASAPI2Impl::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) {
+ASIOError TrgkASIOImpl::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) {
     if (!_preparedState)
         return ASE_NotPresent;
 
     return _preparedState->getSamplePosition(sPos, tStamp);
 }
 
-ASIOError ASIO2WASAPI2Impl::getLatencies(long *_inputLatency, long *_outputLatency) {
+ASIOError TrgkASIOImpl::getLatencies(long *_inputLatency, long *_outputLatency) {
     if (!_preparedState)
         return ASE_NotPresent;
     if (_inputLatency)

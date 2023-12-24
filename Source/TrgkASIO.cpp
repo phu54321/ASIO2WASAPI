@@ -1,31 +1,31 @@
 // Copyright (C) 2023 Hyunwoo Park
 //
-// This file is part of ASIO2WASAPI2.
+// This file is part of trgkASIO.
 //
-// ASIO2WASAPI2 is free software: you can redistribute it and/or modify
+// trgkASIO is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
 //
-// ASIO2WASAPI2 is distributed in the hope that it will be useful,
+// trgkASIO is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+// along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #include <Windows.h>
-#include "ASIO2WASAPI2.h"
-#include "ASIO2WASAPI2Impl.h"
+#include "TrgkASIO.h"
+#include "TrgkASIOImpl.h"
 #include "utils/logger.h"
 #include <tracy/Tracy.hpp>
 #include <spdlog/spdlog.h>
 #include <shellapi.h>
 #include <spdlog/fmt/fmt.h>
 
-const CLSID CLSID_ASIO2WASAPI2_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
+const CLSID CLSID_TRGKASIO_DRIVER = {0xe3226090, 0x473d, 0x4cc9, {0x83, 0x60, 0xe1, 0x23, 0xeb, 0x9e, 0xf8, 0x47}};
 
 void enableHighPrecisionTimer() {
     // For Windows 11: apps require this code to
@@ -57,65 +57,65 @@ void enableHighPrecisionTimer() {
     }
 }
 
-ASIO2WASAPI2::ASIO2WASAPI2(LPUNKNOWN pUnk, HRESULT *phr)
-        : CUnknown(TEXT("ASIO2WASAPI2"), pUnk, phr) {
+TrgkASIO::TrgkASIO(LPUNKNOWN pUnk, HRESULT *phr)
+        : CUnknown(TEXT("TrgkASIO"), pUnk, phr) {
     // Note: this code is called on DLL_PROCESS_ATTACH, so
     // this shouldn't really contain any kernel-interacting code.
 
-    // Move additional kernal interacting code to `ASIO2WASAPI2::init`.
+    // Move additional kernal interacting code to `TrgkASIO::init`.
 }
 
-ASIO2WASAPI2::~ASIO2WASAPI2() = default;
+TrgkASIO::~TrgkASIO() = default;
 
 /*  ASIO driver interface implementation
  */
 
-CUnknown *ASIO2WASAPI2::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) {
-    return static_cast<CUnknown *>(new ASIO2WASAPI2(pUnk, phr));
+CUnknown *TrgkASIO::CreateInstance(LPUNKNOWN pUnk, HRESULT *phr) {
+    return static_cast<CUnknown *>(new TrgkASIO(pUnk, phr));
 }
 
-STDMETHODIMP ASIO2WASAPI2::NonDelegatingQueryInterface(REFIID riid, void **ppv) {
-    if (riid == CLSID_ASIO2WASAPI2_DRIVER) {
+STDMETHODIMP TrgkASIO::NonDelegatingQueryInterface(REFIID riid, void **ppv) {
+    if (riid == CLSID_TRGKASIO_DRIVER) {
         return GetInterface(this, ppv);
     }
     return CUnknown::NonDelegatingQueryInterface(riid, ppv);
 }
 
 
-void ASIO2WASAPI2::getDriverName(char *name) {
-    strcpy_s(name, 32, "ASIO2WASAPI2");
+void TrgkASIO::getDriverName(char *name) {
+    strcpy_s(name, 32, "TrgkASIO");
 }
 
-long ASIO2WASAPI2::getDriverVersion() {
+long TrgkASIO::getDriverVersion() {
     return 1;
 }
 
-void ASIO2WASAPI2::getErrorMessage(char *s) {
+void TrgkASIO::getErrorMessage(char *s) {
     // TODO: maybe add useful message
     s[0] = 0;
 }
 
-ASIOError ASIO2WASAPI2::future(long selector, void *opt) {
+ASIOError TrgkASIO::future(long selector, void *opt) {
     // none of the optional features are present
     return ASE_NotPresent;
 }
 
 
-ASIOBool ASIO2WASAPI2::init(void *sysRef) {
+ASIOBool TrgkASIO::init(void *sysRef) {
     ZoneScoped;
 
     initMainLog();
-    mainlog->info("Starting ASIO2WASAPI");
+    mainlog->info("Starting trgkASIO");
     initAccurateTime();
     enableHighPrecisionTimer();
 
     if (_pImpl) return true;
     try {
-        _pImpl = std::make_unique<ASIO2WASAPI2Impl>(sysRef);
+        _pImpl = std::make_unique<TrgkASIOImpl>(sysRef);
         return true;
     } catch (AppException &e) {
         // Swallow here...
-        auto string = fmt::format("ASIO2WASAPI2Impl constructor failed: {}", e.what());
+        auto string = fmt::format("TrgkASIOImpl constructor failed: {}", e.what());
         mainlog->error(string);
         MessageBoxA((HWND) sysRef, string.c_str(), "Error", MB_OK);
         return false;
@@ -124,17 +124,17 @@ ASIOBool ASIO2WASAPI2::init(void *sysRef) {
 
 ///////////
 
-ASIOError ASIO2WASAPI2::getSampleRate(ASIOSampleRate *sampleRate) {
+ASIOError TrgkASIO::getSampleRate(ASIOSampleRate *sampleRate) {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->getSampleRate(sampleRate);
 }
 
-ASIOError ASIO2WASAPI2::canSampleRate(ASIOSampleRate sampleRate) {
+ASIOError TrgkASIO::canSampleRate(ASIOSampleRate sampleRate) {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->canSampleRate(sampleRate);
 }
 
-ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
+ASIOError TrgkASIO::setSampleRate(ASIOSampleRate sampleRate) {
     if (!_pImpl) return ASE_NotPresent;
     if (sampleRate == 0) {
         mainlog->debug(L"setSampleRate: 0 (external sync) - we don't have external clock, so ignoring");
@@ -147,8 +147,8 @@ ASIOError ASIO2WASAPI2::setSampleRate(ASIOSampleRate sampleRate) {
 ///////////////
 
 // all buffer sizes are in frames
-ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
-                                      long *preferredSize, long *granularity) {
+ASIOError TrgkASIO::getBufferSize(long *minSize, long *maxSize,
+                                  long *preferredSize, long *granularity) {
     if (!_pImpl) return ASE_NotPresent;
     if (minSize) *minSize = 64;
     if (maxSize) *maxSize = 1024;
@@ -157,12 +157,12 @@ ASIOError ASIO2WASAPI2::getBufferSize(long *minSize, long *maxSize,
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2::getChannelInfo(ASIOChannelInfo *info) {
+ASIOError TrgkASIO::getChannelInfo(ASIOChannelInfo *info) {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->getChannelInfo(info);
 }
 
-ASIOError ASIO2WASAPI2::createBuffers(
+ASIOError TrgkASIO::createBuffers(
         ASIOBufferInfo *bufferInfos,
         long numChannels,
         long bufferSize,
@@ -174,7 +174,7 @@ ASIOError ASIO2WASAPI2::createBuffers(
     return _pImpl->createBuffers(bufferInfos, numChannels, bufferSize, callbacks);
 }
 
-ASIOError ASIO2WASAPI2::disposeBuffers() {
+ASIOError TrgkASIO::disposeBuffers() {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->disposeBuffers();
 }
@@ -183,22 +183,22 @@ ASIOError ASIO2WASAPI2::disposeBuffers() {
 
 ////////////
 
-ASIOError ASIO2WASAPI2::start() {
+ASIOError TrgkASIO::start() {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->start();
 }
 
-ASIOError ASIO2WASAPI2::stop() {
+ASIOError TrgkASIO::stop() {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->stop();
 }
 
-ASIOError ASIO2WASAPI2::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) {
+ASIOError TrgkASIO::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->getSamplePosition(sPos, tStamp);
 }
 
-ASIOError ASIO2WASAPI2::outputReady() {
+ASIOError TrgkASIO::outputReady() {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->outputReady();
 }
@@ -206,7 +206,7 @@ ASIOError ASIO2WASAPI2::outputReady() {
 ////////
 // auxillary functions
 
-ASIOError ASIO2WASAPI2::getClockSources(ASIOClockSource *clocks, long *numSources) {
+ASIOError TrgkASIO::getClockSources(ASIOClockSource *clocks, long *numSources) {
     if (!numSources || *numSources == 0)
         return ASE_OK;
     clocks->index = 0;
@@ -218,27 +218,27 @@ ASIOError ASIO2WASAPI2::getClockSources(ASIOClockSource *clocks, long *numSource
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2::setClockSource(long index) {
+ASIOError TrgkASIO::setClockSource(long index) {
     ZoneScoped;
 
     return (index == 0) ? ASE_OK : ASE_NotPresent;
 }
 
 
-ASIOError ASIO2WASAPI2::getLatencies(long *_inputLatency, long *_outputLatency) {
+ASIOError TrgkASIO::getLatencies(long *_inputLatency, long *_outputLatency) {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->getLatencies(_inputLatency, _outputLatency);
 }
 
-ASIOError ASIO2WASAPI2::controlPanel() {
+ASIOError TrgkASIO::controlPanel() {
     ShellExecute(
             nullptr, nullptr,
-            L"https://github.com/phu54321/ASIO2WASAPI2",
+            L"https://github.com/phu54321/TrgkASIO",
             nullptr, nullptr, SW_SHOW);
     return ASE_OK;
 }
 
-ASIOError ASIO2WASAPI2::getChannels(long *numInputChannels, long *numOutputChannels) {
+ASIOError TrgkASIO::getChannels(long *numInputChannels, long *numOutputChannels) {
     if (!_pImpl) return ASE_NotPresent;
     return _pImpl->getChannels(numInputChannels, numOutputChannels);
 }

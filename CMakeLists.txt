@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(ASIO2WASAPI2)
+project(trgkASIO)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -35,7 +35,7 @@ add_subdirectory(Source/tracy)
 
 
 # Main driver
-add_library(ASIO2WASAPI2 SHARED
+add_library(trgkASIO SHARED
         Source/lib/r8brain_free_src/r8bbase.cpp
 
         Source/dllentry/dllmain.cpp
@@ -56,38 +56,38 @@ add_library(ASIO2WASAPI2 SHARED
 
         Source/pref/UserPref.cpp
         Source/pref/UserPrefGUI.cpp
-        Source/ASIO2WASAPI2.cpp
-        Source/ASIO2WASAPI2Impl.cpp
+        Source/TrgkASIO.cpp
+        Source/TrgkASIOImpl.cpp
         Source/PreparedState.cpp
         Source/RunningState.cpp
         Source/WASAPIOutput/ClapRenderer.cpp
         Source/WASAPIOutput/WASAPIOutputEvent.cpp
 
-        Source/res/ASIO2WASAPI2.rc
-        Source/ASIO2WASAPI2.def
+        Source/res/resource.rc
+        Source/TrgkASIO.def
         Source/WASAPIOutput/iidConstant.cpp
         Source/WASAPIOutput/createIAudioClient.cpp
         Source/utils/WaveLoad.cpp
         Source/utils/dlgGetText.cpp
 )
 
-target_compile_definitions(ASIO2WASAPI2 PRIVATE UNICODE _UNICODE)
-target_include_directories(ASIO2WASAPI2 PRIVATE
+target_compile_definitions(trgkASIO PRIVATE UNICODE _UNICODE)
+target_include_directories(trgkASIO PRIVATE
         Source/lib/ASIOSDK/common
         Source/include
         Source/tracy/public
 )
-target_link_libraries(ASIO2WASAPI2 PUBLIC Avrt.lib winmm.lib)
+target_link_libraries(trgkASIO PUBLIC Avrt.lib winmm.lib)
 if (TRACY_ENABLE)
-    target_link_libraries(ASIO2WASAPI2 PUBLIC Tracy::TracyClient)
+    target_link_libraries(trgkASIO PUBLIC Tracy::TracyClient)
 endif ()
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     # 64-bit mode
     message("x64 target")
-    set_target_properties(ASIO2WASAPI2
+    set_target_properties(trgkASIO
             PROPERTIES
-            OUTPUT_NAME "ASIO2WASAPI264"
+            OUTPUT_NAME "trgkASIO64"
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/x64"
     )
 endif ()
@@ -101,7 +101,7 @@ add_executable(test_main
 
 # gui testing
 add_executable(test_pref_gui WIN32
-        Source/res/ASIO2WASAPI2.rc
+        Source/res/resource.rc
         Source/pref/UserPrefGUI.cpp
 
         Source/utils/dlgGetText.cpp
@@ -115,5 +115,5 @@ target_include_directories(test_pref_gui PRIVATE
         Source/include
 )
 target_compile_definitions(test_pref_gui PUBLIC
-        ASIO2WASAPI_PREFGUI_TEST_MAIN
+        TRGKASIO_PREFGUI_TEST_MAIN
 )
