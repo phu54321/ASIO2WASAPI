@@ -42,7 +42,7 @@ static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> g_errorLevels
 
 LPCWSTR listSeparator = L"----------------";
 
-INT_PTR DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+INT_PTR CALLBACK DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_INITDIALOG: {
             auto deviceNameBuffer = reinterpret_cast<std::wstring *>(lParam);
@@ -117,7 +117,7 @@ std::wstring trim(std::wstring str) {
     return str;
 }
 
-INT_PTR DlgUserPrefDurationOverrideEditProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+INT_PTR CALLBACK DlgUserPrefDurationOverrideEditProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_INITDIALOG: {
             auto prefPtr = reinterpret_cast<UserPrefPtr *>(lParam);
@@ -180,7 +180,7 @@ INT_PTR DlgUserPrefDurationOverrideEditProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     }
 }
 
-INT_PTR DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     auto hInstance = (HINSTANCE) GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
 
     switch (uMsg) {
