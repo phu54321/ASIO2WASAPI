@@ -18,19 +18,19 @@
 
 #include <thread>
 
+#include "UserPref.h"
+
 #include "../utils/dpiRaii.h"
 #include "../utils/logger.h"
-#include "../utils/WASAPIUtils.h"
 #include "../utils/dlgGetText.h"
 
-#include "./UserPref.h"
+#include "DlgOutputDevice.h"
+#include "DlgDurationOverrideEditor.h"
+
 #include "../res/resource.h"
 #include "../MessageWindow/MessageWindow.h"
-#include <spdlog/fmt/fmt.h>
+
 #include <windowsx.h>
-#include <CommCtrl.h>
-#include <sstream>
-#include <regex>
 
 static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> g_errorLevels = {
         {spdlog::level::err,   TEXT("error")},
@@ -40,145 +40,8 @@ static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> g_errorLevels
         {spdlog::level::trace, TEXT("trace")},
 };
 
-LPCWSTR listSeparator = L"----------------";
-
-INT_PTR CALLBACK DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-        case WM_INITDIALOG: {
-            auto deviceNameBuffer = reinterpret_cast<std::wstring *>(lParam);
-            SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR) deviceNameBuffer);
-
-            auto devices = getIMMDeviceList();
-            auto hDeviceList = GetDlgItem(hWnd, IDC_DEVICE);
-            std::vector<std::wstring> candidates;
-
-            candidates.emplace_back(L"(default)");
-            candidates.emplace_back(listSeparator);
-
-            for (const auto &d: devices) {
-                auto friendlyName = getDeviceFriendlyName(d);
-                candidates.emplace_back(friendlyName);
-            }
-
-            candidates.emplace_back(listSeparator);
-            for (const auto &d: devices) {
-                auto deviceId = getDeviceId(d);
-                candidates.emplace_back(deviceId);
-            }
-
-            for (const auto &c: candidates) {
-                SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) c.c_str());
-            }
-
-            SetWindowTextW(hDeviceList, deviceNameBuffer->c_str());
-
-            return FALSE;
-        }
-
-        case WM_CLOSE:
-            EndDialog(hWnd, FALSE);
-            return TRUE;
-
-        case WM_COMMAND: {
-            WORD id = LOWORD(wParam);
-            switch (id) {
-                case IDCANCEL:
-                    EndDialog(hWnd, FALSE);
-                    return TRUE;
-
-                case IDOK: {
-                    auto deviceNameBuffer = reinterpret_cast<std::wstring *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-
-                    auto hDeviceList = GetDlgItem(hWnd, IDC_DEVICE);
-                    auto deviceSelected = getWndText(hDeviceList);
-
-                    if (!deviceSelected.empty() && deviceSelected != listSeparator) {
-                        *deviceNameBuffer = deviceSelected;
-                        EndDialog(hWnd, TRUE);
-                    } else {
-                        EndDialog(hWnd, FALSE);
-                    }
-                    return TRUE;
-                }
-                default:
-                    return FALSE;
-            }
-        }
 
 
-        default:
-            return FALSE;
-    }
-}
-
-std::wstring trim(std::wstring str) {
-    str.erase(str.find_last_not_of(' ') + 1);         //suffixing spaces
-    str.erase(0, str.find_first_not_of(' '));       //prefixing spaces
-    return str;
-}
-
-INT_PTR CALLBACK DlgUserPrefDurationOverrideEditProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-        case WM_INITDIALOG: {
-            auto prefPtr = reinterpret_cast<UserPrefPtr *>(lParam);
-            SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR) prefPtr);
-
-            std::wstringstream wss;
-            auto &pref = *prefPtr;
-            for (const auto &it: pref->durationOverride) {
-                wss << it.first << L": " << it.second << L"\r\n";
-            }
-
-            auto hTextEdit = GetDlgItem(hWnd, IDC_TEXTEDIT);
-            SetWindowTextW(hTextEdit, wss.str().c_str());
-
-            return TRUE;
-        }
-
-        case WM_CLOSE:
-            EndDialog(hWnd, FALSE);
-            return TRUE;
-
-        case WM_COMMAND: {
-            WORD id = LOWORD(wParam);
-            switch (id) {
-                case IDCANCEL:
-                    EndDialog(hWnd, FALSE);
-                    return TRUE;
-
-                case IDOK: {
-                    auto prefPtr = reinterpret_cast<UserPrefPtr *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-                    auto &pref = *prefPtr;
-                    auto hTextEdit = GetDlgItem(hWnd, IDC_TEXTEDIT);
-                    auto text = getWndText(hTextEdit);
-                    text = std::regex_replace(text, std::wregex(L"\r"), L"");
-
-                    std::map<std::wstring, int> table;
-                    std::wregex r(L"^(.+):\\s*(\\d+)$");
-
-                    auto itBegin = std::wsregex_iterator(text.begin(), text.end(), r);
-                    auto itEnd = std::wsregex_iterator();
-                    for (auto i = itBegin; i != itEnd; ++i) {
-                        const auto &sm = *i;
-                        auto deviceId = trim(sm[1].str());
-                        auto duration = std::stoi(sm[2].str());
-                        table[deviceId] = duration;
-                    }
-
-                    pref->durationOverride = table;
-                    EndDialog(hWnd, TRUE);
-                    return TRUE;
-                }
-                default:
-                    return FALSE;
-            }
-        }
-
-
-        default:
-            return FALSE;
-    }
-}
 
 INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     auto hInstance = (HINSTANCE) GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
@@ -283,8 +146,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 
                 case IDB_DEVICELIST_ADD: {
                     std::wstring deviceName;
-                    if (DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_USERPREF_OUTPUT_DEVICE), hWnd,
-                                       DlgUserPrefOutputDeviceProc, (LPARAM) &deviceName)) {
+                    if (PromptDeviceName(hInstance, hWnd, &deviceName)) {
                         auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                         SendMessageW(hOutputDeviceList, LB_ADDSTRING, 0, (LPARAM) deviceName.c_str());
                     }
@@ -332,8 +194,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                             auto curSel = ListBox_GetCurSel(hOutputDeviceList);
                             if (curSel != LB_ERR) {
                                 auto deviceName = ListBox_GetWString(hOutputDeviceList, curSel);
-                                if (DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_USERPREF_OUTPUT_DEVICE), hWnd,
-                                                   DlgUserPrefOutputDeviceProc, (LPARAM) &deviceName)) {
+                                if (PromptDeviceName(hInstance, hWnd, &deviceName)) {
                                     SendMessageW(hOutputDeviceList, LB_DELETESTRING, curSel, 0);
                                     SendMessageW(hOutputDeviceList, LB_INSERTSTRING, curSel,
                                                  (LPARAM) deviceName.c_str());
@@ -346,8 +207,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 
                 case IDB_OUTPUT_LATENCY_OVERRIDE: {
                     auto prefPtr = reinterpret_cast<UserPrefPtr *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-                    DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_OUTPUT_LATENCY_OVERRIDE_EDIT), hWnd,
-                                   DlgUserPrefDurationOverrideEditProc, (LPARAM) prefPtr);
+                    DialogDurationOverrideEditor(hInstance, hWnd, *prefPtr);
                 }
             }
             return TRUE;
@@ -364,6 +224,8 @@ HWND createUserPrefEditDialog(HINSTANCE hInstance, HWND hwndParent = nullptr) {
 }
 
 #ifdef TRGKASIO_PREFGUI_TEST_MAIN
+
+#include <objbase.h>
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    PSTR lpCmdLine, int nCmdShow) {

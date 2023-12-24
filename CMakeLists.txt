@@ -69,6 +69,10 @@ add_library(trgkASIO SHARED
         Source/WASAPIOutput/createIAudioClient.cpp
         Source/utils/WaveLoad.cpp
         Source/utils/dlgGetText.cpp
+        Source/pref/DlgOutputDevice.cpp
+        Source/pref/DlgOutputDevice.h
+        Source/pref/DlgDurationOverrideEditor.cpp
+        Source/pref/DlgDurationOverrideEditor.h
 )
 
 target_compile_definitions(trgkASIO PRIVATE UNICODE _UNICODE)
@@ -110,6 +114,10 @@ add_executable(test_pref_gui WIN32
         Source/utils/logger.cpp
         Source/utils/utf8convert.cpp
         Source/utils/WASAPIUtils.cpp
+        Source/pref/DlgOutputDevice.cpp
+        Source/pref/DlgOutputDevice.h
+        Source/pref/DlgDurationOverrideEditor.cpp
+        Source/pref/DlgDurationOverrideEditor.h
 )
 target_include_directories(test_pref_gui PRIVATE
         Source/include
