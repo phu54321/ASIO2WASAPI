@@ -22,7 +22,7 @@
 
 #include "../utils/dpiRaii.h"
 #include "../utils/logger.h"
-#include "../utils/dlgGetText.h"
+#include "../utils/w32StringGetter.h"
 
 #include "DlgOutputDevice.h"
 #include "DlgDurationOverrideEditor.h"

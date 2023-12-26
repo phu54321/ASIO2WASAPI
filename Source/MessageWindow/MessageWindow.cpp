@@ -30,6 +30,7 @@
 #include "../version.h"
 #include "../utils/ResourceLoad.h"
 #include "../pref/UserPrefGUI.h"
+#include "../utils/w32StringGetter.h"
 
 extern HINSTANCE g_hInstDLL;
 
@@ -216,12 +217,15 @@ LRESULT MessageWindowImpl::MessageWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam
         case WM_TRAYICON_MSG: {
             if (wParam == trayIconID) {
                 if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP) {
+                    auto hInstance = (HINSTANCE) GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
                     auto hMenu = CreateMenu();
-                    AppendMenu(hMenu, MF_STRING, MENU_ABOUT, TEXT("About"));
-                    AppendMenu(hMenu, MF_STRING, MENU_PREFERENCE, TEXT("Preference"));
+
+                    AppendMenuW(hMenu, MF_STRING, MENU_ABOUT, getResourceString(hInstance, IDS_ABOUT).c_str());
+                    AppendMenuW(hMenu, MF_STRING, MENU_PREFERENCE,
+                                getResourceString(hInstance, IDS_PREFERENCE).c_str());
 
                     auto hMenubar = CreateMenu();
-                    AppendMenu(hMenubar, MF_POPUP, (UINT_PTR) hMenu, TEXT("Menu"));
+                    AppendMenu(hMenubar, MF_POPUP, (UINT_PTR) hMenu, getResourceString(hInstance, IDS_MENU).c_str());
 
                     auto hPopupMenu = GetSubMenu(hMenubar, 0);
                     POINT pt;

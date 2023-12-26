@@ -23,7 +23,7 @@
 #include "DlgOutputDevice.h"
 #include "../res/resource.h"
 #include "../utils/WASAPIUtils.h"
-#include "../utils/dlgGetText.h"
+#include "../utils/w32StringGetter.h"
 
 #include <vector>
 

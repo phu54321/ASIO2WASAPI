@@ -142,6 +142,19 @@ FONT 8, "Ms Shell Dlg"
 
 
 //
+// String Table resources
+//
+LANGUAGE LANG_NEUTRAL, SUBLANG_SYS_DEFAULT
+STRINGTABLE
+{
+    IDS_MENU                      "Menu"
+    IDS_ABOUT                     "About"
+    IDS_PREFERENCE                "Preference"
+}
+
+
+
+//
 // Icon resources
 //
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL

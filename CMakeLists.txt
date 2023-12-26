@@ -68,7 +68,7 @@ add_library(trgkASIO SHARED
         Source/WASAPIOutput/iidConstant.cpp
         Source/WASAPIOutput/createIAudioClient.cpp
         Source/utils/WaveLoad.cpp
-        Source/utils/dlgGetText.cpp
+        Source/utils/w32StringGetter.cpp
         Source/pref/DlgOutputDevice.cpp
         Source/pref/DlgOutputDevice.h
         Source/pref/DlgDurationOverrideEditor.cpp
@@ -110,7 +110,7 @@ add_executable(test_pref_gui WIN32
 
         Source/WASAPIOutput/iidConstant.cpp
 
-        Source/utils/dlgGetText.cpp
+        Source/utils/w32StringGetter.cpp
         Source/pref/UserPref.cpp
         Source/utils/homeDirFilePath.cpp
         Source/utils/logger.cpp

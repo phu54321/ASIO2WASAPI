@@ -28,7 +28,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <windowsx.h>
 #include <Audioclient.h>
-#include "../utils/dlgGetText.h"
+#include "../utils/w32StringGetter.h"
 #include "../utils/WASAPIUtils.h"
 #include "../utils/logger.h"
 

@@ -16,8 +16,8 @@
 // along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef TRGKASIO_DLGGETTEXT_H
-#define TRGKASIO_DLGGETTEXT_H
+#ifndef TRGKASIO_W32STRINGGETTER_H
+#define TRGKASIO_W32STRINGGETTER_H
 
 #include <string>
 #include <Windows.h>
@@ -26,7 +26,9 @@ std::wstring getDlgText(HWND hDlgItem, int id, UINT getLengthMsg, UINT getTextMs
 
 std::wstring getWndText(HWND hWnd);
 
+std::wstring getResourceString(HINSTANCE hInstance, UINT stringID);
+
 #define ComboBox_GetWString(hDlgItem, id) getDlgText(hDlgItem, id, CB_GETLBTEXTLEN, CB_GETLBTEXT)
 #define ListBox_GetWString(hDlgItem, id) getDlgText(hDlgItem, id, LB_GETTEXTLEN, LB_GETTEXT)
 
-#endif //TRGKASIO_DLGGETTEXT_H
+#endif //TRGKASIO_W32STRINGGETTER_H

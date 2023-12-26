@@ -16,7 +16,7 @@
 // along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "dlgGetText.h"
+#include "w32StringGetter.h"
 #include <vector>
 
 std::wstring getWndText(HWND hWnd) {
@@ -32,4 +32,10 @@ std::wstring getDlgText(HWND hDlgItem, int id, UINT getLengthMsg, UINT getTextMs
     v.resize(SendMessageW(hDlgItem, getLengthMsg, id, 0) + 1);
     SendMessageW(hDlgItem, getTextMsg, id, (LPARAM) v.data());
     return v.data();
+}
+
+std::wstring getResourceString(HINSTANCE hInstance, UINT stringID) {
+    const wchar_t *str;
+    int stringLength = LoadStringW(hInstance, stringID, (LPWSTR) &str, 0);
+    return {str, str + stringLength};
 }
