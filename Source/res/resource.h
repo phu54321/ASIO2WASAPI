@@ -14,6 +14,8 @@
 #define IDR_CLAP_K70_KEYDOWN                    1101
 #define IDR_CLAP_K70_KEYUP                      1102
 #define IDC_DURATION_IN_MS                      40000
+#define IDC_THROTTLE                            40000
+#define IDC_CLAP_GAIN                           40001
 #define IDC_DEVICE_FRIENDLY_NAME                40001
 #define IDC_LICENSE_TEXT                        40002
 #define IDC_LOGLEVEL                            40003
@@ -27,8 +29,6 @@
 #define IDC_DEVICE_DURATION                     40011
 #define IDC_DEVICE                              40012
 #define IDC_OUTPUT_DEVICE_LIST                  40013
-#define IDC_THROTTLE                            40014
-#define IDC_CLAP_GAIN                           40015
 #define IDB_MOVE_UP                             40016
 #define IDB_MOVE_DOWN                           40017
 #define IDB_OUTPUT_LATENCY_OVERRIDE             40018

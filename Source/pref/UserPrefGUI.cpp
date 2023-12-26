@@ -37,7 +37,7 @@ static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> g_errorLevels
         {spdlog::level::warn,  TEXT("warning")},
         {spdlog::level::info,  TEXT("info")},
         {spdlog::level::debug, TEXT("debug")},
-        {spdlog::level::trace, TEXT("trace")},
+        {spdlog::level::trace, TEXT("trace (VERY VERBOSE)")},
 };
 
 
