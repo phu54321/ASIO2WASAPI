@@ -40,7 +40,7 @@ static INT_PTR CALLBACK DlgUserPrefOutputDeviceProc(HWND hWnd, UINT uMsg, WPARAM
 
             std::vector<std::wstring> candidates;
 
-            candidates.emplace_back(L"(default)");
+            candidates.emplace_back(L"(default device)");
             candidates.emplace_back(listSeparator);
 
             for (const auto &d: devices) {

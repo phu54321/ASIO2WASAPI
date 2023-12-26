@@ -57,7 +57,7 @@ TrgkASIOImpl::TrgkASIOImpl(void *sysRef)
 
     mainlog->info("Will find these {} devices", targetDeviceIdList.size());
     for (int i = 0; i < targetDeviceIdList.size(); i++) {
-        if (targetDeviceIdList[i].empty() || targetDeviceIdList[i] == L"(default)") {
+        if (targetDeviceIdList[i].empty() || targetDeviceIdList[i] == L"(default device)") {
             targetDeviceIdList[i] = defaultDeviceId;
             mainlog->info(L" - Target #{:02d}: default output device {}", i, defaultDeviceId);
         } else {

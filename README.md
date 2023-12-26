@@ -42,7 +42,7 @@ trgkASIO는 가상 ASIO를 쉽게 만들어주는 프로그램입니다. 가상A
 {
   "logLevel": "trace",
   "deviceId": [
-    "(default)",
+    "(default device)",
     "MyAudioDevice",
     "{0.0.0.00000000}.{00000000-0000-0000-0000-000000000000}"
   ],

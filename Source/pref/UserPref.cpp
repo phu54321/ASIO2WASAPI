@@ -28,8 +28,7 @@
 using json = nlohmann::json;
 
 const wchar_t *defaultDevices[] = {
-        L"(default)",
-        L"CABLE Input(VB-Audio Virtual Cable)",
+        L"(default device)"
 };
 
 UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
