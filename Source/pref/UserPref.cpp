@@ -37,7 +37,7 @@ UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
     auto ret = std::make_shared<UserPref>();
     if (!fp) {
         // use default
-        mainlog->info("TrgkASIO.json not found. Using default settings");
+        mainlog->info("trgkASIO.json not found. Using default settings");
         for (const wchar_t *device: defaultDevices) {
             ret->deviceIdList.emplace_back(device);
         }

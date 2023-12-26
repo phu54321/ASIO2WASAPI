@@ -119,7 +119,7 @@ MessageWindowImpl::MessageWindowImpl() {
     HICON hIcon = LoadIcon(g_hInstDLL, MAKEINTRESOURCE(IDI_MAINICON));
 
     if (!RegisterWindowClass(hInstDLL, hIcon)) {
-        throw AppException("Cannot register TrgkASIO Message window");
+        throw AppException("Cannot register trgkASIO Message window");
     }
 
     // Create main thread
@@ -140,7 +140,7 @@ MessageWindowImpl::MessageWindowImpl() {
         }
     }
     if (!_hWnd) {
-        throw AppException("Cannot create TrgkASIO Message window");
+        throw AppException("Cannot create trgkASIO Message window");
     }
 }
 
@@ -157,7 +157,7 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
 
     HWND hWnd = CreateWindow(
             szWndClassName,
-            TEXT("TrgkASIO Message Handler Window"),
+            TEXT("trgkASIO Message Handler Window"),
             0,
             0, 0, 0, 0,
             HWND_MESSAGE,
@@ -168,13 +168,13 @@ void MessageWindowImpl::threadProc(HINSTANCE hInstDLL, HICON hIcon, MessageWindo
 
     if (!hWnd) {
         mainlog->error("Cannot create message handler window");
-        p->_threadException = std::make_exception_ptr(AppException("Cannot create TrgkASIO Message window"));
+        p->_threadException = std::make_exception_ptr(AppException("Cannot create trgkASIO Message window"));
         return;
     }
     SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(p));
     p->_hWnd = hWnd;
 
-    createTrayIcon(hWnd, hIcon, TEXT("TrgkASIO"));
+    createTrayIcon(hWnd, hIcon, TEXT("trgkASIO"));
 
     MSG msg;
     BOOL bret;
@@ -282,7 +282,7 @@ INT_PTR MessageWindowImpl::AboutDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
         case WM_INITDIALOG: {
             auto licenseTextBuffer = loadUserdataResource(g_hInstDLL, MAKEINTRESOURCE(IDR_LICENSE_TEXT));
             std::string licenseTextString{licenseTextBuffer.begin(), licenseTextBuffer.end()};
-            SetDlgItemText(hWnd, IDC_VERSION_TEXT, TEXT("TrgkASIO ") SPRODUCT_VERSION);
+            SetDlgItemText(hWnd, IDC_VERSION_TEXT, TEXT("trgkASIO ") SPRODUCT_VERSION);
             SetDlgItemTextA(hWnd, IDC_LICENSE_TEXT, licenseTextString.c_str());
             return TRUE;
         }

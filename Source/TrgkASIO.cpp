@@ -115,7 +115,7 @@ ASIOBool TrgkASIO::init(void *sysRef) {
         return true;
     } catch (AppException &e) {
         // Swallow here...
-        auto string = fmt::format("TrgkASIOImpl constructor failed: {}", e.what());
+        auto string = fmt::format("trgkASIOImpl constructor failed: {}", e.what());
         mainlog->error(string);
         MessageBoxA((HWND) sysRef, string.c_str(), "Error", MB_OK);
         return false;

@@ -46,7 +46,7 @@ void initMainLog() {
     }
 
     {
-        auto logFileName = homeDirFilePath(TEXT("TrgkASIO.log"));
+        auto logFileName = homeDirFilePath(TEXT("trgkASIO.log"));
         FILE *rf = tfopen(logFileName.c_str(), TEXT("rb"));
         if (rf) {
             fclose(rf);
