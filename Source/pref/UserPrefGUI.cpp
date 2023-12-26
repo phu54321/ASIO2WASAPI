@@ -144,7 +144,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     DestroyWindow(hWnd);
                     break;
 
-                case IDB_DEVICELIST_ADD: {
+                case IDB_ADD: {
                     std::wstring deviceName;
                     if (PromptDeviceName(hInstance, hWnd, &deviceName)) {
                         auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
@@ -153,7 +153,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     break;
                 }
 
-                case IDB_DEVICELIST_REMOVE: {
+                case IDB_REMOVE: {
                     auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                     auto curSel = ListBox_GetCurSel(hOutputDeviceList);
                     if (curSel != LB_ERR) {
@@ -162,7 +162,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     break;
                 }
 
-                case IDB_DEVICELIST_UP: {
+                case IDB_MOVE_UP: {
                     auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                     auto curSel = ListBox_GetCurSel(hOutputDeviceList);
                     if (curSel != LB_ERR && curSel != 0) {
@@ -174,7 +174,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     break;
                 }
 
-                case IDB_DEVICELIST_DOWN: {
+                case IDB_MOVE_DOWN: {
                     auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                     auto curSel = ListBox_GetCurSel(hOutputDeviceList);
                     auto listLen = ListBox_GetCount(hOutputDeviceList);

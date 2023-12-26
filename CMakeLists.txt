@@ -108,6 +108,8 @@ add_executable(test_pref_gui WIN32
         Source/res/resource.rc
         Source/pref/UserPrefGUI.cpp
 
+        Source/WASAPIOutput/iidConstant.cpp
+
         Source/utils/dlgGetText.cpp
         Source/pref/UserPref.cpp
         Source/utils/homeDirFilePath.cpp
@@ -125,3 +127,4 @@ target_include_directories(test_pref_gui PRIVATE
 target_compile_definitions(test_pref_gui PUBLIC
         TRGKASIO_PREFGUI_TEST_MAIN
 )
+target_link_libraries(test_pref_gui PUBLIC Avrt.lib winmm.lib)
