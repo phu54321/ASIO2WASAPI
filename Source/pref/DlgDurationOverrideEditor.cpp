@@ -54,7 +54,7 @@ static bool parseDurationOverrideLine(const std::wstring &line, std::wstring *de
 ////////////////////
 
 struct OutputLatencyEntry {
-    std::wstring deviceName;
+    std::wstring deviceId;
     int duration;
     std::vector<IMMDevicePtr> deviceList;
     std::vector<std::wstring> deviceIdList;
@@ -84,24 +84,12 @@ static INT_PTR CALLBACK DlgPromptOutputOverrideEntry(HWND hWnd, UINT uMsg, WPARA
 
             std::vector<std::wstring> candidates;
 
-            // todo: maybe fix code duplication  w/ dlgoutputdevice.cpp?
-            for (size_t i = 0; i < entryPtr->deviceList.size(); i++) {
-                const auto &friendlyName = entryPtr->friendlyNameList[i];
-                candidates.emplace_back(friendlyName);
-            }
-
-            candidates.push_back(listSeparator);
-
             for (size_t i = 0; i < entryPtr->deviceList.size(); i++) {
                 const auto &deviceId = entryPtr->deviceIdList[i];
-                candidates.emplace_back(deviceId);
+                SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) deviceId.c_str());
             }
 
-            for (const auto &c: candidates) {
-                SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) c.c_str());
-            }
-
-            SetDlgItemTextW(hWnd, IDC_DEVICE, entryPtr->deviceName.c_str());
+            SetDlgItemTextW(hWnd, IDC_DEVICE, entryPtr->deviceId.c_str());
             SetDlgItemInt(hWnd, IDC_EDIT_DURATION, entryPtr->duration, TRUE);
 
             SendMessageW(hWnd, WM_COMMAND, MAKEWPARAM(IDC_DEVICE, CBN_EDITUPDATE), (LPARAM) hDeviceList);
@@ -189,7 +177,7 @@ static INT_PTR CALLBACK DlgPromptOutputOverrideEntry(HWND hWnd, UINT uMsg, WPARA
                     auto entryPtr = (OutputLatencyEntry *) GetWindowLongPtr(hWnd, GWLP_USERDATA);
 
                     auto hDevice = GetDlgItem(hWnd, IDC_DEVICE);
-                    entryPtr->deviceName = getWndText(hDevice);
+                    entryPtr->deviceId = getWndText(hDevice);
                     entryPtr->duration = (int) GetDlgItemInt(hWnd, IDC_EDIT_DURATION, nullptr, TRUE);
                     entryPtr->deviceList.clear();
 
@@ -225,7 +213,7 @@ static BOOL PromptOutputOverrideEntry(HINSTANCE hInstance, HWND hWndParent, std:
             (LPARAM) &entry);
 
     if (ret) {
-        *deviceName = entry.deviceName;
+        *deviceName = entry.deviceId;
         *duration = entry.duration;
     }
 

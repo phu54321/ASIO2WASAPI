@@ -73,7 +73,7 @@ void PreparedState::InitASIOBufferInfo(ASIOBufferInfo *bufferInfos, int infoCoun
 }
 
 bool PreparedState::start() {
-    mainlog->trace("PreparedState::start");
+    mainlog->debug("PreparedState::start");
     if (_runningState) return true; // we are already playing
 
     // make sure the previous play thread exited
@@ -89,7 +89,7 @@ bool PreparedState::start() {
 }
 
 bool PreparedState::stop() {
-    mainlog->trace("PreparedState::stop");
+    mainlog->debug("PreparedState::stop");
     _runningState = nullptr;
     return true;
 }

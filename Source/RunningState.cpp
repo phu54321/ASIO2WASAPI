@@ -163,7 +163,7 @@ void RunningState::threadProc(RunningState *state) {
     TIMECAPS tcaps;
     timeGetDevCaps(&tcaps, sizeof(tcaps));
     timeBeginPeriod(tcaps.wPeriodMin);
-    mainlog->info("timeBeginPeriod({})", tcaps.wPeriodMin);
+    mainlog->debug("timeBeginPeriod({})", tcaps.wPeriodMin);
 
     double lastPollTime = accurateTime();
     double pollInterval = (double) preparedState->_bufferSize / preparedState->_sampleRate;
@@ -247,7 +247,7 @@ void RunningState::threadProc(RunningState *state) {
                 ZoneScopedN("[RunningState::threadProc] _shouldPoll - Polling ASIO data");
                 // Copy data from asio side
                 int currentAsioBufferIndex = preparedState->_bufferIndex;
-                mainlog->debug("[RunningState::threadProc] Writing {} samples from buffer {}", bufferSize,
+                mainlog->trace("[RunningState::threadProc] Writing {} samples from buffer {}", bufferSize,
                                currentAsioBufferIndex);
                 const auto &asioCurrentBuffer = preparedState->_buffers[currentAsioBufferIndex];
                 for (size_t ch = 0; ch < channelCount; ch++) {
@@ -258,7 +258,7 @@ void RunningState::threadProc(RunningState *state) {
                         outputBuffer[ch][i] = sample;
                     }
                 }
-                mainlog->debug("[RunningState::threadProc] Switching to buffer {}", 1 - currentAsioBufferIndex);
+                mainlog->trace("[RunningState::threadProc] Switching to buffer {}", 1 - currentAsioBufferIndex);
                 preparedState->_callbacks->bufferSwitch(1 - currentAsioBufferIndex, ASIOTrue);
                 preparedState->_bufferIndex = 1 - currentAsioBufferIndex;
             }
@@ -304,7 +304,7 @@ void RunningState::threadProc(RunningState *state) {
 
             if (currentTime >= targetTime) {
                 lastPollTime += pollInterval;
-                mainlog->debug("shouldPoll = true");
+                mainlog->trace("shouldPoll = true");
                 shouldPoll = true;
             } else {
                 mainlog->trace("[RunningState::threadProc] Unlock mutex & waiting");
