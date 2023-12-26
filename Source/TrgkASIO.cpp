@@ -233,7 +233,7 @@ ASIOError TrgkASIO::getLatencies(long *_inputLatency, long *_outputLatency) {
 ASIOError TrgkASIO::controlPanel() {
     ShellExecute(
             nullptr, nullptr,
-            L"https://github.com/phu54321/TrgkASIO",
+            L"https://github.com/phu54321/trgkASIO",
             nullptr, nullptr, SW_SHOW);
     return ASE_OK;
 }

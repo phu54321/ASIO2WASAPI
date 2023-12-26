@@ -301,7 +301,7 @@ INT_PTR MessageWindowImpl::AboutDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
             if (id == IDB_GITHUB) {
                 ShellExecute(
                         nullptr, nullptr,
-                        L"https://github.com/phu54321/TrgkASIO",
+                        L"https://github.com/phu54321/trgkASIO",
                         nullptr, nullptr, SW_SHOW);
             }
             return TRUE;
