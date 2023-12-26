@@ -95,4 +95,4 @@ I'm okay with English, so feel free to leave issues even if you don't know Korea
 - FlexASIO: https://github.com/dechamps/FlexASIO/
 - PortAudio: http://www.portaudio.com/
 
-메인 라이선스는 [GPL 2.0](./license.txt) 를 따릅니다.
+메인 라이선스는 [GPL 2.0](./LICENSE.txt) 를 따릅니다.

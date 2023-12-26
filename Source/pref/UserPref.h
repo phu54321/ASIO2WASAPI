@@ -40,6 +40,6 @@ using UserPrefPtr = std::shared_ptr<UserPref>;
 
 UserPrefPtr loadUserPref(LPCTSTR loadRelPath = TEXT("trgkASIO.json"));
 
-void saveUserPref(UserPrefPtr pref, LPCTSTR saveRelPath = TEXT("trgkASIO.json"));
+void saveUserPref(const UserPrefPtr &pref, LPCTSTR saveRelPath = TEXT("trgkASIO.json"));
 
 #endif //TRGKASIO_USERPREF_H

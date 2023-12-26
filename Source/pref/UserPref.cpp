@@ -93,7 +93,7 @@ UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
 }
 
 
-void saveUserPref(UserPrefPtr pref, LPCTSTR saveRelPath) {
+void saveUserPref(const UserPrefPtr &pref, LPCTSTR saveRelPath) {
     FILE *fp = homeDirFOpen(saveRelPath, TEXT("wb"));
     if (!fp) {
         // use default
@@ -143,5 +143,4 @@ void saveUserPref(UserPrefPtr pref, LPCTSTR saveRelPath) {
 
     fputs(j.dump(2).c_str(), fp);
     fclose(fp);
-    return;
 }
