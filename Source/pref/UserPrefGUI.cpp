@@ -223,7 +223,7 @@ HWND createUserPrefEditDialog(HINSTANCE hInstance, HWND hwndParent = nullptr) {
     return CreateDialog(hInstance, MAKEINTRESOURCE(IDD_USERPREF_EDIT), hwndParent, DlgUserPrefEditWndProc);
 }
 
-#ifdef TRGKASIO_PREFGUI_TEST_MAIN
+#ifdef TRGKASIO_PREFGUI_MAIN
 
 #include <objbase.h>
 

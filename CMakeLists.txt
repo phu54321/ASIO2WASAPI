@@ -104,7 +104,7 @@ add_executable(test_main
 )
 
 # gui testing
-add_executable(test_pref_gui WIN32
+add_executable(Configurator WIN32
         Source/res/resource.rc
         Source/pref/UserPrefGUI.cpp
 
@@ -121,10 +121,9 @@ add_executable(test_pref_gui WIN32
         Source/pref/DlgDurationOverrideEditor.cpp
         Source/pref/DlgDurationOverrideEditor.h
 )
-target_include_directories(test_pref_gui PRIVATE
+target_include_directories(Configurator PRIVATE
         Source/include
 )
-target_compile_definitions(test_pref_gui PUBLIC
-        TRGKASIO_PREFGUI_TEST_MAIN
+target_compile_definitions(Configurator PUBLIC
+        TRGKASIO_PREFGUI_MAIN
 )
-target_link_libraries(test_pref_gui PUBLIC Avrt.lib winmm.lib)
