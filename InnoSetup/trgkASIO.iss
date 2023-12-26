@@ -40,7 +40,9 @@ Source: "..\\Build-RelWithDebInfo\\x64\trgkASIO64.dll"; DestDir: "{commonpf64}\\
 Source: "..\\Build-RelWithDebInfo\\trgkASIO.dll"; DestDir: "{commonpf32}\\{#MyAppName}"; Flags: ignoreversion regserver 32bit; Check: not Is64BitInstallMode
 Source: "..\\Build-RelWithDebInfo\\trgkASIO.dll"; DestDir: "{commonpf32}\\{#MyAppName}"; Flags: ignoreversion; Check: Is64BitInstallMode
 Source: "..\\LICENSE.txt"; DestDir: "{autopf}\{#MyAppName}"; Flags: ignoreversion
+Source: "..\\Build-RelWithDebInfo\\Configurator.exe"; DestDir: "{autopf}\{#MyAppName}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+Name: "{group}\trgkASIO Configurator"; Filename: "{autopf}\{#MyAppName}\Configurator.exe"; WorkingDir: "{autopf}"

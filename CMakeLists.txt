@@ -86,6 +86,39 @@ if (TRACY_ENABLE)
     target_link_libraries(trgkASIO PUBLIC Tracy::TracyClient)
 endif ()
 
+# Unit testing
+add_executable(test_main
+        Tests/test_ringbuffer.cpp
+        Tests/test_main.cpp
+)
+
+# gui testing
+if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    add_executable(Configurator WIN32
+            Source/res/resource.rc
+            Source/pref/UserPrefGUI.cpp
+
+            Source/WASAPIOutput/iidConstant.cpp
+
+            Source/utils/w32StringGetter.cpp
+            Source/pref/UserPref.cpp
+            Source/utils/homeDirFilePath.cpp
+            Source/utils/logger.cpp
+            Source/utils/utf8convert.cpp
+            Source/utils/WASAPIUtils.cpp
+            Source/pref/DlgOutputDevice.cpp
+            Source/pref/DlgOutputDevice.h
+            Source/pref/DlgDurationOverrideEditor.cpp
+            Source/pref/DlgDurationOverrideEditor.h
+    )
+    target_include_directories(Configurator PRIVATE
+            Source/include
+    )
+    target_compile_definitions(Configurator PUBLIC
+            TRGKASIO_PREFGUI_MAIN
+    )
+endif ()
+
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     # 64-bit mode
     message("x64 target")
@@ -95,35 +128,3 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/x64"
     )
 endif ()
-
-
-# Unit testing
-add_executable(test_main
-        Tests/test_ringbuffer.cpp
-        Tests/test_main.cpp
-)
-
-# gui testing
-add_executable(Configurator WIN32
-        Source/res/resource.rc
-        Source/pref/UserPrefGUI.cpp
-
-        Source/WASAPIOutput/iidConstant.cpp
-
-        Source/utils/w32StringGetter.cpp
-        Source/pref/UserPref.cpp
-        Source/utils/homeDirFilePath.cpp
-        Source/utils/logger.cpp
-        Source/utils/utf8convert.cpp
-        Source/utils/WASAPIUtils.cpp
-        Source/pref/DlgOutputDevice.cpp
-        Source/pref/DlgOutputDevice.h
-        Source/pref/DlgDurationOverrideEditor.cpp
-        Source/pref/DlgDurationOverrideEditor.h
-)
-target_include_directories(Configurator PRIVATE
-        Source/include
-)
-target_compile_definitions(Configurator PUBLIC
-        TRGKASIO_PREFGUI_MAIN
-)
