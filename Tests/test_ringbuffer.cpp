@@ -32,13 +32,18 @@ TEST_CASE("Ringbuffer push", "[ring_buffer]") {
     }
 
     SECTION("Overflow doesnt work") {
-        int arr[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-        REQUIRE(!rb.push(arr, 8));
+        int arr[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+        REQUIRE(!rb.push(arr, 9));
     };
 
     SECTION("Wrapping overflow works") {
         int arr[7] = {1, 2, 3, 4, 5, 6, 7};
         REQUIRE(rb.push(arr, 7));
+    };
+
+    SECTION("Wrapping overflow works (2)") {
+        int arr[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+        REQUIRE(rb.push(arr, 8));
     };
 }
 
@@ -74,17 +79,17 @@ TEST_CASE("Ringbuffer works", "[ring_buffer]") {
 
     // wrapping push works
     {
-        int arr[7] = {1, 2, 3, 4, 5, 6, 7};
-        REQUIRE(rb.push(arr, 7));
+        int arr[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+        REQUIRE(rb.push(arr, 8));
     }
 
     // wrapping get works
     {
-        int arr[9];
-        int expected[9] = {4, 5, 1, 2, 3, 4, 5, 6, 7};
-        REQUIRE(rb.get(arr, 9));
+        int arr[10];
+        int expected[10] = {4, 5, 1, 2, 3, 4, 5, 6, 7, 8};
+        REQUIRE(rb.get(arr, 10));
         REQUIRE(rb.size() == 0);
         REQUIRE(rb.capacity() == 10);
-        REQUIRE(memcmp(arr, expected, sizeof(int) * 9) == 0);
+        REQUIRE(memcmp(arr, expected, sizeof(int) * 10) == 0);
     }
 }

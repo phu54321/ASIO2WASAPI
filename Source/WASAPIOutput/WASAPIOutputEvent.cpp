@@ -111,8 +111,9 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
 
     {
         auto &rb0 = _ringBufferList[0];
-        mainlog->trace(L"{} pushSamples, rp {} wp {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
-                       _pDeviceId, rb0.rp(), rb0.wp(),
+        mainlog->trace(
+                L"{} pushSamples, readPos {} writePos {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
+                _pDeviceId, rb0.readPos(), rb0.writePos(),
                        rb0.capacity(), _inputBufferSize, _outputBufferSize);
     }
 
@@ -184,7 +185,8 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
     {
         auto &rb0 = _ringBufferList[0];
-        mainlog->debug(L"{} LoadData, rp {} wp {} ringSize {} get {}", _pDeviceId, rb0.rp(), rb0.wp(),
+        mainlog->debug(L"{} LoadData, readPos {} writePos {} ringSize {} get {}", _pDeviceId, rb0.readPos(),
+                       rb0.writePos(),
                        rb0.capacity(), writeBufferSize);
     }
 

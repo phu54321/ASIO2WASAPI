@@ -32,50 +32,48 @@ template<typename T>
 class RingBuffer {
 public:
     RingBuffer(size_t capacity)
-            : _ringBuffer(capacity), _capacity(capacity), _readPos(0), _writePos(0) {}
+            : _ringBuffer(capacity), _capacity(capacity), _readPos(0), _size(0) {}
 
     ~RingBuffer() = default;
 
     [[nodiscard]] size_t capacity() const { return _capacity; }
 
-    [[nodiscard]] size_t size() const {
-        return (_writePos + _capacity - _readPos) % _capacity;
-    }
+    [[nodiscard]] size_t size() const { return _size; }
 
     bool push(const T *input, size_t inputSize) {
         bool write_overflow = false;
 
         auto rp = _readPos;
-        auto &wp = _writePos;
+        auto wp = writePos();
 
         if (rp <= wp) {
-            // case 1: -----rp+++++++++++wp-------
-            if (wp + inputSize < _capacity) {
-                // case 1-1 -----rp+++++++++++wp@@@@@wp--
+            // case 1: -----readPos+++++++++++writePos-------
+            if (wp + inputSize <= _capacity) {
+                // case 1-1 -----readPos+++++++++++wp@@@@@writePos--
                 std::copy(input, input + inputSize, _ringBuffer.data() + wp);
-                wp += inputSize;
+                _size += inputSize;
             } else {
-                // case 1-1 @@wp--rp+++++++++++wp@@@@@@@@
+                // case 1-1 @@wp--readPos+++++++++++writePos@@@@@@@@
                 auto fillToEndSize = _capacity - wp;
                 auto fillFromStartSize = inputSize - fillToEndSize;
-                if (fillFromStartSize >= rp) {
+                if (fillFromStartSize > rp) {
                     write_overflow = true;
                 } else {
                     std::copy(input, input + fillToEndSize, _ringBuffer.data() + wp);
                     std::copy(input + fillToEndSize, input + inputSize, _ringBuffer.data());
-                    wp = fillFromStartSize;
+                    _size += inputSize;
                 }
             }
         } else {
-            // case 2: ++++wp--------------rp++++
-            if (wp + inputSize >= rp) {
+            // case 2: ++++writePos--------------readPos++++
+            if (wp + inputSize > rp) {
                 write_overflow = true;
             } else {
                 memcpy(
                         _ringBuffer.data() + wp,
                         input,
                         inputSize * sizeof(T));
-                wp += inputSize;
+                _size += inputSize;
             }
         }
 
@@ -83,8 +81,7 @@ public:
     }
 
     bool get(T *output, size_t requestedSize) {
-        auto size = (_writePos + _capacity - _readPos) % _capacity;
-        if (size < requestedSize) return false; // Insufficient data
+        if (_size < requestedSize) return false; // Insufficient data
 
         auto bufferData = _ringBuffer.data();
         const T *pIn = bufferData + _readPos;
@@ -97,21 +94,22 @@ public:
             if (pIn == pInWrap) pIn = bufferData;
         }
         _readPos = pIn - bufferData;
+        _size -= requestedSize;
         return true;
     }
 
 
-public:;
+public:
 
-    size_t rp() const { return _readPos; }
+    [[nodiscard]] size_t readPos() const { return _readPos; }
 
-    size_t wp() const { return _writePos; }
+    [[nodiscard]] size_t writePos() const { return (_readPos + _size) % _capacity; }
 
 private:
     std::vector<T> _ringBuffer;
     size_t _capacity;
     size_t _readPos = 0;
-    size_t _writePos = 0;
+    size_t _size = 0;
 };
 
 #endif //TRGKASIO_RINGBUFFER_H

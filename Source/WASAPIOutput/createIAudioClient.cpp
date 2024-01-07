@@ -38,8 +38,8 @@ static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWave
 std::shared_ptr<IAudioClient> createAudioClient(
         UserPrefPtr pref,
         const std::shared_ptr<IMMDevice> &pDevice,
-        WAVEFORMATEX *pWaveFormat,
-        WASAPIMode mode) {
+        WASAPIMode mode,
+        WAVEFORMATEX *pWaveFormat) {
     ZoneScoped;
 
     if (!pDevice || !pWaveFormat) {
@@ -181,13 +181,13 @@ bool FindStreamFormat(
     waveFormat.dwChannelMask = dwChannelMask;
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-    auto pAudioClient = createAudioClient(pref, pDevice, (WAVEFORMATEX *) &waveFormat, mode);
+    auto pAudioClient = createAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
     if (pAudioClient) goto Finish;
 
     //try 24-bit-in-32bit next
     mainlog->debug(TEXT("{} triyng 24bit-in-32bit"), deviceId);
     waveFormat.Samples.wValidBitsPerSample = 24;
-    pAudioClient = createAudioClient(pref, pDevice, (WAVEFORMATEX *) &waveFormat, mode);
+    pAudioClient = createAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
     if (pAudioClient) goto Finish;
 
     //finally, try 16-bit
@@ -196,7 +196,7 @@ bool FindStreamFormat(
     waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
     waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
     waveFormat.Samples.wValidBitsPerSample = waveFormat.Format.wBitsPerSample;
-    pAudioClient = createAudioClient(pref, pDevice, (WAVEFORMATEX *) &waveFormat, mode);
+    pAudioClient = createAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
     if (pAudioClient) goto Finish;
 
     Finish:
