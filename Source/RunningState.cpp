@@ -33,6 +33,7 @@
 
 #include "WASAPIOutput/WASAPIOutputEvent.h"
 #include "utils/accurateTime.h"
+#include "utils/clampSample.h"
 #include <tracy/Tracy.hpp>
 #include "res/resource.h"
 
@@ -92,10 +93,8 @@ RunningState::~RunningState() {
 void RunningState::signalOutputReady() {
     ZoneScoped;
     {
-        mainlog->trace("[RunningState::signalOutputReady] locking mutex");
         std::lock_guard lock(_mutex);
         _isOutputReady = true;
-        mainlog->trace("[RunningState::signalOutputReady] unlocking mutex");
     }
     _notifier.notify_all();
 }
@@ -103,54 +102,18 @@ void RunningState::signalOutputReady() {
 void RunningState::signalStop() {
     ZoneScoped;
     {
-        mainlog->trace("[RunningState::signalStop] locking mutex");
         std::lock_guard lock(_mutex);
         _pollStop = true;
-        mainlog->trace("[RunningState::signalStop] unlocking mutex");
     }
     _notifier.notify_all();
 }
-
-void compress24bitTo32bit(std::vector<std::vector<int32_t>> *outputBuffer) {
-    ZoneScoped;
-
-    const int32_t overflowPreventer = 5;
-    const int32_t compressPadding = (1 << 19) - overflowPreventer;
-    const int32_t compressionThresholdHigh =
-            (1 << 23) - compressPadding - overflowPreventer;
-    const int32_t compressionThresholdLow = -compressionThresholdHigh;
-
-    const auto channelCount = outputBuffer->size();
-    const auto bufferSize = outputBuffer->at(0).size();
-
-    for (size_t ch = 0; ch < channelCount; ch++) {
-        auto &channelBuffer = outputBuffer->at(ch);
-        for (size_t i = 0; i < bufferSize; i++) {
-            auto sample = channelBuffer[i];
-            int32_t o;
-            if (sample > compressionThresholdHigh) {
-                auto overflow = sample - compressionThresholdHigh;
-                o = compressionThresholdHigh + (int32_t) round(
-                        compressPadding * (2 / (1 + exp(-overflow / compressPadding)) - 1));
-            } else if (sample < compressionThresholdLow) {
-                auto overflow = sample - compressionThresholdLow;
-                o = compressionThresholdLow + (int32_t) round(
-                        compressPadding * (2 / (1 + exp(-overflow / compressPadding)) - 1));
-            } else {
-                o = sample;
-            }
-            channelBuffer[i] = (o << 8);
-        }
-    }
-}
-
 
 void RunningState::threadProc(RunningState *state) {
     auto &preparedState = state->_preparedState;
     auto bufferSize = preparedState->_bufferSize;
     auto channelCount = preparedState->_pref->channelCount;
-    std::vector<std::vector<int32_t>> outputBuffer;
-    outputBuffer.resize(preparedState->_pref->channelCount);
+
+    std::vector<std::vector<int32_t>> outputBuffer(preparedState->_pref->channelCount);
     for (auto &buf: outputBuffer) {
         buf.resize(preparedState->_bufferSize);
     }
@@ -240,8 +203,6 @@ void RunningState::threadProc(RunningState *state) {
             mainlog->trace("[RunningState::threadProc] unlock mutex after flag set");
             lock.unlock();
 
-            assert(preparedState);
-
             // Put asio main input.
             {
                 ZoneScopedN("[RunningState::threadProc] _shouldPoll - Polling ASIO data");
@@ -287,7 +248,12 @@ void RunningState::threadProc(RunningState *state) {
             // TODO: add additional processing
 
             // Rescale & compress output
-            compress24bitTo32bit(&outputBuffer);
+            for (auto &channel: outputBuffer) {
+                for (int &sample: channel) {
+                    double normalizedSample = sample / (double) (1 << 23);
+                    sample = (int32_t) (0x7fffffff * clampSample(normalizedSample));
+                }
+            }
 
             // Output
             {
