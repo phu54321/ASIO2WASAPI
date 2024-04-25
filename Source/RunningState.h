@@ -51,11 +51,14 @@ private:
     bool _throttle;
 
     PreparedState *_preparedState;
+
+    // Clock-related variables
+    TracyLockable(std::mutex, _clockMutex);
+    std::condition_variable_any _clockNotifier;
     bool _isOutputReady = true;
     bool _pollStop = false;
 
-    TracyLockable(std::mutex, _mutex);
-    std::condition_variable_any _notifier;
+
     std::thread _pollThread;
 
     KeyboardClapSource _clapSource;

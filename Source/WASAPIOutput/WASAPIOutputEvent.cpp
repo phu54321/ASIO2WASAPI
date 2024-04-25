@@ -41,9 +41,10 @@ WASAPIOutputEvent::WASAPIOutputEvent(
         int sampleRate,
         UINT32 inputBufferSize,
         WASAPIMode mode,
-        int ringBufferSizeMultiplier)
+        int ringBufferSizeMultiplier,
+        std::condition_variable_any &clockNotifier)
         : _pDevice(pDevice), _inputBufferSize(inputBufferSize), _channelNum(pref->channelCount),
-          _sampleRate(sampleRate), _mode(mode), _playedSampleCount(0) {
+          _sampleRate(sampleRate), _mode(mode), _playedSampleCount(0), _clockNotifier(clockNotifier) {
 
     ZoneScoped;
     HRESULT hr;
@@ -185,7 +186,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
     {
         auto &rb0 = _ringBufferList[0];
-        mainlog->debug(L"{} LoadData, readPos {} writePos {} ringSize {} get {}", _pDeviceId, rb0.readPos(),
+        mainlog->trace(L"{} LoadData, readPos {} writePos {} ringSize {} get {}", _pDeviceId, rb0.readPos(),
                        rb0.writePos(),
                        rb0.capacity(), writeBufferSize);
     }
@@ -292,6 +293,7 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
         ZoneScopedN("WASAPIOutputEvent::playThread");
 //        mainlog->trace("WaitForMultipleObjects");
         pDriver->LoadData(pRenderClient);
+        pDriver->_clockNotifier.notify_all();
     }
 
     hr = pAudioClient->Stop(); // Stop playing.

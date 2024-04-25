@@ -42,7 +42,8 @@ public:
             int sampleRate,
             UINT32 inputBufferSize,
             WASAPIMode mode,
-            int ringBufferSizeMultiplier);
+            int ringBufferSizeMultiplier,
+            std::condition_variable_any &clockNotifier);
 
     ~WASAPIOutputEvent();
 
@@ -89,6 +90,8 @@ private:
 
     HANDLE _stopEvent = nullptr;
     HANDLE _runningEvent = nullptr;
+
+    std::condition_variable_any &_clockNotifier;
 };
 
 #endif //TRGKASIO_WASAPIOUTPUTEVENT_H
