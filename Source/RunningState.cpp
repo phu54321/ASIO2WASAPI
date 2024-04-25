@@ -22,6 +22,7 @@
 
 #include "RunningState.h"
 #include "utils/logger.h"
+#include "utils/intervalBlock.h"
 #include "utils/raiiUtils.h"
 #include <spdlog/spdlog.h>
 #include <utility>
@@ -55,7 +56,7 @@ RunningState::RunningState(PreparedState *p)
     for (int i = 0; i < p->_pDeviceList.size(); i++) {
         auto &device = p->_pDeviceList[i];
         auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
-        auto output = std::make_unique<WASAPIOutputEvent>(
+        auto output = std::make_shared<WASAPIOutputEvent>(
                 device,
                 driverSettings,
                 p->_sampleRate,
@@ -71,7 +72,7 @@ RunningState::RunningState(PreparedState *p)
                     1000.0 * p->_bufferSize / p->_sampleRate,
                     output->getOutputBufferSize(),
                     1000.0 * output->getOutputBufferSize() / p->_sampleRate));
-
+            _mainOutput = output;
         }
         _outputList.push_back(std::move(output));
     }
@@ -126,10 +127,17 @@ void RunningState::threadProc(RunningState *state) {
     double lastPollTime = accurateTime();
     double pollInterval = (double) preparedState->_bufferSize / preparedState->_sampleRate;
     bool shouldPoll = true;
-    int currentOutputFrame = 0;
+
+    IntervalBlock ioLatencyLogBlock(1.0);
+    int64_t currentOutputFrame = 0;
 
     while (true) {
         auto currentTime = accurateTime();
+
+        if (ioLatencyLogBlock.due()) {
+            auto ioLatency = currentOutputFrame - state->_mainOutput->playedSampleCount();
+            mainlog->info("[RunningState::threadProc] IO buffer latency: {} frames", ioLatency);
+        }
 
         mainlog->trace("[RunningState::threadProc] Locking mutex");
         std::unique_lock lock(state->_mutex);
