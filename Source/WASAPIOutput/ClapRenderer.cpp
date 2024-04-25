@@ -56,8 +56,7 @@ double ClapRenderer::getMaxClapSoundLength() const {
     return _maxClapSoundLength;
 }
 
-void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int index,
-                          double gain) const {
+void ClapRenderer::render(std::vector<int32_t> *output, int startFrame, int index, double gain) const {
     assert(output);
 
     ZoneScoped;
@@ -70,15 +69,11 @@ void ClapRenderer::render(std::vector<int32_t> *output, double renderTime, doubl
     }
 
     auto &clapSound = _clapSoundList[index];
-    double clapRelTime = (renderTime - clapStartTime);
-    int clapStartSamples = (int) round(clapRelTime * clapSound.sampleRate);
-    mainlog->trace("clapRelTime {}, clapStartSamples {}", clapRelTime, clapStartSamples);
 
-    // Clap hadn't started
     const auto &samples = clapSound.audio;
     int32_t *outP = output->data();
-    for (int i = std::max(0, -clapStartSamples); i < output->size(); i++) {
-        auto inPos = i + clapStartSamples;
+    for (int i = std::max(0, -startFrame); i < output->size(); i++) {
+        auto inPos = i + startFrame;
         if (inPos < 0) continue;
         else if (inPos >= samples.size()) break;
         outP[i] += (int32_t) round(samples[inPos] * gain * (1 << 24));

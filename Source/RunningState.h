@@ -29,6 +29,7 @@
 #include "MessageWindow/MessageWindow.h"
 #include "WASAPIOutput/ClapRenderer.h"
 #include "MessageWindow/KeyDownListener.h"
+#include "inputs/KeyboardClapSource.h"
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -56,8 +57,9 @@ private:
     std::condition_variable_any _notifier;
     std::thread _pollThread;
 
+    KeyboardClapSource _clapSource;
+
     std::vector<WASAPIOutputPtr> _outputList;
-    ClapRenderer _clapRenderer;
     MessageWindow _msgWindow;
     KeyDownListener _keyListener;
 

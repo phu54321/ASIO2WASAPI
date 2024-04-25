@@ -32,7 +32,7 @@ public:
 
     double getMaxClapSoundLength() const;
 
-    void render(std::vector<int32_t> *output, double renderTime, double clapStartTime, int index, double gain) const;
+    void render(std::vector<int32_t> *output, int startFrame, int index, double gain) const;
 
 private:
     std::vector<WaveSound> _clapSoundList;

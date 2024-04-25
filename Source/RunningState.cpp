@@ -41,15 +41,10 @@ using namespace std::chrono_literals;
 
 extern HINSTANCE g_hInstDLL;
 
-const int INDEX_KEYDOWN = 0;
-const int INDEX_KEYUP = 1;
 
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p),
-          _clapRenderer(g_hInstDLL, {
-                          MAKEINTRESOURCE(IDR_CLAP_K70_KEYDOWN),
-                          MAKEINTRESOURCE(IDR_CLAP_K70_KEYUP)
-          }, p->_sampleRate),
+          _clapSource(p->_sampleRate, p->_pref->clapGain),
           _throttle(p->_pref->throttle),
           _keyListener(_throttle) {
     ZoneScoped;
@@ -131,56 +126,10 @@ void RunningState::threadProc(RunningState *state) {
     double lastPollTime = accurateTime();
     double pollInterval = (double) preparedState->_bufferSize / preparedState->_sampleRate;
     bool shouldPoll = true;
-
-    const int clapQueueSize = 256;
-    const int maxConcurrentKeyCount = 16;
-    struct KeyDownPair {
-        double time = 0;
-        int eventId[maxConcurrentKeyCount + 1];  // +1 so that last element is always -1
-
-        KeyDownPair() {
-            std::fill(eventId, eventId + maxConcurrentKeyCount, -1);
-        }
-    };
-
-    // Fixed-size looping queue
-    // This is intentionally designed to overflow after keyDownQueueSize
-    // to prevent additional allocation
-    std::vector<KeyDownPair> clapQueue(clapQueueSize);
-    int clapQueueIndex = 0;
+    int currentOutputFrame = 0;
 
     while (true) {
         auto currentTime = accurateTime();
-
-        // TODO: put this block somewhere appropriate
-        {
-            ZoneScopedN("RunningState::threadProc - Keydown queue update");
-            // Update keydown queue for clap sound
-            auto pressCount = state->_keyListener.pollKeyEventCount();
-            if (pressCount.keyDown > 0 || pressCount.keyUp) {
-                auto &entry = clapQueue[clapQueueIndex];
-                int j = 0;
-
-                entry.time = currentTime;
-                for (int i = 0; i < pressCount.keyDown && j < maxConcurrentKeyCount; i++) {
-                    entry.eventId[j++] = INDEX_KEYDOWN;
-                }
-                for (int i = 0; i < pressCount.keyUp && j < maxConcurrentKeyCount; i++) {
-                    entry.eventId[j++] = INDEX_KEYUP;
-                }
-                entry.eventId[j] = -1;
-                clapQueueIndex = (clapQueueIndex + 1) % clapQueueSize;
-            }
-
-            // GC old keydown events
-            double cutoffTime = currentTime - state->_clapRenderer.getMaxClapSoundLength();
-            for (int i = 0; i < clapQueueSize; i++) {
-                if (clapQueue[i].eventId[0] >= 0 && clapQueue[i].time < cutoffTime) {
-                    clapQueue[i].eventId[0] = -1;
-                }
-            }
-        }
-
 
         mainlog->trace("[RunningState::threadProc] Locking mutex");
         std::unique_lock lock(state->_mutex);
@@ -224,25 +173,9 @@ void RunningState::threadProc(RunningState *state) {
                 preparedState->_bufferIndex = 1 - currentAsioBufferIndex;
             }
 
-            // Add clap sound
+            // Add additional sources
             {
-                ZoneScopedN("[RunningState::threadProc] _shouldPoll - Add clap sound");
-                for (int i = 0; i < clapQueueSize; i++) {
-                    auto &pair = clapQueue[i];
-                    if (pair.eventId[0] >= 0) {
-                        for (size_t ch = 0; ch < channelCount; ch++) {
-                            for (auto eventId: pair.eventId) {
-                                if (eventId == -1) break;
-                                state->_clapRenderer.render(
-                                        &outputBuffer[ch],
-                                        currentTime,
-                                        pair.time,
-                                        eventId,
-                                        preparedState->_pref->clapGain);
-                            }
-                        }
-                    }
-                }
+                state->_clapSource.render(currentOutputFrame, &outputBuffer);
             }
 
             // TODO: add additional processing
@@ -262,6 +195,8 @@ void RunningState::threadProc(RunningState *state) {
                     output->pushSamples(outputBuffer);
                 }
             }
+
+            currentOutputFrame += bufferSize;
         } else {
             auto targetTime = lastPollTime + pollInterval;
 
