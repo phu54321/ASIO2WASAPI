@@ -198,8 +198,10 @@ ASIOError TrgkASIO::getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) 
 }
 
 ASIOError TrgkASIO::outputReady() {
-    if (!_pImpl) return ASE_NotPresent;
-    return _pImpl->outputReady();
+    if (_pImpl) {
+        _pImpl->outputReady();
+    }
+    return ASE_OK;
 }
 
 ////////

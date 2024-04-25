@@ -177,7 +177,7 @@ void RunningState::threadProc(RunningState *state) {
                     }
                 }
                 mainlog->trace("[RunningState::threadProc] Switching to buffer {}", 1 - currentAsioBufferIndex);
-                preparedState->_callbacks->bufferSwitch(1 - currentAsioBufferIndex, ASIOTrue);
+                preparedState->bufferSwitch(1 - currentAsioBufferIndex, ASIOTrue);
                 preparedState->_bufferIndex = 1 - currentAsioBufferIndex;
             }
 
@@ -205,6 +205,7 @@ void RunningState::threadProc(RunningState *state) {
             }
 
             currentOutputFrame += bufferSize;
+            preparedState->_samplePosition = currentOutputFrame;
         } else {
             auto targetTime = lastPollTime + pollInterval;
 

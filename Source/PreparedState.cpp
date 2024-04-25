@@ -101,3 +101,15 @@ void PreparedState::outputReady() {
 void PreparedState::requestReset() {
     _callbacks->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
 }
+
+static void getNanoSeconds(ASIOTimeStamp *ts) {
+    double nanoSeconds = accurateTime() * 1'000'000'000.;
+    const double twoRaisedTo32 = 4294967296.;
+    ts->hi = (unsigned long) (nanoSeconds / twoRaisedTo32);
+    ts->lo = (unsigned long) (nanoSeconds - (ts->hi * twoRaisedTo32));
+}
+
+void PreparedState::bufferSwitch(long doubleBufferIndex, ASIOBool directProcess) {
+    getNanoSeconds(&_theSystemTime);
+    _callbacks->bufferSwitch(doubleBufferIndex, directProcess);
+}
