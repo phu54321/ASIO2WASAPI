@@ -30,6 +30,7 @@
 #include "WASAPIOutput/ClapRenderer.h"
 #include "MessageWindow/KeyDownListener.h"
 #include "inputs/KeyboardClapSource.h"
+#include "WASAPIOutput/WASAPIOutputEvent.h"
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -59,6 +60,7 @@ private:
 
     KeyboardClapSource _clapSource;
 
+    std::shared_ptr<WASAPIOutputEvent> _mainOutput;
     std::vector<WASAPIOutputPtr> _outputList;
     MessageWindow _msgWindow;
     KeyDownListener _keyListener;

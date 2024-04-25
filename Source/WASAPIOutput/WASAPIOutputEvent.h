@@ -54,6 +54,11 @@ public:
 
     UINT32 getOutputBufferSize() const { return _outputBufferSize; }
 
+    /**
+     * Check how many 'real' samples were pushed to the WASAPI output sink.
+     */
+    int64_t playedSampleCount() const { return _playedSampleCount; }
+
 private:
     void start();
 
@@ -69,6 +74,7 @@ private:
     int _sampleRate;
     UINT32 _inputBufferSize;
     UINT32 _outputBufferSize;
+    uint64_t _playedSampleCount;
 
     WASAPIMode _mode;
 

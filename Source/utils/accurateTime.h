@@ -19,8 +19,6 @@
 #ifndef TRGKASIO_ACCURATETIME_H
 #define TRGKASIO_ACCURATETIME_H
 
-void initAccurateTime();
-
 double accurateTime();
 
 #endif //TRGKASIO_ACCURATETIME_H

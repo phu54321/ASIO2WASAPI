@@ -106,7 +106,6 @@ ASIOBool TrgkASIO::init(void *sysRef) {
 
     initMainLog();
     mainlog->info("Starting trgkASIO");
-    initAccurateTime();
     enableHighPrecisionTimer();
 
     if (_pImpl) return true;

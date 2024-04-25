@@ -19,14 +19,20 @@
 #include <Windows.h>
 #include "accurateTime.h"
 
-static LARGE_INTEGER qpcFreq;
+static LARGE_INTEGER g_qpcFreq;
 
 void initAccurateTime() {
-    QueryPerformanceFrequency(&qpcFreq);
+    static bool inited = false;
+    if (!inited) {
+        QueryPerformanceFrequency(&g_qpcFreq);
+        inited = true;
+    }
 }
 
 double accurateTime() {
+    initAccurateTime();
+
     LARGE_INTEGER counter;
     QueryPerformanceCounter(&counter);
-    return (double) counter.QuadPart / (double) qpcFreq.QuadPart;
+    return (double) counter.QuadPart / (double) g_qpcFreq.QuadPart;
 }

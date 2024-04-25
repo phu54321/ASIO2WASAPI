@@ -73,7 +73,8 @@ add_library(trgkASIO SHARED
         Source/pref/DlgOutputDevice.h
         Source/pref/DlgDurationOverrideEditor.cpp
         Source/pref/DlgDurationOverrideEditor.h
-        Source/utils/clampSample.cpp Source/utils/clampSample.h Source/inputs/KeyboardClapSource.cpp)
+        Source/utils/clampSample.cpp Source/utils/clampSample.h Source/inputs/KeyboardClapSource.cpp
+        )
 
 target_compile_definitions(trgkASIO PRIVATE UNICODE _UNICODE)
 target_include_directories(trgkASIO PRIVATE

@@ -43,7 +43,7 @@ WASAPIOutputEvent::WASAPIOutputEvent(
         WASAPIMode mode,
         int ringBufferSizeMultiplier)
         : _pDevice(pDevice), _inputBufferSize(inputBufferSize), _channelNum(pref->channelCount),
-          _sampleRate(sampleRate), _mode(mode) {
+          _sampleRate(sampleRate), _mode(mode), _playedSampleCount(0) {
 
     ZoneScoped;
     HRESULT hr;
@@ -220,6 +220,8 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
                     }
                 }
             }
+
+            _playedSampleCount += writeBufferSize;
         }
     }
 
@@ -232,6 +234,7 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
         ZoneScopedN("ReleaseBuffer");
         pRenderClient->ReleaseBuffer(writeBufferSize, 0);
     }
+
     return S_OK;
 }
 
