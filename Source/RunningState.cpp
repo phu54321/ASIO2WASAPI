@@ -46,8 +46,7 @@ extern HINSTANCE g_hInstDLL;
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p),
           _clapSource(p->_sampleRate, p->_pref->clapGain),
-          _throttle(p->_pref->throttle),
-          _keyListener(_throttle) {
+          _keyListener(p->_pref->throttle) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -62,7 +61,7 @@ RunningState::RunningState(PreparedState *p)
                 p->_sampleRate,
                 p->_bufferSize,
                 mode,
-                _throttle ? 4 : 2);
+                2);
 
         if (i == 0) {
             _msgWindow.setTrayTooltip(fmt::format(
@@ -88,6 +87,7 @@ RunningState::~RunningState() {
 
 void RunningState::signalOutputReady() {
     ZoneScoped;
+    mainlog->debug("signalOutputReady");
     {
         std::lock_guard lock(_mutex);
         _isOutputReady = true;
@@ -124,41 +124,23 @@ void RunningState::threadProc(RunningState *state) {
     timeBeginPeriod(tcaps.wPeriodMin);
     mainlog->debug("timeBeginPeriod({})", tcaps.wPeriodMin);
 
-    double lastPollTime = accurateTime();
-    double pollInterval = (double) preparedState->_bufferSize / preparedState->_sampleRate;
-    bool shouldPoll = true;
-
     IntervalBlock ioLatencyLogBlock(1.0);
     int64_t currentOutputFrame = 0;
 
     while (true) {
-        auto currentTime = accurateTime();
+        mainlog->trace("[RunningState::threadProc] Locking mutex");
+        std::unique_lock lock(state->_mutex);
+        state->_notifier.wait(lock);
 
         if (ioLatencyLogBlock.due()) {
             auto ioLatency = currentOutputFrame - state->_mainOutput->playedSampleCount();
             mainlog->info("[RunningState::threadProc] IO buffer latency: {} frames", ioLatency);
         }
 
-        mainlog->trace("[RunningState::threadProc] Locking mutex");
-        std::unique_lock lock(state->_mutex);
-
         // Timer event
         if (state->_pollStop) break;
-        else if (shouldPoll) {
-            ZoneScopedN("[RunningState::threadProc] _shouldPoll");
-            // Wait for output
-            if (!state->_isOutputReady) {
-                mainlog->trace("[RunningState::threadProc] unlock mutex d/t notifier wait");
-                state->_notifier.wait(lock, [state]() {
-                    return state->_isOutputReady || state->_pollStop;
-                });
-                mainlog->trace("[RunningState::threadProc] re-lock mutex after notifier wait");
-            }
-            if (state->_pollStop) break;
-            state->_isOutputReady = false;
-            shouldPoll = false;
-            mainlog->trace("[RunningState::threadProc] unlock mutex after flag set");
-            lock.unlock();
+        else if (state->_isOutputReady) {
+            ZoneScopedN("[RunningState::threadProc] _isOutputReady");
 
             // Put asio main input.
             {
@@ -177,7 +159,7 @@ void RunningState::threadProc(RunningState *state) {
                     }
                 }
                 mainlog->trace("[RunningState::threadProc] Switching to buffer {}", 1 - currentAsioBufferIndex);
-                preparedState->_callbacks->bufferSwitch(1 - currentAsioBufferIndex, ASIOTrue);
+                preparedState->bufferSwitch(1 - currentAsioBufferIndex, ASIOTrue);
                 preparedState->_bufferIndex = 1 - currentAsioBufferIndex;
             }
 
@@ -205,32 +187,6 @@ void RunningState::threadProc(RunningState *state) {
             }
 
             currentOutputFrame += bufferSize;
-        } else {
-            auto targetTime = lastPollTime + pollInterval;
-
-            mainlog->trace("checkPollTimer: current {:.6f} last {:.6f} interval {:.6f}",
-                           currentTime, lastPollTime, pollInterval);
-
-            if (currentTime >= targetTime) {
-                lastPollTime += pollInterval;
-                mainlog->trace("shouldPoll = true");
-                shouldPoll = true;
-            } else {
-                mainlog->trace("[RunningState::threadProc] Unlock mutex & waiting");
-                lock.unlock();
-
-                double remainingTime = targetTime - currentTime;
-                Sleep((int) floor(remainingTime / tcaps.wPeriodMin) * tcaps.wPeriodMin);
-
-                while (true) {
-                    currentTime = accurateTime();
-                    if (currentTime >= targetTime) break;
-                    if (state->_throttle) Sleep(1);
-                    else Sleep(0);
-                }
-
-                lock.lock();
-            }
         }
     }
 

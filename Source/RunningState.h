@@ -48,15 +48,14 @@ public:
 private:
     void signalStop();
 
-    bool _throttle;
-
     PreparedState *_preparedState;
-    bool _isOutputReady = true;
-    bool _pollStop = false;
+
+    std::thread _pollThread;
 
     TracyLockable(std::mutex, _mutex);
     std::condition_variable_any _notifier;
-    std::thread _pollThread;
+    bool _isOutputReady = true;
+    bool _pollStop = false;
 
     KeyboardClapSource _clapSource;
 

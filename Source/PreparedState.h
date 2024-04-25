@@ -58,6 +58,8 @@ public:
 
     void requestReset();
 
+    void bufferSwitch(long doubleBufferIndex, ASIOBool directProcess);
+
     ASIOError getSamplePosition(ASIOSamples *sPos, ASIOTimeStamp *tStamp) const;
 
 private:
