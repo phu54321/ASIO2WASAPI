@@ -286,6 +286,8 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
     if (FAILED(hr))
         return -1;
 
+    pDriver->_started = true;
+
     HANDLE events[2] = {pDriver->_stopEvent, hEvent.get()};
     while ((WaitForMultipleObjects(2, events, FALSE, INFINITE)) ==
            (WAIT_OBJECT_0 + 1)) { // the hEvent is signalled and m_hStopPlayThreadEvent is not
@@ -295,6 +297,8 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
         pDriver->LoadData(pRenderClient);
         pDriver->_clockNotifier.notify_all();
     }
+
+    pDriver->_started = false;
 
     hr = pAudioClient->Stop(); // Stop playing.
     if (FAILED(hr))

@@ -53,6 +53,8 @@ public:
      */
     void pushSamples(const std::vector<std::vector<int32_t>> &buffer);
 
+    bool started() override { return _started; }
+
     UINT32 getOutputBufferSize() const { return _outputBufferSize; }
 
     /**
@@ -64,6 +66,8 @@ private:
     void start();
 
     void stop();
+
+    bool _started = false;
 
     static DWORD WINAPI playThread(LPVOID pThis);
 

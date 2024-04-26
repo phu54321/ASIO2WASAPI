@@ -138,6 +138,7 @@ void RunningState::threadProc(RunningState *state) {
 
     IntervalBlock ioLatencyLogBlock(1);
     int64_t currentOutputFrame = 0;
+    std::unique_lock lock(state->_clockMutex);
 
     while (true) {
         if (ioLatencyLogBlock.due()) {
@@ -189,30 +190,39 @@ void RunningState::threadProc(RunningState *state) {
                 preparedState->_bufferIndex = 1 - currentAsioBufferIndex;
             }
 
-            // Add additional sources
-            {
+            // Check if output should be discarded.
+            bool allOutputStarted = true;
+            for (auto &output: state->_outputList) {
+                if (!output->started()) allOutputStarted = false;
+            }
+
+            if (allOutputStarted) {
+                // Add additional sources
                 state->_clapSource.render(currentOutputFrame, &outputBuffer);
-            }
 
-            // TODO: add additional processing
+                // TODO: add additional processing
 
-            // Rescale & compress output
-            for (auto &channel: outputBuffer) {
-                for (int &sample: channel) {
-                    double normalizedSample = sample / (double) (1 << 23);
-                    sample = (int32_t) (0x7fffffff * clampSample(normalizedSample));
+                // Rescale & compress output
+                for (auto &channel: outputBuffer) {
+                    for (int &sample: channel) {
+                        double normalizedSample = sample / (double) (1 << 23);
+                        sample = (int32_t) (0x7fffffff * clampSample(normalizedSample));
+                    }
                 }
+
+                // Output
+                {
+                    ZoneScopedN("[RunningState::threadProc] _shouldPoll - Pushing outputs");
+                    for (auto &output: state->_outputList) {
+                        output->pushSamples(outputBuffer);
+                    }
+                }
+                currentOutputFrame += bufferSize;
+                preparedState->_samplePosition = currentOutputFrame;
             }
 
-            // Output
-            {
-                ZoneScopedN("[RunningState::threadProc] _shouldPoll - Pushing outputs");
-                for (auto &output: state->_outputList) {
-                    output->pushSamples(outputBuffer);
-                }
-            }
-            currentOutputFrame += bufferSize;
-            preparedState->_samplePosition = currentOutputFrame;
+            auto ioLatency = currentOutputFrame - state->_mainOutput->playedSampleCount();
+            mainlog->trace("[RunningState::threadProc] IO buffer latency: {} frames", ioLatency);
         }
 
         // Timekeeping
@@ -228,7 +238,9 @@ void RunningState::threadProc(RunningState *state) {
                 shouldPoll = true;
             }
         }
+        Sleep(0);
     }
 
-    timeEndPeriod(tcaps.wPeriodMin);
+    timeEndPeriod(tcaps
+                          .wPeriodMin);
 }

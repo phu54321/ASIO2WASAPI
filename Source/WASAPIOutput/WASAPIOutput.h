@@ -33,6 +33,12 @@ public:
      * @param buffer `sample = buffer[channel][sampleIndex]`
      */
     virtual void pushSamples(const std::vector<std::vector<int32_t>> &buffer) = 0;
+
+    /**
+     * Check if output sink has finished initializing and is ready to accept the data.
+     * @return
+     */
+    virtual bool started() = 0;
 };
 
 using WASAPIOutputPtr = std::shared_ptr<WASAPIOutput>;
