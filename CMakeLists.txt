@@ -74,7 +74,7 @@ add_library(trgkASIO SHARED
         Source/pref/DlgDurationOverrideEditor.cpp
         Source/pref/DlgDurationOverrideEditor.h
         Source/utils/clampSample.cpp Source/utils/clampSample.h Source/inputs/KeyboardClapSource.cpp
-        Source/utils/synchronizedClock.h)
+        Source/utils/SynchronizedClock.h)
 
 target_compile_definitions(trgkASIO PRIVATE UNICODE _UNICODE)
 target_include_directories(trgkASIO PRIVATE

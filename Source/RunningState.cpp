@@ -65,7 +65,7 @@ RunningState::RunningState(PreparedState *p)
                 p->_bufferSize,
                 mode,
                 2,
-                _clockNotifier);  // (*)
+                _clock);  // (*)
 
         if (i == 0) {
             _msgWindow.setTrayTooltip(fmt::format(
@@ -97,19 +97,19 @@ RunningState::~RunningState() {
 void RunningState::signalOutputReady() {
     ZoneScoped;
     {
-        std::lock_guard lock(_clockMutex);
+        std::unique_lock lock(_clockStateLock);
         _isOutputReady = true;
     }
-    _clockNotifier.notify_all();
+    _clock.tick();
 }
 
 void RunningState::signalStop() {
     ZoneScoped;
     {
-        std::lock_guard lock(_clockMutex);
+        std::unique_lock lock(_clockStateLock);
         _pollStop = true;
     }
-    _clockNotifier.notify_all();
+    _clock.tick();
 }
 
 void RunningState::threadProc(RunningState *state) {
@@ -138,17 +138,17 @@ void RunningState::threadProc(RunningState *state) {
 
     IntervalBlock ioLatencyLogBlock(1);
     int64_t currentOutputFrame = 0;
-    std::unique_lock lock(state->_clockMutex);
-
     while (true) {
         if (ioLatencyLogBlock.due()) {
             auto ioLatency = currentOutputFrame - state->_mainOutput->playedSampleCount();
             mainlog->info("[RunningState::threadProc] IO buffer latency: {} frames", ioLatency);
         }
 
-        std::unique_lock lock(state->_clockMutex);
+        std::unique_lock lock(state->_clockStateLock);
         if (!shouldPoll && !state->_pollStop) {
-            state->_clockNotifier.wait_for(lock, std::chrono::milliseconds(10));
+            lock.unlock();
+            state->_clock.wait_for(1);
+            lock.lock();
         }
 
         // Timer event
@@ -157,16 +157,19 @@ void RunningState::threadProc(RunningState *state) {
             ZoneScopedN("[RunningState::threadProc] _shouldPoll");
             // Wait for output
             if (!state->_isOutputReady) {
-                mainlog->trace("[RunningState::threadProc] unlock mutex d/t notifier wait");
-                state->_clockNotifier.wait(lock, [state]() {
-                    return state->_isOutputReady || state->_pollStop;
-                });
-                mainlog->trace("[RunningState::threadProc] re-lock mutex after notifier wait");
+                mainlog->trace("[RunningState::threadProc] unlock _mutex d/t notifier wait");
+                while (true) {
+                    lock.unlock();
+                    state->_clock.wait_for(1);
+                    if (state->_isOutputReady || state->_pollStop) break;
+                    lock.lock();
+                }
+                mainlog->trace("[RunningState::threadProc] re-lock _mutex after notifier wait");
             }
             if (state->_pollStop) break;
             state->_isOutputReady = false;
             shouldPoll = false;
-            mainlog->trace("[RunningState::threadProc] unlock mutex after flag set");
+            mainlog->trace("[RunningState::threadProc] unlock _mutex after flag set");
             lock.unlock();
 
             // Put asio main input.

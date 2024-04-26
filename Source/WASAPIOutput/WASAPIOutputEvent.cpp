@@ -42,9 +42,9 @@ WASAPIOutputEvent::WASAPIOutputEvent(
         UINT32 inputBufferSize,
         WASAPIMode mode,
         int ringBufferSizeMultiplier,
-        std::condition_variable_any &clockNotifier)
+        SynchronizedClock &clock)
         : _pDevice(pDevice), _inputBufferSize(inputBufferSize), _channelNum(pref->channelCount),
-          _sampleRate(sampleRate), _mode(mode), _playedSampleCount(0), _clockNotifier(clockNotifier) {
+          _sampleRate(sampleRate), _mode(mode), _playedSampleCount(0), _clock(clock) {
 
     ZoneScoped;
     HRESULT hr;
@@ -115,7 +115,7 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
         mainlog->trace(
                 L"{} pushSamples, readPos {} writePos {} _ringBufferSize {} _inputBufferSize {}, _outputBufferSize {}",
                 _pDeviceId, rb0.readPos(), rb0.writePos(),
-                       rb0.capacity(), _inputBufferSize, _outputBufferSize);
+                rb0.capacity(), _inputBufferSize, _outputBufferSize);
     }
 
     {
@@ -147,7 +147,7 @@ void WASAPIOutputEvent::pushSamples(const std::vector<std::vector<int32_t>> &buf
         }
     }
 
-    // Logging may take long, so do this outside of the mutex
+    // Logging may take long, so do this outside of the _mutex
     if (write_overflow) {
         mainlog->warn(L"{} [++++++++++] Write overflow!", _pDeviceId);
         return;
@@ -224,6 +224,8 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
 
             _playedSampleCount += writeBufferSize;
         }
+
+        pRenderClient->ReleaseBuffer(writeBufferSize, 0);
     }
 
     // mainlog->warn may take long, so this logging should be done outside _ringBufferMutex lock.
@@ -231,10 +233,6 @@ HRESULT WASAPIOutputEvent::LoadData(const std::shared_ptr<IAudioRenderClient> &p
         mainlog->warn(L"{} [----------] Skipped pushing to wasapi", _pDeviceId);
     }
 
-    {
-        ZoneScopedN("ReleaseBuffer");
-        pRenderClient->ReleaseBuffer(writeBufferSize, 0);
-    }
 
     return S_OK;
 }
@@ -295,7 +293,7 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
         ZoneScopedN("WASAPIOutputEvent::playThread");
 //        mainlog->trace("WaitForMultipleObjects");
         pDriver->LoadData(pRenderClient);
-        pDriver->_clockNotifier.notify_all();
+        pDriver->_clock.tick();
     }
 
     pDriver->_started = false;

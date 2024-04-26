@@ -31,6 +31,7 @@
 #include "MessageWindow/KeyDownListener.h"
 #include "inputs/KeyboardClapSource.h"
 #include "WASAPIOutput/WASAPIOutputEvent.h"
+#include "utils/SynchronizedClock.h"
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -53,8 +54,8 @@ private:
     PreparedState *_preparedState;
 
     // Clock-related variables
-    TracyLockable(std::mutex, _clockMutex);
-    std::condition_variable_any _clockNotifier;
+    SynchronizedClock _clock;
+    std::mutex _clockStateLock;
     bool _isOutputReady = true;
     bool _pollStop = false;
 

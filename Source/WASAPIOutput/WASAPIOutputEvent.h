@@ -33,6 +33,7 @@
 #include <tracy/Tracy.hpp>
 #include "../utils/RingBuffer.h"
 #include "createIAudioClient.h"
+#include "../utils/SynchronizedClock.h"
 
 class WASAPIOutputEvent : public WASAPIOutput {
 public:
@@ -43,7 +44,7 @@ public:
             UINT32 inputBufferSize,
             WASAPIMode mode,
             int ringBufferSizeMultiplier,
-            std::condition_variable_any &clockNotifier);
+            SynchronizedClock &clock);
 
     ~WASAPIOutputEvent();
 
@@ -95,7 +96,7 @@ private:
     HANDLE _stopEvent = nullptr;
     HANDLE _runningEvent = nullptr;
 
-    std::condition_variable_any &_clockNotifier;
+    SynchronizedClock &_clock;
 };
 
 #endif //TRGKASIO_WASAPIOUTPUTEVENT_H
