@@ -125,12 +125,16 @@ ASIOBool TrgkASIO::init(void *sysRef) {
 
 ASIOError TrgkASIO::getSampleRate(ASIOSampleRate *sampleRate) {
     if (!_pImpl) return ASE_NotPresent;
-    return _pImpl->getSampleRate(sampleRate);
+    auto ret = _pImpl->getSampleRate(sampleRate);
+    mainlog->debug(L"getSampleRate: {:.1f}", *sampleRate);
+    return ret;
 }
 
 ASIOError TrgkASIO::canSampleRate(ASIOSampleRate sampleRate) {
     if (!_pImpl) return ASE_NotPresent;
-    return _pImpl->canSampleRate(sampleRate);
+    auto ret = _pImpl->canSampleRate(sampleRate);
+    mainlog->debug(L"camSampleRate: {:.1f} - {}", sampleRate, ret);
+    return ret;
 }
 
 ASIOError TrgkASIO::setSampleRate(ASIOSampleRate sampleRate) {
@@ -169,7 +173,10 @@ ASIOError TrgkASIO::createBuffers(
 
     ZoneScoped;
 
-    if (!_pImpl) return ASE_NotPresent;
+    if (!_pImpl) {
+        mainlog->debug("createBuffers: ASE_NotPresent");
+        return ASE_NotPresent;
+    }
     return _pImpl->createBuffers(bufferInfos, numChannels, bufferSize, callbacks);
 }
 

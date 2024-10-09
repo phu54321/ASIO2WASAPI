@@ -203,6 +203,8 @@ ASIOError TrgkASIOImpl::createBuffers(
 
     ZoneScoped;
 
+    mainlog->debug("createBuffers: numChannels {}, bufferSize {}", numChannels, bufferSize);
+
     // Check parameters
     if (!callbacks) return ASE_InvalidParameter;
     if (numChannels < 0 || numChannels > _pref->channelCount) return ASE_InvalidParameter;
