@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "trgkASIO"
-#define MyAppVersion "24.4.26.1316"
+#define MyAppVersion "24.10.27.1020"
 #define MyAppPublisher "Park Hyunwoo"
 #define MyAppURL "https://github.com/phu54321"
 #define clsid "{{E3226090-473D-4CC9-8360-E123EB9EF847}}"
