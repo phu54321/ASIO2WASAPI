@@ -57,7 +57,8 @@ KeyEventCount KeyDownListener::pollKeyEventCount() {
 ////
 
 
-void KeyDownListener::_tickNotifierCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
+void CALLBACK KeyDownListener::_tickNotifierCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1,
+                                                     DWORD_PTR dw2) {
     auto listener = reinterpret_cast<KeyDownListener *>(dwUser);
     // In case of CPU overuse, multiple _tickNotifierCallback calls can overlap.
     // Gracefully terminate overlapping calls

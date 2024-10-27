@@ -57,7 +57,7 @@ void SynchronizedClock::wait_for(int ms) {
     }
 }
 
-static void _tickClockCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
+static void CALLBACK _tickClockCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     auto clock = reinterpret_cast<SynchronizedClock *>(dwUser);
     clock->tick();
 }

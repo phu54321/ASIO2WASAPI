@@ -37,7 +37,8 @@ public:
     KeyEventCount pollKeyEventCount();
 
 private:
-    static void _tickNotifierCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
+    static void
+    CALLBACK _tickNotifierCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
 
     UINT _timerID;
     UINT _wPeriodMin;
