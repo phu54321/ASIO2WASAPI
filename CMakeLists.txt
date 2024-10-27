@@ -82,17 +82,20 @@ target_include_directories(trgkASIO PRIVATE
         Source/lib/ASIOSDK/common
         Source/include
         Source/tracy/public
-)
+        )
 target_link_libraries(trgkASIO PUBLIC Avrt.lib winmm.lib)
 if (TRACY_ENABLE)
     target_link_libraries(trgkASIO PUBLIC Tracy::TracyClient)
 endif ()
 
+add_custom_target(BuildAll)
+add_dependencies(BuildAll trgkASIO)
+
 # Unit testing
 add_executable(test_main
         Tests/test_ringbuffer.cpp
         Tests/test_main.cpp
-)
+        )
 
 # gui testing
 if (CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -118,7 +121,8 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 4)
     )
     target_compile_definitions(Configurator PUBLIC
             TRGKASIO_PREFGUI_MAIN
-    )
+            )
+    add_dependencies(BuildAll Configurator)
 endif ()
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)

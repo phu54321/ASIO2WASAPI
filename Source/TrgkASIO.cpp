@@ -239,6 +239,7 @@ ASIOError TrgkASIO::getLatencies(long *_inputLatency, long *_outputLatency) {
 }
 
 ASIOError TrgkASIO::controlPanel() {
+    // Open configurator application
     ShellExecute(
             nullptr, nullptr,
             L"https://github.com/phu54321/trgkASIO",
