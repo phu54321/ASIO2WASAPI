@@ -24,6 +24,7 @@
 #include "utils/logger.h"
 #include "utils/intervalBlock.h"
 #include "utils/raiiUtils.h"
+#include "utils/EventPerSecondCounter.h"
 #include <spdlog/spdlog.h>
 #include <utility>
 #include <cassert>
@@ -134,21 +135,19 @@ void RunningState::threadProc(RunningState *state) {
     double pollInterval = (double) preparedState->_bufferSize / preparedState->_sampleRate;
     bool shouldPoll = true;
 
-    IntervalBlock intervalLogBlock(1);
+    IntervalBlock intervalLogBlock(10);
+    EventPerSecondCounter mainLoopCounter{L"[RunningState::threadProc] main loop", 10};
+    EventPerSecondCounter pollInputCounter{L"[RunningState::threadProc] ASIO input polling", 10};
     int64_t currentOutputFrame = 0;
-    int tickPerSecond = 0;
 
     auto timerID = timeTickClockTimer(tcaps.wPeriodMin, &state->_clock);
 
     while (true) {
-        tickPerSecond++;
-
         if (intervalLogBlock.due()) {
             auto ioLatency = currentOutputFrame - state->_mainOutput->playedSampleCount();
-            mainlog->info("[RunningState::threadProc] IO buffer latency: {} frames, polling per second: {}", ioLatency,
-                          tickPerSecond);
-            tickPerSecond = 0;
+            mainlog->info("[RunningState::threadProc] IO buffer latency: {} frames", ioLatency);
         }
+        mainLoopCounter.tick();
 
         std::unique_lock lock(state->_clockStateLock);
         if (!shouldPoll && !state->_pollStop) {
@@ -161,6 +160,8 @@ void RunningState::threadProc(RunningState *state) {
         if (state->_pollStop) break;
         else if (shouldPoll) {
             ZoneScopedN("[RunningState::threadProc] _shouldPoll");
+            pollInputCounter.tick();
+
             // Wait for output
             if (!state->_isOutputReady) {
                 mainlog->trace("[RunningState::threadProc] unlock _mutex d/t notifier wait");

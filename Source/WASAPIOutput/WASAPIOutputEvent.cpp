@@ -32,6 +32,7 @@
 #include "../utils/raiiUtils.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
+#include "../utils/EventPerSecondCounter.h"
 #include <tracy/Tracy.hpp>
 
 
@@ -287,11 +288,15 @@ DWORD WINAPI WASAPIOutputEvent::playThread(LPVOID pThis) {
     pDriver->_started = true;
 
     HANDLE events[2] = {pDriver->_stopEvent, hEvent.get()};
+    EventPerSecondCounter audioOutputCounter{
+            L"[WASAPIOutputEvent::playThread] Audio output callback to " + pDriver->_pDeviceId, 10};
+
     while ((WaitForMultipleObjects(2, events, FALSE, INFINITE)) ==
            (WAIT_OBJECT_0 + 1)) { // the hEvent is signalled and m_hStopPlayThreadEvent is not
         // Grab the next empty buffer from the audio _pDevice.
         ZoneScopedN("WASAPIOutputEvent::playThread");
 //        mainlog->trace("WaitForMultipleObjects");
+        audioOutputCounter.tick();
         pDriver->LoadData(pRenderClient);
         pDriver->_clock.tick();
     }
