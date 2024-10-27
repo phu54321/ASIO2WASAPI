@@ -112,6 +112,11 @@ void RunningState::signalStop() {
     _clock.tick();
 }
 
+void tickClockCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
+    auto clock = reinterpret_cast<SynchronizedClock *>(dwUser);
+    clock->tick();
+}
+
 void RunningState::threadProc(RunningState *state) {
     auto &preparedState = state->_preparedState;
     auto bufferSize = preparedState->_bufferSize;
@@ -122,8 +127,8 @@ void RunningState::threadProc(RunningState *state) {
         buf.resize(preparedState->_bufferSize);
     }
 
-    // Ask MMCSS to temporarily boost the runThread priority
-    // to reduce the possibility of glitches while we play.
+// Ask MMCSS to temporarily boost the runThread priority
+// to reduce the possibility of glitches while we play.
     DWORD taskIndex = 0;
     AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
 
@@ -136,12 +141,21 @@ void RunningState::threadProc(RunningState *state) {
     double pollInterval = (double) preparedState->_bufferSize / preparedState->_sampleRate;
     bool shouldPoll = true;
 
-    IntervalBlock ioLatencyLogBlock(1);
+    IntervalBlock intervalLogBlock(1);
     int64_t currentOutputFrame = 0;
+    int tickPerSecond = 0;
+
+    auto timerID = timeSetEvent(1, tcaps.wPeriodMin, tickClockCallback, (DWORD_PTR) &state->_clock,
+                                TIME_PERIODIC | TIME_KILL_SYNCHRONOUS);
+
     while (true) {
-        if (ioLatencyLogBlock.due()) {
+        tickPerSecond++;
+
+        if (intervalLogBlock.due()) {
             auto ioLatency = currentOutputFrame - state->_mainOutput->playedSampleCount();
-            mainlog->info("[RunningState::threadProc] IO buffer latency: {} frames", ioLatency);
+            mainlog->info("[RunningState::threadProc] IO buffer latency: {} frames, polling per second: {}", ioLatency,
+                          tickPerSecond);
+            tickPerSecond = 0;
         }
 
         std::unique_lock lock(state->_clockStateLock);
@@ -244,6 +258,7 @@ void RunningState::threadProc(RunningState *state) {
         Sleep(0);
     }
 
+    timeKillEvent(timerID);
     timeEndPeriod(tcaps
                           .wPeriodMin);
 }
