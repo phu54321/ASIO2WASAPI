@@ -20,7 +20,8 @@
 #define TRGKASIO_KEYDOWNLISTENER_H
 
 #include <thread>
-#include <atomic>
+#include <Windows.h>
+#include "../utils/SynchronizedClock.h"
 
 struct KeyEventCount {
     int keyDown;
@@ -29,20 +30,25 @@ struct KeyEventCount {
 
 class KeyDownListener {
 public:
-    explicit KeyDownListener(bool cpuThrottle = true);
+    KeyDownListener();
 
     ~KeyDownListener();
 
     KeyEventCount pollKeyEventCount();
 
 private:
-    static void threadProc(KeyDownListener *p);
+    static void _tickNotifierCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
 
-    const bool _cpuThrottle;
-    std::thread _thread;
-    volatile bool _killThread = false;
-    std::atomic<int> _keyDownCount{0};
-    std::atomic<int> _keyUpCount{0};
+    UINT _timerID;
+    UINT _wPeriodMin;
+    std::mutex _tickMutex;
+
+    bool _keyPressed[256] = {false};
+    bool _initialRun = true;
+
+    std::mutex _keyCountMutex;
+    int _keyDownCount{0};
+    int _keyUpCount{0};
 };
 
 #endif //TRGKASIO_KEYDOWNLISTENER_H

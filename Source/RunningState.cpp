@@ -45,9 +45,7 @@ extern HINSTANCE g_hInstDLL;
 
 RunningState::RunningState(PreparedState *p)
         : _preparedState(p),
-          _clapSource(p->_sampleRate, p->_pref->clapGain),
-          _throttle(p->_pref->throttle),
-          _keyListener(_throttle) {
+          _clapSource(p->_sampleRate, p->_pref->clapGain) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -112,11 +110,6 @@ void RunningState::signalStop() {
     _clock.tick();
 }
 
-void tickClockCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
-    auto clock = reinterpret_cast<SynchronizedClock *>(dwUser);
-    clock->tick();
-}
-
 void RunningState::threadProc(RunningState *state) {
     auto &preparedState = state->_preparedState;
     auto bufferSize = preparedState->_bufferSize;
@@ -145,8 +138,7 @@ void RunningState::threadProc(RunningState *state) {
     int64_t currentOutputFrame = 0;
     int tickPerSecond = 0;
 
-    auto timerID = timeSetEvent(1, tcaps.wPeriodMin, tickClockCallback, (DWORD_PTR) &state->_clock,
-                                TIME_PERIODIC | TIME_KILL_SYNCHRONOUS);
+    auto timerID = timeTickClockTimer(tcaps.wPeriodMin, &state->_clock);
 
     while (true) {
         tickPerSecond++;
@@ -259,6 +251,5 @@ void RunningState::threadProc(RunningState *state) {
     }
 
     timeKillEvent(timerID);
-    timeEndPeriod(tcaps
-                          .wPeriodMin);
+    timeEndPeriod(tcaps.wPeriodMin);
 }

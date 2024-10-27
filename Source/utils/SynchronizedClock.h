@@ -26,6 +26,8 @@
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <Windows.h>
+#include <mmsystem.h>
 
 class SynchronizedClock {
 public:
@@ -33,28 +35,16 @@ public:
 
     ~SynchronizedClock() = default;
 
-    void tick() {
-        {
-            std::unique_lock lock(_mutex);
-            _counter++;
-        }
-        _notifier.notify_one();
-    }
+    void tick();
 
-    void wait_for(int ms) {
-        std::unique_lock lock(_mutex);
-        if (_counter > 0) {
-            _counter--;
-        } else {
-            _notifier.wait_for(lock, std::chrono::milliseconds(ms), [this]() { return _counter > 0; });
-            _counter--;
-        }
-    }
+    void wait_for(int ms);
 
 private:
     int _counter = 0;
     std::mutex _mutex;
     std::condition_variable _notifier;
 };
+
+MMRESULT timeTickClockTimer(UINT wPeriodMin, SynchronizedClock *clock);
 
 #endif //TRGKASIO_SYNCHRONIZEDCLOCK_H

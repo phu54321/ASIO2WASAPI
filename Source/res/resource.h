@@ -14,7 +14,6 @@
 #define IDR_CLAP_K70_KEYDOWN                    1101
 #define IDR_CLAP_K70_KEYUP                      1102
 #define IDC_DURATION_IN_MS                      40000
-#define IDC_THROTTLE                            40000
 #define IDS_MENU                                40000
 #define IDC_CLAP_GAIN                           40001
 #define IDC_DEVICE_FRIENDLY_NAME                40001

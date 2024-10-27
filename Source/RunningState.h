@@ -49,8 +49,6 @@ public:
 private:
     void signalStop();
 
-    bool _throttle;
-
     PreparedState *_preparedState;
 
     // Clock-related variables

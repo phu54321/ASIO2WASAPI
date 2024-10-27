@@ -56,9 +56,6 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
             SetDlgItemInt(hWnd, IDC_CHANNEL_COUNT, pref->channelCount, FALSE);
             SetDlgItemInt(hWnd, IDC_CLAP_GAIN, (int) round(pref->clapGain * 100), FALSE);
 
-            auto hThrottleCheckbox = GetDlgItem(hWnd, IDC_THROTTLE);
-            Button_SetCheck(hThrottleCheckbox, pref->throttle ? BST_CHECKED : BST_UNCHECKED);
-
             auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
             for (int i = 0; i < g_errorLevels.size(); i++) {
                 const auto &p = g_errorLevels[i];
@@ -109,10 +106,6 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                         if (clapGain < 0) clapGain = 0;
                         if (clapGain > 1) clapGain = 1;
                         pref->clapGain = clapGain;
-
-                        auto hThrottleCheckbox = GetDlgItem(hWnd, IDC_THROTTLE);
-                        auto checked = Button_GetCheck(hThrottleCheckbox);
-                        pref->throttle = (checked == BST_CHECKED);
 
                         auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
                         auto errorLevelSel = ComboBox_GetCurSel(hLogLevel);

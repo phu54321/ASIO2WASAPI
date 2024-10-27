@@ -49,7 +49,6 @@ UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
 
         ret->channelCount = j.value("channelCount", 2);
         ret->clapGain = j.value("clapGain", 0.);
-        ret->throttle = j.value("throttle", true);
 
         // Note:: Declare default log level on logger.cpp
         auto logLevel = j.value("logLevel", "");
@@ -103,7 +102,6 @@ void saveUserPref(const UserPrefPtr &pref, LPCTSTR saveRelPath) {
     json j;
     j["channelCount"] = pref->channelCount;
     j["clapGain"] = pref->clapGain;
-    j["throttle"] = pref->throttle;
 
     switch (pref->logLevel) {
         case spdlog::level::trace:

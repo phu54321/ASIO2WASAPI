@@ -20,22 +20,92 @@
 #include "../utils/logger.h"
 #include <Windows.h>
 #include <vector>
+#include <mmsystem.h>
 
-KeyDownListener::KeyDownListener(bool cpuThrottle) : _thread(threadProc, this), _cpuThrottle(cpuThrottle) {}
+static int normalizeKey(int vKey);
+
+static bool isValidKey(unsigned char vkCode);
+
+KeyDownListener::KeyDownListener() {
+    TIMECAPS tcaps;
+    timeGetDevCaps(&tcaps, sizeof(tcaps));
+    _wPeriodMin = tcaps.wPeriodMin;
+    timeBeginPeriod(_wPeriodMin);
+
+    // Incur 1000hz polling rate
+    _timerID = timeSetEvent(1, _wPeriodMin, _tickNotifierCallback, reinterpret_cast<DWORD_PTR>(this),
+                            TIME_PERIODIC | TIME_KILL_SYNCHRONOUS);
+}
 
 KeyDownListener::~KeyDownListener() {
-    _killThread = true;
-    _thread.join();
+    timeKillEvent(_timerID);
+    timeEndPeriod(_wPeriodMin);
 }
 
 KeyEventCount KeyDownListener::pollKeyEventCount() {
+    std::lock_guard lock{_keyCountMutex};
+
     KeyEventCount kc = {0};
-    kc.keyDown = _keyDownCount.exchange(0);
-    kc.keyUp = _keyUpCount.exchange(0);
+    kc.keyDown = _keyDownCount;
+    kc.keyUp = _keyUpCount;
+
+    _keyDownCount = 0;
+    _keyUpCount = 0;
     return kc;
 }
 
 ////
+
+
+void KeyDownListener::_tickNotifierCallback(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
+    auto listener = reinterpret_cast<KeyDownListener *>(dwUser);
+    // In case of CPU overuse, multiple _tickNotifierCallback calls can overlap.
+    // Gracefully terminate overlapping calls
+    if (!listener->_tickMutex.try_lock()) return;
+
+    std::lock_guard guard{listener->_tickMutex, std::adopt_lock};
+    /// Rationale of using GetAsyncKeyState
+    /// 1. Raw Input API - Games frequently utilizes them, and getting multiple
+    ///   raw input api concurrently on a game process is quite hard to get reliably.
+    /// 2. Keybaord Hooks - Raw Input API interferes with WH_KEYBOARD_LL things when
+    ///   the hook were held in the same process, so while dll can capture keystroke from
+    ///   any other application, it cannot get one from itself.
+    /// 3. GetKeyboardState - Interferes with message queue of the thread. This only works if
+    ///   WM_KEYDOWN like messages are sent to the current message queue. This also interferes
+    ///   with raw input API
+    /// So while seemingly not-so-efficient and slow, looping all keys through GetAsyncKeyState
+    /// is the most reliable way to get keyboard states
+    auto initialRun = listener->_initialRun;
+    auto newKeyDownCount = 0;
+    auto newKeyUpCount = 0;
+
+    for (int vKey = 0; vKey < 256; vKey++) {
+        auto normalizedVK = normalizeKey(vKey);
+        if (!isValidKey(normalizedVK)) continue;
+
+        int state = GetAsyncKeyState(vKey) & 0x8000;
+        if (state) {
+            if (!listener->_keyPressed[vKey]) {
+                listener->_keyPressed[vKey] = true;
+                if (!initialRun) newKeyDownCount++;
+            }
+        } else {
+            if (listener->_keyPressed[vKey]) {
+                listener->_keyPressed[vKey] = false;
+                if (!initialRun) newKeyUpCount++;
+            }
+        }
+    }
+
+    {
+        std::lock_guard keyCountLock{listener->_keyCountMutex};
+        listener->_keyUpCount += newKeyUpCount;
+        listener->_keyDownCount += newKeyDownCount;
+    }
+    listener->_initialRun = false;
+}
+
+//////
 
 
 static int normalizeKey(int vKey) {
@@ -128,44 +198,3 @@ static bool isValidKey(unsigned char vkCode) {
     }
 }
 
-
-void KeyDownListener::threadProc(KeyDownListener *p) {
-    bool _keyPressed[256] = {false};
-    bool initialRun = true;
-
-    while (!p->_killThread) {
-//        mainlog->debug("KeyDownListener threadProc loop");
-
-        /// Rationale of using GetAsyncKeyState
-        /// 1. Raw Input API - Games frequently utilizes them, and getting multiple
-        ///   raw input api concurrently on a game process is quite hard to get reliably.
-        /// 2. Keybaord Hooks - Raw Input API interferes with WH_KEYBOARD_LL things when
-        ///   the hook were held in the same process, so while dll can capture keystroke from
-        ///   any other application, it cannot get one from itself.
-        /// 3. GetKeyboardState - Interferes with message queue of the thread. This only works if
-        ///   WM_KEYDOWN like messages are sent to the current message queue. This also interferes
-        ///   with raw input API
-        /// So while seemingly not-so-efficient and slow, looping all keys through GetAsyncKeyState
-        /// is the most reliable way to get keyboard states
-        for (int vKey = 0; vKey < 256; vKey++) {
-            auto normalizedVK = normalizeKey(vKey);
-            if (!isValidKey(normalizedVK)) continue;
-
-            int state = GetAsyncKeyState(vKey) & 0x8000;
-            if (state) {
-                if (!_keyPressed[vKey]) {
-                    _keyPressed[vKey] = true;
-                    if (!initialRun) p->_keyDownCount++;
-                }
-            } else {
-                if (_keyPressed[vKey]) {
-                    _keyPressed[vKey] = false;
-                    if (!initialRun) p->_keyUpCount++;
-                }
-            }
-        }
-        initialRun = false;
-        if (p->_cpuThrottle) Sleep(1);
-        else Sleep(0);
-    }
-}

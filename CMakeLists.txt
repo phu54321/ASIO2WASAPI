@@ -49,6 +49,10 @@ add_library(trgkASIO SHARED
         Source/utils/accurateTime.cpp
         Source/utils/hexdump.cpp
         Source/utils/ResourceLoad.cpp
+        Source/utils/WaveLoad.cpp
+        Source/utils/w32StringGetter.cpp
+        Source/utils/SynchronizedClock.cpp
+        Source/utils/clampSample.cpp
 
         Source/MessageWindow/MessageWindow.cpp
         Source/MessageWindow/TrayHandler.cpp
@@ -56,25 +60,22 @@ add_library(trgkASIO SHARED
 
         Source/pref/UserPref.cpp
         Source/pref/UserPrefGUI.cpp
+        Source/pref/DlgDurationOverrideEditor.cpp
+        Source/pref/DlgOutputDevice.cpp
+
+        Source/inputs/KeyboardClapSource.cpp
+
         Source/TrgkASIO.cpp
         Source/TrgkASIOImpl.cpp
         Source/PreparedState.cpp
         Source/RunningState.cpp
         Source/WASAPIOutput/ClapRenderer.cpp
         Source/WASAPIOutput/WASAPIOutputEvent.cpp
-
-        Source/res/resource.rc
-        Source/TrgkASIO.def
         Source/WASAPIOutput/iidConstant.cpp
         Source/WASAPIOutput/createIAudioClient.cpp
-        Source/utils/WaveLoad.cpp
-        Source/utils/w32StringGetter.cpp
-        Source/pref/DlgOutputDevice.cpp
-        Source/pref/DlgOutputDevice.h
-        Source/pref/DlgDurationOverrideEditor.cpp
-        Source/pref/DlgDurationOverrideEditor.h
-        Source/utils/clampSample.cpp Source/utils/clampSample.h Source/inputs/KeyboardClapSource.cpp
-        Source/utils/SynchronizedClock.h)
+
+        Source/res/resource.rc
+        Source/TrgkASIO.def)
 
 target_compile_definitions(trgkASIO PRIVATE UNICODE _UNICODE)
 target_include_directories(trgkASIO PRIVATE
