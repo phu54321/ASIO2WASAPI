@@ -85,8 +85,8 @@ static INT_PTR CALLBACK DlgPromptOutputOverrideEntry(HWND hWnd, UINT uMsg, WPARA
             std::vector<std::wstring> candidates;
 
             for (size_t i = 0; i < entryPtr->deviceList.size(); i++) {
-                const auto &deviceId = entryPtr->deviceIdList[i];
-                SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) deviceId.c_str());
+                const auto &deviceFriendlyName = entryPtr->friendlyNameList[i];
+                SendMessageW(hDeviceList, CB_ADDSTRING, 0, (LPARAM) deviceFriendlyName.c_str());
             }
 
             SetDlgItemTextW(hWnd, IDC_DEVICE, entryPtr->deviceId.c_str());

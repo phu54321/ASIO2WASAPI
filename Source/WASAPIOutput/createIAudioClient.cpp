@@ -54,6 +54,7 @@ std::shared_ptr<IAudioClient> createAudioClient(
 
     HRESULT hr;
     auto deviceId = getDeviceId(pDevice);
+    auto deviceFriendlyName = getDeviceFriendlyName(pDevice);
 
     IAudioClient *pAudioClient_ = nullptr;
     hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void **) &pAudioClient_);
@@ -79,6 +80,9 @@ std::shared_ptr<IAudioClient> createAudioClient(
         const auto &durationOverride = pref->durationOverride;
 
         auto it = durationOverride.find(deviceId);
+        if (it == durationOverride.end()) {
+            it = durationOverride.find(deviceFriendlyName);
+        }
         if (it != durationOverride.end()) {
             bufferDuration = it->second;
         } else {
