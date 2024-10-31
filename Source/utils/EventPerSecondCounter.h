@@ -31,9 +31,9 @@
 
 class EventPerSecondCounter {
 public:
-    const int logMinimumCount = 10;
+    const int logMinimumCount = 5000;
 
-    EventPerSecondCounter(std::wstring label, double logInterval = 1.0) : _label(std::move(label)),
+    EventPerSecondCounter(std::wstring label, double logInterval = 5.0) : _label(std::move(label)),
                                                                           _logInterval(logInterval) {
         _lastTickTime = _tickStart = accurateTime();
     }
@@ -47,6 +47,7 @@ public:
 
         if (_tickDurations.size() >= logMinimumCount && now - _tickStart >= _logInterval) {
             double avgTickDuration = (now - _tickStart) / _tickDurations.size();
+
             auto last1PercentSize = _tickDurations.size() / 100.0;
             auto last1PercentSizeInt = int(last1PercentSize);
             double last1PercentSizeFractional = last1PercentSize - last1PercentSizeInt;
@@ -55,9 +56,22 @@ public:
             auto last1PercentDuration =
                     *(_tickDurations.begin() + last1PercentSizeInt) * (1 - last1PercentSizeFractional) +
                     *(_tickDurations.begin() + last1PercentSizeInt + 1);
-            mainlog->info(L"{} avg {:.1f}PS, low1% {:.1f}PS", _label, 1 / avgTickDuration, 1 / last1PercentDuration);
+
+            auto last01PercentSize = _tickDurations.size() / 1000.0;
+            auto last01PercentSizeInt = int(last01PercentSize);
+            double last01PercentSizeFractional = last01PercentSize - last01PercentSizeInt;
+            std::nth_element(_tickDurations.begin(), _tickDurations.begin() + last01PercentSizeInt,
+                             _tickDurations.end(),
+                             std::greater{});
+            auto last01PercentDuration =
+                    *(_tickDurations.begin() + last01PercentSizeInt) * (1 - last01PercentSizeFractional) +
+                    *(_tickDurations.begin() + last01PercentSizeInt + 1);
+
+            mainlog->info(L"{} avg {:.1f}PS, low 1p {:.1f}PS 0.1p {:.1f}PS", _label, 1 / avgTickDuration,
+                          1 / last1PercentDuration, 1 / last01PercentDuration);
 
             _tickStart = now;
+            _tickDurations.clear();
         }
     }
 
