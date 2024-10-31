@@ -69,7 +69,7 @@ add_library(trgkASIO SHARED
         Source/TrgkASIOImpl.cpp
         Source/PreparedState.cpp
         Source/RunningState.cpp
-        Source/WASAPIOutput/ClapRenderer.cpp
+        Source/inputs/ClapRenderer.cpp
         Source/WASAPIOutput/WASAPIOutputEvent.cpp
         Source/WASAPIOutput/iidConstant.cpp
         Source/WASAPIOutput/createIAudioClient.cpp

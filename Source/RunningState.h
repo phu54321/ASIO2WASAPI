@@ -27,7 +27,7 @@
 #include <Windows.h>
 #include "PreparedState.h"
 #include "MessageWindow/MessageWindow.h"
-#include "WASAPIOutput/ClapRenderer.h"
+#include "inputs/ClapRenderer.h"
 #include "MessageWindow/KeyDownListener.h"
 #include "inputs/KeyboardClapSource.h"
 #include "WASAPIOutput/WASAPIOutputEvent.h"
@@ -60,7 +60,7 @@ private:
 
     std::thread _pollThread;
 
-    KeyboardClapSource _clapSource;
+    std::vector<std::shared_ptr<AudioSource>> _sources;
 
     std::shared_ptr<WASAPIOutputEvent> _mainOutput;
     std::vector<WASAPIOutputPtr> _outputList;

@@ -68,8 +68,6 @@ void KeyboardClapSource::render(int64_t currentFrame, std::vector<std::vector<in
     _pollKeys(currentFrame);
 
     int channelCount = outputBuffer->size();
-    int bufferSize = outputBuffer->at(0).size();
-    double currentTime = accurateTime();
 
     ZoneScopedN("[RunningState::threadProc] _shouldPoll - Add clap sound");
     for (int i = 0; i < clapQueueSize; i++) {

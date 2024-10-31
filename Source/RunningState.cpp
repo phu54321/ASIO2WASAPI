@@ -45,8 +45,7 @@ extern HINSTANCE g_hInstDLL;
 
 
 RunningState::RunningState(PreparedState *p)
-        : _preparedState(p),
-          _clapSource(p->_sampleRate, p->_pref->clapGain) {
+        : _preparedState(p) {
     ZoneScoped;
     std::shared_ptr<WASAPIOutputEvent> mainOutput;
 
@@ -79,6 +78,12 @@ RunningState::RunningState(PreparedState *p)
         _outputList.push_back(std::move(output));
     }
 
+    // Add sources
+    if (driverSettings->clapGain > 0) {
+        _sources.push_back(std::make_shared<KeyboardClapSource>(p->_sampleRate, driverSettings->clapGain));
+    }
+
+
     _pollThread = std::thread(RunningState::threadProc, this);
 }
 
@@ -87,8 +92,14 @@ RunningState::~RunningState() {
     signalStop();
     _pollThread.join();
 
-    // (*) Since we're passing a reference to _clockNotifier to all _pDeviceList,
+
+    // (*) Since we're passing a reference to _clockNotifier to all output devices
     // they must be cleared explicitly on the destructor before _clockNotifier is destructed.
+
+    // Clear input devices
+    _sources.clear();
+
+    // Clear output devices
     _outputList.clear();
     _mainOutput = nullptr;
 }
@@ -208,7 +219,9 @@ void RunningState::threadProc(RunningState *state) {
 
             if (allOutputStarted) {
                 // Add additional sources
-                state->_clapSource.render(currentOutputFrame, &outputBuffer);
+                for(auto& source: state->_sources) {
+                    source->render(currentOutputFrame, &outputBuffer);
+                }
 
                 // TODO: add additional processing
 

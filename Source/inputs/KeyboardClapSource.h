@@ -25,15 +25,16 @@
 
 #include <vector>
 #include "../MessageWindow/KeyDownListener.h"
-#include "../WASAPIOutput/ClapRenderer.h"
+#include "ClapRenderer.h"
+#include "./AudioSource.h"
 
-class KeyboardClapSource {
+class KeyboardClapSource: public AudioSource {
 public:
     KeyboardClapSource(int sampleRate, double clapGain);
 
-    ~KeyboardClapSource() = default;
+    ~KeyboardClapSource() override = default;
 
-    void KeyboardClapSource::render(int64_t currentFrame, std::vector<std::vector<int32_t>> *outputBuffer);
+    void render(int64_t currentFrame, std::vector<std::vector<int32_t>> *outputBuffer) override;
 
 private:
     static const int clapQueueSize = 256;
