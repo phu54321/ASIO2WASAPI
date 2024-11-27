@@ -40,19 +40,21 @@ public:
     void render(int64_t currentFrame, std::vector<std::vector<int32_t>> *outputBuffer) override;
 
 private:
+    void _feedResampledData(int ch, double *input, UINT32 size);
+
     IMMDevicePtr _pDevice;
     std::wstring _pDeviceId;
     std::wstring _prevOutputDeviceId;
 
     std::shared_ptr<IAudioCaptureClient> _pAudioCaptureClient;
     std::shared_ptr<IAudioClient> _pAudioClient;
-    std::vector<int32_t> _tempBuffer;
+    std::vector<double> _tempBuffer;
     int _sampleRate;
     int _channelCount;
-//    WAVEFORMATEX* _pwfx = nullptr;
+    WAVEFORMATEX *_pwfx = nullptr;
     UINT32 _bufferSize;
-    std::vector<r8b::CDSPResampler24> _resamplers;
-    std::vector<RingBuffer<int32_t>> _audioBuffer;
+    std::vector<std::unique_ptr<r8b::CDSPResampler24>> _resamplers;
+    std::vector<RingBuffer<double>> _audioBuffer;
 };
 
 

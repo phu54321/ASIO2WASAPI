@@ -43,15 +43,15 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
     }
     _pAudioClient = make_autorelease(pAudioClient_);
 
-//    hr = _pAudioClient->GetMixFormat(&_pwfx);
-//    if (FAILED(hr)) {
-//        throw AppException("GetMixFormat failed");
-//    }
+    hr = _pAudioClient->GetMixFormat(&_pwfx);
+    if (FAILED(hr)) {
+        throw AppException("GetMixFormat failed");
+    }
 
     WAVEFORMATEXTENSIBLE waveFormat = {0};
     waveFormat.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     waveFormat.Format.nChannels = channelCount;
-    waveFormat.Format.nSamplesPerSec = sampleRate;
+    waveFormat.Format.nSamplesPerSec = _pwfx->nSamplesPerSec;
     waveFormat.Format.wBitsPerSample = 32;
     waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
     waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
@@ -59,6 +59,8 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
     waveFormat.Samples.wValidBitsPerSample = waveFormat.Format.wBitsPerSample;
     waveFormat.dwChannelMask = (1 << channelCount) - 1;
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+
+    CoTaskMemFree(_pwfx);
 
     hr = _pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_SHARED,
@@ -71,7 +73,6 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
     if (FAILED(hr)) {
         mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->Initialize failed: 0x{:08X}", _pDeviceId,
                        (uint32_t) hr);
-//        CoTaskMemFree(_pwfx);
         throw AppException("IsFormatSupported failed");
     }
     _pAudioClient->GetBufferSize(&_bufferSize);
@@ -85,14 +86,17 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
     if (FAILED(hr)) {
         mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->GetService failed: 0x{:08X}", _pDeviceId,
                        (uint32_t) hr);
-//        CoTaskMemFree(_pwfx);
         throw AppException("GetService failed");
     }
     _pAudioCaptureClient = make_autorelease(pCaptureClient_);
 
+    mainlog->info(L"{} WASAPIOutputLoopbackSource resample: {} -> {}", _pDeviceId, waveFormat.Format.nSamplesPerSec,
+                  _sampleRate);
     for (int ch = 0; ch < _channelCount; ch++) {
         _audioBuffer.emplace_back((_bufferSize + 1024) * 2);
-//        _resamplers.emplace_back(_pwfx->nSamplesPerSec,_sampleRate, _bufferSize);
+        _resamplers.push_back(
+                std::make_unique<r8b::CDSPResampler24>(waveFormat.Format.nSamplesPerSec, _sampleRate,
+                                                       (int) _bufferSize));
     }
 
     if (interceptDefaultOutput) {
@@ -106,9 +110,23 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
 
 WASAPIOutputLoopbackSource::~WASAPIOutputLoopbackSource() {
     _pAudioClient->Stop();
-//    CoTaskMemFree(_pwfx);
     if (!_prevOutputDeviceId.empty()) {
         setDefaultOutputDeviceId(_prevOutputDeviceId);
+    }
+}
+
+void WASAPIOutputLoopbackSource::_feedResampledData(int ch, double *input, UINT32 size) {
+    while (size > 0) {
+        auto packetSize = std::min(size, _bufferSize);
+        double *outputSamples;
+        auto outputLength = _resamplers[ch]->process(input, packetSize, outputSamples);
+        if (!_audioBuffer[ch].push(outputSamples, outputLength)) {
+            mainlog->debug(
+                    L"{} WASAPIOutputLoopbackSource::render: ringbuffer[{}] overflow - capacity {}, size {}, new {}",
+                    _pDeviceId, ch, _audioBuffer[0].capacity(), _audioBuffer[0].size(), outputLength);
+        }
+        input += packetSize;
+        size -= packetSize;
     }
 }
 
@@ -140,32 +158,22 @@ void WASAPIOutputLoopbackSource::render(int64_t currentFrame, std::vector<std::v
             mainlog->debug(L"{} WASAPIOutputLoopbackSource::render fetched buffer size {} [silent]", _pDeviceId,
                            numFramesAvailable);
             for (int ch = 0; ch < _channelCount; ch++) {
-                memset(_tempBuffer.data(), 0, sizeof(int32_t) * numFramesAvailable);
-                if (!_audioBuffer[ch].push(_tempBuffer.data(), numFramesAvailable)) {
-                    mainlog->debug(
-                            L"{} WASAPIOutputLoopbackSource::render: ringbuffer[{}] overflow - capacity {}, size {}, new {}",
-                            _pDeviceId, ch, _audioBuffer[0].capacity(), _audioBuffer[0].size(), numFramesAvailable);
-                }
+                std::fill(_tempBuffer.data(), _tempBuffer.data() + numFramesAvailable, 0.0);
+                _feedResampledData(ch, _tempBuffer.data(), numFramesAvailable);
             }
         } else {
-            int64_t sqSum = 0;
-            for (unsigned ch = 0; ch < _channelCount; ch++) {
+            for (int ch = 0; ch < _channelCount; ch++) {
                 auto in = reinterpret_cast<int32_t *>(pData) + ch;
                 auto pStart = _tempBuffer.data();
                 auto pEnd = _tempBuffer.data() + numFramesAvailable;
                 for (auto p = pStart; p != pEnd; p++) {
-                    *p = *in;
-                    sqSum += (int64_t) *in * (int64_t) *in;
+                    *p = *in / 2147483648.0;
                     in += _channelCount;
                 }
-                if (!_audioBuffer[ch].push(_tempBuffer.data(), numFramesAvailable)) {
-                    mainlog->debug(
-                            L"{} WASAPIOutputLoopbackSource::render: ringbuffer[{}] overflow - capacity {}, size {}, new {}",
-                            _pDeviceId, ch, _audioBuffer[0].capacity(), _audioBuffer[0].size(), numFramesAvailable);
-                }
+                _feedResampledData(ch, _tempBuffer.data(), numFramesAvailable);
             }
-            mainlog->debug(L"{} WASAPIOutputLoopbackSource::render fetched buffer size {}, sqrt_avg_sq {}", _pDeviceId,
-                           numFramesAvailable, sqrt((double) sqSum / _channelCount / numFramesAvailable));
+            mainlog->debug(L"{} WASAPIOutputLoopbackSource::render fetched buffer size {}", _pDeviceId,
+                           numFramesAvailable);
         }
         _pAudioCaptureClient->ReleaseBuffer(numFramesAvailable);
         _pAudioCaptureClient->GetNextPacketSize(&packetLength);
@@ -187,8 +195,7 @@ void WASAPIOutputLoopbackSource::render(int64_t currentFrame, std::vector<std::v
         _audioBuffer[ch].get(_tempBuffer.data(), outputSize);
         auto &outputBufferChannel = outputBuffer->at(ch);
         for (int i = 0; i < outputSize; i++) {
-            outputBufferChannel[i] += _tempBuffer[i] / 256;
-//            outputBufferChannel[i] += round((1 << 24) * sin((currentFrame + i) * 0.001));
+            outputBufferChannel[i] += (int) round(_tempBuffer[i] * (1 << 23));
         }
     }
 }
