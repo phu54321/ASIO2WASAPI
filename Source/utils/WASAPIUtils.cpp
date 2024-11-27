@@ -20,6 +20,7 @@
 #include <functional>
 #include <mmdeviceapi.h>
 #include <functiondiscoverykeys_devpkey.h>
+#include "IPolicyConfig.h"
 #include "WASAPIUtils.h"
 #include "raiiUtils.h"
 
@@ -71,14 +72,26 @@ IMMDevicePtr getDefaultOutputDevice() {
             CLSCTX_ALL, IID_IMMDeviceEnumerator,
             (void **) &pEnumerator_);
     if (FAILED(hr)) return nullptr;
-
-
     auto pEnumerator = make_autorelease(pEnumerator_);
+
     IMMDevice *device;
-    hr = pEnumerator_->GetDefaultAudioEndpoint(EDataFlow::eRender, ERole::eConsole, &device);
+    hr = pEnumerator->GetDefaultAudioEndpoint(EDataFlow::eRender, ERole::eConsole, &device);
     if (FAILED(hr)) return nullptr;
 
     return make_autorelease(device);
+}
+
+bool setDefaultOutputDeviceId(const std::wstring &deviceId) {
+    IPolicyConfigVista *pPolicyConfig;
+    ERole reserved = eConsole;
+
+    HRESULT hr = CoCreateInstance(__uuidof(CPolicyConfigVistaClient),
+                                  NULL, CLSCTX_ALL, __uuidof(IPolicyConfigVista), (LPVOID *) &pPolicyConfig);
+    if (SUCCEEDED(hr)) {
+        hr = pPolicyConfig->SetDefaultEndpoint(deviceId.c_str(), reserved);
+        pPolicyConfig->Release();
+    }
+    return SUCCEEDED(hr);
 }
 
 ////

@@ -42,6 +42,13 @@ bool iterateAudioEndPoints(const std::function<bool(IMMDevicePtr pMMDevice)> &cb
 IMMDevicePtr getDefaultOutputDevice();
 
 /**
+ * Set default output device to
+ * @param deviceId
+ * @return Succeeded
+ */
+bool setDefaultOutputDeviceId(const std::wstring &deviceId);
+
+/**
  * Get devices in vector form
  * @return
  */

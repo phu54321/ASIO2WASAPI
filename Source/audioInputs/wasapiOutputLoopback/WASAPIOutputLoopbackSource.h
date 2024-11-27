@@ -32,7 +32,8 @@
 
 class WASAPIOutputLoopbackSource : public AudioSource {
 public:
-    WASAPIOutputLoopbackSource(const IMMDevicePtr &device, int channelCount, int sampleRate);
+    WASAPIOutputLoopbackSource(const IMMDevicePtr &device, int channelCount, int sampleRate,
+                               bool interceptDefaultOutput);
 
     ~WASAPIOutputLoopbackSource() override;
 
@@ -41,6 +42,7 @@ public:
 private:
     IMMDevicePtr _pDevice;
     std::wstring _pDeviceId;
+    std::wstring _prevOutputDeviceId;
 
     std::shared_ptr<IAudioCaptureClient> _pAudioCaptureClient;
     std::shared_ptr<IAudioClient> _pAudioClient;

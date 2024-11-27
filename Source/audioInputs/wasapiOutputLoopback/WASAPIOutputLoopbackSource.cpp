@@ -28,7 +28,8 @@
 
 #define REFTIMES_PER_SEC  10000000
 
-WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevice, int channelCount, int sampleRate)
+WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevice, int channelCount, int sampleRate,
+                                                       bool interceptDefaultOutput)
         : _channelCount(channelCount), _sampleRate(sampleRate), _pDevice(pDevice), _pDeviceId(getDeviceId(pDevice)) {
 
 
@@ -94,12 +95,21 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
 //        _resamplers.emplace_back(_pwfx->nSamplesPerSec,_sampleRate, _bufferSize);
     }
 
+    if (interceptDefaultOutput) {
+        auto prevOutputDevice = getDefaultOutputDevice();
+        _prevOutputDeviceId = getDeviceId(prevOutputDevice);
+        setDefaultOutputDeviceId(_pDeviceId);
+    }
+
     _pAudioClient->Start();
 }
 
 WASAPIOutputLoopbackSource::~WASAPIOutputLoopbackSource() {
     _pAudioClient->Stop();
 //    CoTaskMemFree(_pwfx);
+    if (!_prevOutputDeviceId.empty()) {
+        setDefaultOutputDeviceId(_prevOutputDeviceId);
+    }
 }
 
 void WASAPIOutputLoopbackSource::render(int64_t currentFrame, std::vector<std::vector<int32_t>> *outputBuffer) {

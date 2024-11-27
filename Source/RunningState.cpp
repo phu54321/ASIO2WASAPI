@@ -55,6 +55,36 @@ RunningState::RunningState(PreparedState *p)
 
     auto driverSettings = p->_pref;
 
+    // Add sources
+    if (driverSettings->clapGain > 0) {
+        _sources.push_back(std::make_shared<KeyboardClapSource>(p->_sampleRate, driverSettings->clapGain));
+    }
+
+    // Note: `WASAPIOutputLoopbackSource` constructor changes default output device, so this must be called before
+    // `mainOutput` variable is initialized, as `mainOutput` *might* acquire exclusive access to current output device,
+    // stalling all other application's audio.`
+    if (!driverSettings->loopbackInputDevice.empty()) {
+        auto pDevices = getIMMDeviceList();
+        for (auto &pDevice: pDevices) {
+            auto pDeviceId = getDeviceId(pDevice);
+            auto pDeviceFriendlyName = getDeviceFriendlyName(pDevice);
+            if (pDeviceId == driverSettings->loopbackInputDevice ||
+                pDeviceFriendlyName == driverSettings->loopbackInputDevice) {
+                try {
+                    mainlog->info(L"Initialzing WASAPIOutputLoopbackSource with {}", pDeviceId);
+                    _sources.push_back(
+                            std::make_shared<WASAPIOutputLoopbackSource>(pDevice, driverSettings->channelCount,
+                                                                         p->_sampleRate,
+                                                                         driverSettings->autoChangeOutputToLoopback));
+                } catch (AppException &e) {
+                    mainlog->error(L"{} Exception while initializing WASAPIOutputLoopbackSource with: {}", pDeviceId,
+                                   utf8_to_wstring(e.what()));
+                }
+                break;
+            }
+        }
+    }
+
     // (*) Since we're passing a reference to _clockNotifier to all _pDeviceList,
     // they must be cleared explicitly on the destructor before _clockNotifier is destructed.
     for (int i = 0; i < p->_pDeviceList.size(); i++) {
@@ -82,32 +112,6 @@ RunningState::RunningState(PreparedState *p)
         _outputList.push_back(std::move(output));
     }
 
-    // Add sources
-    if (driverSettings->clapGain > 0) {
-        _sources.push_back(std::make_shared<KeyboardClapSource>(p->_sampleRate, driverSettings->clapGain));
-    }
-
-    {
-        auto pDevices = getIMMDeviceList();
-        for (auto &pDevice: pDevices) {
-            auto pDeviceId = getDeviceId(pDevice);
-            if (pDeviceId == L"{0.0.0.00000000}.{920d9458-69cf-4337-9d32-6dd9bf2821e6}") {
-                try {
-                    mainlog->info(L"Initialzing WASAPIOutputLoopbackSource with {}", pDeviceId);
-                    _sources.push_back(
-                            std::make_shared<WASAPIOutputLoopbackSource>(pDevice, driverSettings->channelCount,
-                                                                         p->_sampleRate));
-                } catch (AppException &e) {
-                    mainlog->error(L"{} Exception while initializing WASAPIOutputLoopbackSource with: {}", pDeviceId,
-                                   utf8_to_wstring(e.what()));
-                }
-                break;
-            }
-        }
-
-    }
-
-
     _pollThread = std::thread(RunningState::threadProc, this);
 }
 
@@ -116,17 +120,17 @@ RunningState::~RunningState() {
     signalStop();
     _pollThread.join();
 
-
     // (*) Since we're passing a reference to _clockNotifier to all output devices
     // they must be cleared explicitly on the destructor before _clockNotifier is destructed.
-
-    // Clear input devices
-    _sources.clear();
 
     // Clear output devices
     _outputList.clear();
     _mainOutput = nullptr;
+
+    // Clear input devices
+    _sources.clear();
 }
+
 
 void RunningState::signalOutputReady() {
     ZoneScoped;
