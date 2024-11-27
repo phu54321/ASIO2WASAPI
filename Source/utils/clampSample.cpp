@@ -22,6 +22,7 @@
 
 #include "clampSample.h"
 #include <tracy/Tracy.hpp>
+#include <math.h>
 
 double clampSample(double sample) {
     const float compressionPadding = 0.0625;  // 1 / 16

@@ -21,6 +21,7 @@
 
 #include <Windows.h>
 #include <vector>
+#include <cstdint>
 
 std::vector<uint8_t> loadUserdataResource(
         HMODULE hDLL,

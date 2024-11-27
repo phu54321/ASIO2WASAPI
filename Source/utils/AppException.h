@@ -31,7 +31,7 @@ private:
 public:
     explicit AppException(std::string s) : message(std::move(s)) {}
 
-    const char *what() const override {
+    [[nodiscard]] const char *what() const noexcept override {
         return message.c_str();
     }
 };

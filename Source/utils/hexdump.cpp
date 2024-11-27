@@ -18,6 +18,7 @@
 
 #include "hexdump.h"
 #include <vector>
+#include <cstdint>
 
 std::string hexdump(const void* p, int size) {
     static const char* chTable = "0123456789abcdef";
