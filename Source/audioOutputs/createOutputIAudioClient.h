@@ -16,8 +16,8 @@
 // along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef TRGKASIO_CREATEIAUDIOCLIENT_H
-#define TRGKASIO_CREATEIAUDIOCLIENT_H
+#ifndef TRGKASIO_CREATEOUTPUTIAUDIOCLIENT_H
+#define TRGKASIO_CREATEOUTPUTIAUDIOCLIENT_H
 
 #include <memory>
 #include <mmdeviceapi.h>
@@ -31,12 +31,12 @@ enum class WASAPIMode {
     Shared
 };
 
-bool FindStreamFormat(
+bool FindOutputStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
         UserPrefPtr pref,
-        int sampleCount,
+        int sampleRate,
         WASAPIMode mode,
         WAVEFORMATEXTENSIBLE *pwfxt = nullptr,
         std::shared_ptr<IAudioClient> *ppAudioClient = nullptr);
 
-#endif //TRGKASIO_CREATEIAUDIOCLIENT_H
+#endif //TRGKASIO_CREATEOUTPUTIAUDIOCLIENT_H

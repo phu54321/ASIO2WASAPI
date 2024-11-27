@@ -22,7 +22,7 @@
 #include "TrgkASIOImpl.h"
 #include "res/resource.h"
 #include "utils/json.hpp"
-#include "WASAPIOutput/createIAudioClient.h"
+#include "audioOutputs/createOutputIAudioClient.h"
 #include "utils/raiiUtils.h"
 #include "RunningState.h"
 #include "PreparedState.h"
@@ -131,7 +131,7 @@ ASIOError TrgkASIOImpl::canSampleRate(ASIOSampleRate _sampleRate) {
     for (int i = 0; i < _pDeviceList.size(); i++) {
         auto &device = _pDeviceList[i];
         auto mode = (i == 0) ? WASAPIMode::Exclusive : WASAPIMode::Shared;
-        if (!FindStreamFormat(device, _pref, sampleRate, mode))
+        if (!FindOutputStreamFormat(device, _pref, sampleRate, mode))
             return ASE_NoClock;
     }
     return ASE_OK;

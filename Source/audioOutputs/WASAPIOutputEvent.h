@@ -32,7 +32,7 @@
 #include "WASAPIOutput.h"
 #include <tracy/Tracy.hpp>
 #include "../utils/RingBuffer.h"
-#include "createIAudioClient.h"
+#include "createOutputIAudioClient.h"
 #include "../utils/SynchronizedClock.h"
 
 class WASAPIOutputEvent : public WASAPIOutput {

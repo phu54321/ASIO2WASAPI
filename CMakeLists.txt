@@ -43,7 +43,7 @@ add_library(trgkASIO SHARED
         Source/dllentry/COMBaseClasses.cpp
 
         Source/utils/logger.cpp
-        Source/utils/WASAPIUtils.cpp
+        Source/audioOutputs/WASAPIUtils.cpp
         Source/utils/utf8convert.cpp
         Source/utils/homeDirFilePath.cpp
         Source/utils/accurateTime.cpp
@@ -63,16 +63,16 @@ add_library(trgkASIO SHARED
         Source/pref/DlgDurationOverrideEditor.cpp
         Source/pref/DlgOutputDevice.cpp
 
-        Source/inputs/KeyboardClapSource.cpp
+        Source/audioInputs/KeyboardClapSource.cpp
 
         Source/TrgkASIO.cpp
         Source/TrgkASIOImpl.cpp
         Source/PreparedState.cpp
         Source/RunningState.cpp
-        Source/inputs/ClapRenderer.cpp
-        Source/WASAPIOutput/WASAPIOutputEvent.cpp
-        Source/WASAPIOutput/iidConstant.cpp
-        Source/WASAPIOutput/createIAudioClient.cpp
+        Source/audioInputs/ClapRenderer.cpp
+        Source/audioOutputs/WASAPIOutputEvent.cpp
+        Source/audioOutputs/iidConstant.cpp
+        Source/audioOutputs/createOutputIAudioClient.cpp
 
         Source/res/resource.rc
         Source/TrgkASIO.def)
@@ -103,14 +103,14 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 4)
             Source/res/resource.rc
             Source/pref/UserPrefGUI.cpp
 
-            Source/WASAPIOutput/iidConstant.cpp
+            Source/audioOutputs/iidConstant.cpp
 
             Source/utils/w32StringGetter.cpp
             Source/pref/UserPref.cpp
             Source/utils/homeDirFilePath.cpp
             Source/utils/logger.cpp
             Source/utils/utf8convert.cpp
-            Source/utils/WASAPIUtils.cpp
+            Source/audioOutputs/WASAPIUtils.cpp
             Source/pref/DlgOutputDevice.cpp
             Source/pref/DlgOutputDevice.h
             Source/pref/DlgDurationOverrideEditor.cpp

@@ -33,7 +33,7 @@
 #include <mmsystem.h>
 #include <deque>
 
-#include "WASAPIOutput/WASAPIOutputEvent.h"
+#include "audioOutputs/WASAPIOutputEvent.h"
 #include "utils/accurateTime.h"
 #include "utils/clampSample.h"
 #include <tracy/Tracy.hpp>

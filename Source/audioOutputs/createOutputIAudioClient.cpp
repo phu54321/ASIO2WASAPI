@@ -16,9 +16,9 @@
 // along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#include "createIAudioClient.h"
+#include "createOutputIAudioClient.h"
 #include "../utils/raiiUtils.h"
-#include "../utils/WASAPIUtils.h"
+#include "WASAPIUtils.h"
 #include <spdlog/spdlog.h>
 #include "../utils/logger.h"
 #include <mmdeviceapi.h>
@@ -35,7 +35,7 @@ static void dumpErrorWaveFormatEx(const char *varname, const WAVEFORMATEX &pWave
     mainlog->error("    : {}.cbSize: {}", varname, pWaveFormat.cbSize);
 }
 
-std::shared_ptr<IAudioClient> createAudioClient(
+static std::shared_ptr<IAudioClient> createOutputIAudioClient(
         UserPrefPtr pref,
         const std::shared_ptr<IMMDevice> &pDevice,
         WASAPIMode mode,
@@ -147,7 +147,7 @@ std::shared_ptr<IAudioClient> createAudioClient(
     return pAudioClient;
 }
 
-bool FindStreamFormat(
+bool FindOutputStreamFormat(
         const std::shared_ptr<IMMDevice> &pDevice,
         UserPrefPtr pref,
         int sampleRate,
@@ -162,7 +162,7 @@ bool FindStreamFormat(
     auto deviceId = getDeviceId(pDevice);
     auto channelCount = pref->channelCount;
 
-    mainlog->debug(TEXT("{} FindStreamFormat: channelCount {}, sampleRate {}, mode {}"),
+    mainlog->debug(TEXT("{} FindOutputStreamFormat: channelCount {}, sampleRate {}, mode {}"),
                    deviceId,
                    channelCount,
                    sampleRate,
@@ -185,13 +185,13 @@ bool FindStreamFormat(
     waveFormat.dwChannelMask = dwChannelMask;
     waveFormat.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-    auto pAudioClient = createAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
+    auto pAudioClient = createOutputIAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
     if (pAudioClient) goto Finish;
 
     //try 24-bit-in-32bit next
     mainlog->debug(TEXT("{} triyng 24bit-in-32bit"), deviceId);
     waveFormat.Samples.wValidBitsPerSample = 24;
-    pAudioClient = createAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
+    pAudioClient = createOutputIAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
     if (pAudioClient) goto Finish;
 
     //finally, try 16-bit
@@ -200,7 +200,7 @@ bool FindStreamFormat(
     waveFormat.Format.nBlockAlign = waveFormat.Format.wBitsPerSample * waveFormat.Format.nChannels / 8;
     waveFormat.Format.nAvgBytesPerSec = waveFormat.Format.nSamplesPerSec * waveFormat.Format.nBlockAlign;
     waveFormat.Samples.wValidBitsPerSample = waveFormat.Format.wBitsPerSample;
-    pAudioClient = createAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
+    pAudioClient = createOutputIAudioClient(pref, pDevice, mode, (WAVEFORMATEX *) &waveFormat);
     if (pAudioClient) goto Finish;
 
     Finish:

@@ -26,9 +26,9 @@
 
 #include "WASAPIOutput.h"
 #include "WASAPIOutputEvent.h"
-#include "createIAudioClient.h"
+#include "createOutputIAudioClient.h"
 #include <spdlog/spdlog.h>
-#include "../utils/WASAPIUtils.h"
+#include "WASAPIUtils.h"
 #include "../utils/raiiUtils.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
@@ -51,10 +51,10 @@ WASAPIOutputEvent::WASAPIOutputEvent(
     HRESULT hr;
 
     _pDeviceId = getDeviceId(pDevice);
-    if (!FindStreamFormat(pDevice, pref, sampleRate, mode, &_waveFormat,
-                          &_pAudioClient)) {
+    if (!FindOutputStreamFormat(pDevice, pref, sampleRate, mode, &_waveFormat,
+                                &_pAudioClient)) {
         mainlog->error(L"{} Cannot find suitable stream for mat for output _pDevice", _pDeviceId);
-        throw AppException("FindStreamFormat failed");
+        throw AppException("FindOutputStreamFormat failed");
     }
 
     hr = _pAudioClient->GetBufferSize(&_outputBufferSize);

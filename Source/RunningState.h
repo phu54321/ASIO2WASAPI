@@ -27,10 +27,10 @@
 #include <Windows.h>
 #include "PreparedState.h"
 #include "MessageWindow/MessageWindow.h"
-#include "inputs/ClapRenderer.h"
+#include "audioInputs/ClapRenderer.h"
 #include "MessageWindow/KeyDownListener.h"
-#include "inputs/KeyboardClapSource.h"
-#include "WASAPIOutput/WASAPIOutputEvent.h"
+#include "audioInputs/KeyboardClapSource.h"
+#include "audioOutputs/WASAPIOutputEvent.h"
 #include "utils/SynchronizedClock.h"
 #include <atomic>
 #include <thread>

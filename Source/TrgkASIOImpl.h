@@ -27,12 +27,12 @@
 #include <thread>
 #include <atomic>
 #include "utils/AppException.h"
-#include "WASAPIOutput/WASAPIOutput.h"
+#include "audioOutputs/WASAPIOutput.h"
 #include "pref/UserPref.h"
 
 #include "asiosys.h"
 #include "asio.h"
-#include "utils/WASAPIUtils.h"
+#include "audioOutputs/WASAPIUtils.h"
 
 
 struct PreparedState;

@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Hyun Woo Park
+// Copyright (C) 2024 Hyunwoo Park
 //
 // This file is part of trgkASIO.
 //
@@ -13,14 +13,15 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
+// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 
 #include <functional>
 #include <mmdeviceapi.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include "WASAPIUtils.h"
-#include "raiiUtils.h"
+#include "../utils/raiiUtils.h"
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);

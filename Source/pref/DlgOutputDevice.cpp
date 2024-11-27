@@ -22,7 +22,7 @@
 
 #include "DlgOutputDevice.h"
 #include "../res/resource.h"
-#include "../utils/WASAPIUtils.h"
+#include "../audioOutputs/WASAPIUtils.h"
 #include "../utils/w32StringGetter.h"
 
 #include <vector>
