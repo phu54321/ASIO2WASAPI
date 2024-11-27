@@ -55,35 +55,6 @@ RunningState::RunningState(PreparedState *p)
 
     auto driverSettings = p->_pref;
 
-    // Add sources
-    if (driverSettings->clapGain > 0) {
-        _sources.push_back(std::make_shared<KeyboardClapSource>(p->_sampleRate, driverSettings->clapGain));
-    }
-
-    // Note: `WASAPIOutputLoopbackSource` constructor changes default output device, so this must be called before
-    // `mainOutput` variable is initialized, as `mainOutput` *might* acquire exclusive access to current output device,
-    // stalling all other application's audio.`
-    if (!driverSettings->loopbackInputDevice.empty()) {
-        auto pDevices = getIMMDeviceList();
-        for (auto &pDevice: pDevices) {
-            auto pDeviceId = getDeviceId(pDevice);
-            auto pDeviceFriendlyName = getDeviceFriendlyName(pDevice);
-            if (pDeviceId == driverSettings->loopbackInputDevice ||
-                pDeviceFriendlyName == driverSettings->loopbackInputDevice) {
-                try {
-                    mainlog->info(L"Initialzing WASAPIOutputLoopbackSource with {}", pDeviceId);
-                    _sources.push_back(
-                            std::make_shared<WASAPIOutputLoopbackSource>(pDevice, driverSettings->channelCount,
-                                                                         p->_sampleRate,
-                                                                         driverSettings->autoChangeOutputToLoopback));
-                } catch (AppException &e) {
-                    mainlog->error(L"{} Exception while initializing WASAPIOutputLoopbackSource with: {}", pDeviceId,
-                                   utf8_to_wstring(e.what()));
-                }
-                break;
-            }
-        }
-    }
 
     // (*) Since we're passing a reference to _clockNotifier to all _pDeviceList,
     // they must be cleared explicitly on the destructor before _clockNotifier is destructed.
@@ -110,6 +81,37 @@ RunningState::RunningState(PreparedState *p)
             _mainOutput = output;
         }
         _outputList.push_back(std::move(output));
+    }
+
+    // Add additional sources
+    if (driverSettings->clapGain > 0) {
+        _sources.push_back(std::make_shared<KeyboardClapSource>(p->_sampleRate, driverSettings->clapGain));
+    }
+
+    // Note: `loopbackInputDevice` might be the same device with `mainOutput`.
+    // In this case, it's advisable to just ignore `loopbackInputDevice` rather than
+    // not outputing anything to `mainOutput`. For that, `mainOutput` variable should
+    // be initialized in prior to `WASAPIOutputLoopbackSource` initialization.
+    if (!driverSettings->loopbackInputDevice.empty()) {
+        auto pDevices = getIMMDeviceList();
+        for (auto &pDevice: pDevices) {
+            auto pDeviceId = getDeviceId(pDevice);
+            auto pDeviceFriendlyName = getDeviceFriendlyName(pDevice);
+            if (pDeviceId == driverSettings->loopbackInputDevice ||
+                pDeviceFriendlyName == driverSettings->loopbackInputDevice) {
+                try {
+                    mainlog->info(L"Initialzing WASAPIOutputLoopbackSource with {}", pDeviceId);
+                    _sources.push_back(
+                            std::make_shared<WASAPIOutputLoopbackSource>(pDevice, driverSettings->channelCount,
+                                                                         p->_sampleRate,
+                                                                         driverSettings->autoChangeOutputToLoopback));
+                } catch (AppException &e) {
+                    mainlog->error(L"{} Exception while initializing WASAPIOutputLoopbackSource with: {}", pDeviceId,
+                                   utf8_to_wstring(e.what()));
+                }
+                break;
+            }
+        }
     }
 
     _pollThread = std::thread(RunningState::threadProc, this);
@@ -247,7 +249,7 @@ void RunningState::threadProc(RunningState *state) {
 
             if (allOutputStarted) {
                 // Add additional sources
-                for(auto& source: state->_sources) {
+                for (auto &source: state->_sources) {
                     source->render(currentOutputFrame, &outputBuffer);
                 }
 
