@@ -29,7 +29,7 @@
 #include <windowsx.h>
 #include <Audioclient.h>
 #include "../utils/w32StringGetter.h"
-#include "../audioOutputs/WASAPIUtils.h"
+#include "../utils/WASAPIUtils.h"
 #include "../utils/logger.h"
 
 static std::wstring trim(std::wstring str) {

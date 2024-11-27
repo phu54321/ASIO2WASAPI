@@ -39,7 +39,7 @@ class WASAPIOutputEvent : public WASAPIOutput {
 public:
     WASAPIOutputEvent(
             const std::shared_ptr<IMMDevice> &pDevice,
-            UserPrefPtr pref,
+            const UserPrefPtr &pref,
             int sampleRate,
             UINT32 inputBufferSize,
             WASAPIMode mode,

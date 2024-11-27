@@ -24,6 +24,7 @@
 #include "utils/logger.h"
 #include "utils/intervalBlock.h"
 #include "utils/raiiUtils.h"
+#include "utils/utf8convert.h"
 #include "utils/EventPerSecondCounter.h"
 #include <spdlog/spdlog.h>
 #include <utility>
@@ -32,6 +33,9 @@
 #include <timeapi.h>
 #include <mmsystem.h>
 #include <deque>
+
+#include "audioInputs/keyboardClap/KeyboardClapSource.h"
+#include "audioInputs/wasapiOutputLoopback/WASAPIOutputLoopbackSource.h"
 
 #include "audioOutputs/WASAPIOutputEvent.h"
 #include "utils/accurateTime.h"
@@ -81,6 +85,26 @@ RunningState::RunningState(PreparedState *p)
     // Add sources
     if (driverSettings->clapGain > 0) {
         _sources.push_back(std::make_shared<KeyboardClapSource>(p->_sampleRate, driverSettings->clapGain));
+    }
+
+    {
+        auto pDevices = getIMMDeviceList();
+        for (auto &pDevice: pDevices) {
+            auto pDeviceId = getDeviceId(pDevice);
+            if (pDeviceId == L"{0.0.0.00000000}.{920d9458-69cf-4337-9d32-6dd9bf2821e6}") {
+                try {
+                    mainlog->info(L"Initialzing WASAPIOutputLoopbackSource with {}", pDeviceId);
+                    _sources.push_back(
+                            std::make_shared<WASAPIOutputLoopbackSource>(pDevice, driverSettings->channelCount,
+                                                                         p->_sampleRate));
+                } catch (AppException &e) {
+                    mainlog->error(L"{} Exception while initializing WASAPIOutputLoopbackSource with: {}", pDeviceId,
+                                   utf8_to_wstring(e.what()));
+                }
+                break;
+            }
+        }
+
     }
 
 

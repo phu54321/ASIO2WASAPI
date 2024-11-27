@@ -28,7 +28,7 @@
 #include "WASAPIOutputEvent.h"
 #include "createOutputIAudioClient.h"
 #include <spdlog/spdlog.h>
-#include "WASAPIUtils.h"
+#include "../utils/WASAPIUtils.h"
 #include "../utils/raiiUtils.h"
 #include "../utils/logger.h"
 #include "../utils/AppException.h"
@@ -37,8 +37,8 @@
 
 
 WASAPIOutputEvent::WASAPIOutputEvent(
-        const std::shared_ptr<IMMDevice> &pDevice,
-        UserPrefPtr pref,
+        const IMMDevicePtr &pDevice,
+        const UserPrefPtr &pref,
         int sampleRate,
         UINT32 inputBufferSize,
         WASAPIMode mode,

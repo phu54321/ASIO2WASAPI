@@ -14,6 +14,7 @@
 #define IDR_CLAP_K70_KEYDOWN                    1101
 #define IDR_CLAP_K70_KEYUP                      1102
 #define IDC_DURATION_IN_MS                      40000
+#define IDC_LOGLEVEL                            40000
 #define IDS_MENU                                40000
 #define IDC_CLAP_GAIN                           40001
 #define IDC_DEVICE_FRIENDLY_NAME                40001
@@ -21,8 +22,9 @@
 #define IDB_USE_DEFAULT_DURATION                40002
 #define IDC_LICENSE_TEXT                        40002
 #define IDS_PREFERENCE                          40002
-#define IDC_LOGLEVEL                            40003
+#define IDC_LOOPBACK_INPUT_TOGGLE               40003
 #define IDB_USE_MINIMUM_DURATION                40004
+#define IDC_LOOPBACK_INPUT_DEVICE               40004
 #define IDC_OUTPUT_LATENCY_TABLE                40004
 #define IDB_REMOVE                              40005
 #define IDC_EDIT_DURATION                       40006

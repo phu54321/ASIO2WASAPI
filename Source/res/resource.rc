@@ -98,7 +98,7 @@ FONT 8, "Ms Shell Dlg"
 
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
-IDD_USERPREF_EDIT DIALOG 0, 0, 199, 330
+IDD_USERPREF_EDIT DIALOG 0, 0, 199, 311
 STYLE DS_3DLOOK | DS_CENTER | DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
 EXSTYLE WS_EX_WINDOWEDGE
 CAPTION "trgkASIO Preference"
@@ -107,26 +107,26 @@ FONT 8, "Ms Shell Dlg"
     LTEXT           "# of audio channels", 0, 7, 7, 64, 9, SS_LEFT, WS_EX_LEFT
     EDITTEXT        IDC_CHANNEL_COUNT, 96, 7, 29, 12, ES_AUTOHSCROLL | ES_NUMBER, WS_EX_LEFT
     LTEXT           "(1: mono, 2: stereo)", 0, 130, 7, 62, 9, SS_LEFT, WS_EX_LEFT
-    GROUPBOX        "Audio outputs", 0, 7, 26, 185, 101, 0, WS_EX_LEFT
-    LISTBOX         IDC_OUTPUT_DEVICE_LIST, 14, 39, 173, 55, WS_TABSTOP | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY, WS_EX_LEFT
-    LTEXT           "Only the first output gets the lowest-latency mode.", 0, 14, 96, 157, 9, SS_LEFT, WS_EX_LEFT
-    PUSHBUTTON      "Add", IDB_ADD, 52, 108, 40, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "Remove", IDB_REMOVE, 94, 108, 40, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "ก่", IDB_MOVE_UP, 138, 108, 24, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "ก้", IDB_MOVE_DOWN, 163, 108, 24, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "Override output latency", IDB_OUTPUT_LATENCY_OVERRIDE, 7, 131, 78, 14, 0, WS_EX_LEFT
-    LTEXT           "e.g) when you have no sound...", 0, 90, 133, 105, 10, SS_LEFT, WS_EX_LEFT
-    GROUPBOX        "Additional features", 0, 7, 157, 185, 37, 0, WS_EX_LEFT
-    LTEXT           "Key clap volume (%)", 0, 19, 172, 64, 9, SS_LEFT, WS_EX_LEFT
-    EDITTEXT        IDC_CLAP_GAIN, 96, 172, 29, 12, ES_AUTOHSCROLL | ES_NUMBER, WS_EX_LEFT
-    LTEXT           "(0~100)", 0, 130, 172, 26, 9, SS_LEFT, WS_EX_LEFT
-    GROUPBOX        "Advanced (Don't touch if you don't know)", 0, 7, 207, 185, 77, 0, WS_EX_LEFT
-    COMBOBOX        IDC_LOGLEVEL, 96, 220, 75, 62, CBS_DROPDOWN | CBS_HASSTRINGS, WS_EX_LEFT
-    LTEXT           "Log level", 0, 19, 224, 30, 9, SS_LEFT, WS_EX_LEFT
-    LTEXT           "Note: log is written to '~/trgkASIO.log', if the file exists. Beware of LARGE file size when using debug/trace.", 0, 15, 237, 173, 17, SS_LEFT, WS_EX_LEFT
-    LTEXT           "Note: restart ASIO application to apply the changes.", 0, 7, 293, 164, 9, SS_LEFT, WS_EX_LEFT
-    DEFPUSHBUTTON   "OK", IDOK, 87, 309, 50, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "Cancel", IDCANCEL, 142, 309, 50, 14, 0, WS_EX_LEFT
+    GROUPBOX        "Audio Inputs", 0, 7, 29, 185, 67, 0, WS_EX_LEFT
+    LTEXT           "Key clap volume (%)", 0, 14, 44, 64, 9, SS_LEFT, WS_EX_LEFT
+    EDITTEXT        IDC_CLAP_GAIN, 96, 44, 29, 12, ES_AUTOHSCROLL | ES_NUMBER, WS_EX_LEFT
+    LTEXT           "(0~100)", 0, 130, 44, 26, 9, SS_LEFT, WS_EX_LEFT
+    AUTOCHECKBOX    "Loopback input from device", IDC_LOOPBACK_INPUT_TOGGLE, 14, 61, 103, 8, 0, WS_EX_LEFT
+    COMBOBOX        IDC_LOOPBACK_INPUT_DEVICE, 14, 73, 173, 300, WS_VSCROLL | WS_DISABLED | CBS_DROPDOWN | CBS_HASSTRINGS, WS_EX_LEFT
+    GROUPBOX        "Audio outputs", 0, 7, 101, 185, 122, 0, WS_EX_LEFT
+    LISTBOX         IDC_OUTPUT_DEVICE_LIST, 14, 114, 173, 55, WS_TABSTOP | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY, WS_EX_LEFT
+    LTEXT           "Only the first output gets the lowest-latency mode.", 0, 14, 171, 157, 9, SS_LEFT, WS_EX_LEFT
+    PUSHBUTTON      "Add", IDB_ADD, 52, 187, 40, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Remove", IDB_REMOVE, 94, 187, 40, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "ก่", IDB_MOVE_UP, 138, 187, 24, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "ก้", IDB_MOVE_DOWN, 163, 187, 24, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Override output audio device latency", IDB_OUTPUT_LATENCY_OVERRIDE, 67, 203, 125, 14, 0, WS_EX_LEFT
+    LTEXT           "Log level", 0, 7, 232, 30, 9, SS_LEFT, WS_EX_LEFT
+    COMBOBOX        IDC_LOGLEVEL, 96, 232, 84, 62, CBS_DROPDOWN | CBS_HASSTRINGS, WS_EX_LEFT
+    LTEXT           "Note: log is written to '~/trgkASIO.log', if the file exists. Beware of LARGE file size when using debug/trace.", 0, 7, 252, 173, 17, SS_LEFT, WS_EX_LEFT
+    LTEXT           "Note: restart ASIO application to apply the changes.", 0, 7, 273, 164, 9, SS_LEFT, WS_EX_LEFT
+    DEFPUSHBUTTON   "OK", IDOK, 87, 288, 50, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Cancel", IDCANCEL, 142, 288, 50, 14, 0, WS_EX_LEFT
 }
 
 

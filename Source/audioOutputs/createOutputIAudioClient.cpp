@@ -18,7 +18,7 @@
 
 #include "createOutputIAudioClient.h"
 #include "../utils/raiiUtils.h"
-#include "WASAPIUtils.h"
+#include "../utils/WASAPIUtils.h"
 #include <spdlog/spdlog.h>
 #include "../utils/logger.h"
 #include <mmdeviceapi.h>
@@ -71,8 +71,8 @@ static std::shared_ptr<IAudioClient> createOutputIAudioClient(
         if (closestMatch) {
             dumpErrorWaveFormatEx("ClosestMatch", *closestMatch);
             CoTaskMemFree(closestMatch);
-            return nullptr;
         }
+        return nullptr;
     }
 
     REFERENCE_TIME bufferDuration;

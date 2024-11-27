@@ -23,7 +23,7 @@
 
 #include "PreparedState.h"
 #include "RunningState.h"
-#include "audioOutputs/WASAPIUtils.h"
+#include "utils/WASAPIUtils.h"
 #include "utils/logger.h"
 #include <spdlog/spdlog.h>
 

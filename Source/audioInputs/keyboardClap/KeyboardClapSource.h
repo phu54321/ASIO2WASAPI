@@ -24,9 +24,9 @@
 #define TRGKASIO_KEYBOARDCLAPSOURCE_H
 
 #include <vector>
-#include "../MessageWindow/KeyDownListener.h"
+#include "../../MessageWindow/KeyDownListener.h"
 #include "ClapRenderer.h"
-#include "./AudioSource.h"
+#include "../AudioSource.h"
 
 class KeyboardClapSource: public AudioSource {
 public:

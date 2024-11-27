@@ -21,7 +21,7 @@
 #include <mmdeviceapi.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include "WASAPIUtils.h"
-#include "../utils/raiiUtils.h"
+#include "raiiUtils.h"
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);

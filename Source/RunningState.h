@@ -27,9 +27,8 @@
 #include <Windows.h>
 #include "PreparedState.h"
 #include "MessageWindow/MessageWindow.h"
-#include "audioInputs/ClapRenderer.h"
 #include "MessageWindow/KeyDownListener.h"
-#include "audioInputs/KeyboardClapSource.h"
+#include "audioInputs/AudioSource.h"
 #include "audioOutputs/WASAPIOutputEvent.h"
 #include "utils/SynchronizedClock.h"
 #include <atomic>

@@ -29,7 +29,7 @@
 #include "asiosys.h"
 #include "asio.h"
 #include "audioOutputs/WASAPIOutput.h"
-#include "audioOutputs/WASAPIUtils.h"
+#include "utils/WASAPIUtils.h"
 #include "TrgkASIOImpl.h"
 
 class RunningState;

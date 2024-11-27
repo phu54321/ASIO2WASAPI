@@ -32,7 +32,7 @@
 
 #include "asiosys.h"
 #include "asio.h"
-#include "audioOutputs/WASAPIUtils.h"
+#include "utils/WASAPIUtils.h"
 
 
 struct PreparedState;

@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Hyunwoo Park
+// Copyright (C) 2024 Hyunwoo Park
 //
 // This file is part of trgkASIO.
 //
@@ -13,7 +13,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with trgkASIO.  If not, see <http://www.gnu.org/licenses/>.
+// along with ASIO2WASAPI2.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #ifndef TRGKASIO_CLAPRENDERER_H
@@ -22,7 +22,7 @@
 #include <Windows.h>
 #include <vector>
 #include <random>
-#include "../utils/WaveLoad.h"
+#include "../../utils/WaveLoad.h"
 
 class ClapRenderer {
 public:

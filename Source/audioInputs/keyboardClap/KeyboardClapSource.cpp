@@ -21,9 +21,9 @@
 //
 
 #include "KeyboardClapSource.h"
-#include "../utils/accurateTime.h"
-#include "../res/resource.h"
-#include <tracy/Tracy.hpp>
+#include "../../utils/accurateTime.h"
+#include "../../res/resource.h"
+#include "tracy/Tracy.hpp"
 
 extern HINSTANCE g_hInstDLL;
 
