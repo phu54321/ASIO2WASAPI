@@ -76,6 +76,6 @@ void ClapRenderer::render(std::vector<int32_t> *output, int startFrame, int inde
         auto inPos = i + startFrame;
         if (inPos < 0) continue;
         else if (inPos >= samples.size()) break;
-        outP[i] += (int32_t) round(samples[inPos] * gain * (1 << 24));
+        outP[i] += (int32_t) round(samples[inPos] * gain * (1 << 23));
     }
 }
