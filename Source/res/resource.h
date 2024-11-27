@@ -18,9 +18,11 @@
 #define IDC_CLAP_GAIN                           40001
 #define IDC_DEVICE_FRIENDLY_NAME                40001
 #define IDS_ABOUT                               40001
+#define IDB_USE_DEFAULT_DURATION                40002
 #define IDC_LICENSE_TEXT                        40002
 #define IDS_PREFERENCE                          40002
 #define IDC_LOGLEVEL                            40003
+#define IDB_USE_MINIMUM_DURATION                40004
 #define IDC_OUTPUT_LATENCY_TABLE                40004
 #define IDB_REMOVE                              40005
 #define IDC_EDIT_DURATION                       40006

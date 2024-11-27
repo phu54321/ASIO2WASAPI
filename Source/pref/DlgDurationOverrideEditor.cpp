@@ -56,6 +56,8 @@ static bool parseDurationOverrideLine(const std::wstring &line, std::wstring *de
 struct OutputLatencyEntry {
     std::wstring deviceId;
     int duration;
+    int minimumBufferDuration = 0;
+    int defaultBufferDuration = 0;
     std::vector<IMMDevicePtr> deviceList;
     std::vector<std::wstring> deviceIdList;
     std::vector<std::wstring> friendlyNameList;
@@ -152,18 +154,36 @@ static INT_PTR CALLBACK DlgPromptOutputOverrideEntry(HWND hWnd, UINT uMsg, WPARA
                             mainlog->error(L" - pAudioClient->Activate failed: 0x{:08X}", (uint32_t) hr);
                             durationText = "no latency information provided";
                         } else {
-                            REFERENCE_TIME defaultDuration, minBufferDuration;
-                            pAudioClient->GetDevicePeriod(&defaultDuration, &minBufferDuration);
+                            REFERENCE_TIME defaultBufferDuration, minBufferDuration;
+                            pAudioClient->GetDevicePeriod(&defaultBufferDuration, &minBufferDuration);
                             pAudioClient->Release();
-                            durationText = fmt::format("minimum {}, default {}", minBufferDuration, defaultDuration);
+                            durationText = fmt::format("minimum {}, default {}", minBufferDuration,
+                                                       defaultBufferDuration);
+                            entryPtr->minimumBufferDuration = minBufferDuration;
+                            entryPtr->defaultBufferDuration = defaultBufferDuration;
                         }
                     } else {
                         durationText = "no latency information provided";
                         SetDlgItemTextW(hWnd, IDC_DEVICE_FRIENDLY_NAME, L"(unknown device)");
+                        entryPtr->minimumBufferDuration = 0;
+                        entryPtr->defaultBufferDuration = 0;
                     }
 
                     SetDlgItemTextA(hWnd, IDC_DEVICE_DURATION, durationText.c_str());
                     return TRUE;
+                }
+
+                case IDB_USE_MINIMUM_DURATION: {
+                    auto entryPtr = (OutputLatencyEntry *) GetWindowLongPtr(hWnd, GWLP_USERDATA);
+                    SetDlgItemInt(hWnd, IDC_EDIT_DURATION, entryPtr->minimumBufferDuration, TRUE);
+                    break;
+                }
+
+                case IDB_USE_DEFAULT_DURATION: {
+                    auto entryPtr = (OutputLatencyEntry *) GetWindowLongPtr(hWnd, GWLP_USERDATA);
+                    auto duration = (int) GetDlgItemInt(hWnd, IDC_EDIT_DURATION, nullptr, TRUE);
+                    SetDlgItemInt(hWnd, IDC_EDIT_DURATION, entryPtr->defaultBufferDuration, TRUE);
+                    break;
                 }
 
                 case IDC_EDIT_DURATION: {
