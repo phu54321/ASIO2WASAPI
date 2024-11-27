@@ -19,6 +19,7 @@
 #define IDC_CLAP_GAIN                           40001
 #define IDC_DEVICE_FRIENDLY_NAME                40001
 #define IDS_ABOUT                               40001
+#define IDB_OUTPUT_DEVICE_MOVE_DOWN             40002
 #define IDB_USE_DEFAULT_DURATION                40002
 #define IDC_LICENSE_TEXT                        40002
 #define IDS_PREFERENCE                          40002
@@ -26,15 +27,17 @@
 #define IDB_USE_MINIMUM_DURATION                40004
 #define IDC_LOOPBACK_INPUT_DEVICE               40004
 #define IDC_OUTPUT_LATENCY_TABLE                40004
+#define IDB_OUTPUT_DEVICE_MOVE_UP               40005
 #define IDB_REMOVE                              40005
 #define IDC_EDIT_DURATION                       40006
+#define IDC_REDIRECT_AUDIO                      40006
 #define IDC_VERSION_TEXT                        40007
 #define IDB_ADD                                 40008
+#define IDB_OUTPUT_DEVICE_ADD                   40008
 #define IDB_GITHUB                              40009
+#define IDB_OUTPUT_DEVICE_REMOVE                40009
 #define IDC_CHANNEL_COUNT                       40010
 #define IDC_DEVICE_DURATION                     40011
 #define IDC_DEVICE                              40012
 #define IDC_OUTPUT_DEVICE_LIST                  40013
-#define IDB_MOVE_UP                             40016
-#define IDB_MOVE_DOWN                           40017
 #define IDB_OUTPUT_LATENCY_OVERRIDE             40018

@@ -32,7 +32,7 @@ const wchar_t *defaultDevices[] = {
 };
 
 UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
-    FILE *fp = homeDirFOpen(loadRelPath, TEXT("rb"));
+    FILE *fp = homeDirFOpen(loadRelPath, TEXT("r"));
     auto ret = std::make_shared<UserPref>();
     if (!fp) {
         // use default
@@ -48,7 +48,6 @@ UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
         auto j = json::parse(fp);
 
         ret->channelCount = j.value("channelCount", 2);
-        ret->clapGain = j.value("clapGain", 0.);
 
         // Note:: Declare default log level on logger.cpp
         auto logLevel = j.value("logLevel", "");
@@ -58,6 +57,12 @@ UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
         if (logLevel == "warn") ret->logLevel = spdlog::level::warn;
         if (logLevel == "error") ret->logLevel = spdlog::level::err;
 
+        // additional audio inputs
+        ret->clapGain = j.value("clapGain", 0.);
+        ret->loopbackInputDevice = utf8_to_wstring(j.value("loopbackInputDevice", ""));
+        ret->autoChangeOutputToLoopback = j.value("autoChangeOutputToLoopback", false);
+
+        // audio outputs
         if (!j.contains("deviceId")) {
             for (const wchar_t *device: defaultDevices) {
                 ret->deviceIdList.emplace_back(device);
@@ -92,7 +97,7 @@ UserPrefPtr loadUserPref(LPCTSTR loadRelPath) {
 
 
 void saveUserPref(const UserPrefPtr &pref, LPCTSTR saveRelPath) {
-    FILE *fp = homeDirFOpen(saveRelPath, TEXT("wb"));
+    FILE *fp = homeDirFOpen(saveRelPath, TEXT("w"));
     if (!fp) {
         // use default
         mainlog->error(TEXT("[saveUserPref] homeDirFOpen failed: {}"), saveRelPath);
@@ -100,9 +105,8 @@ void saveUserPref(const UserPrefPtr &pref, LPCTSTR saveRelPath) {
     }
 
     json j;
-    j["channelCount"] = pref->channelCount;
-    j["clapGain"] = pref->clapGain;
 
+    j["channelCount"] = pref->channelCount;
     switch (pref->logLevel) {
         case spdlog::level::trace:
             j["logLevel"] = "trace";
@@ -123,14 +127,18 @@ void saveUserPref(const UserPrefPtr &pref, LPCTSTR saveRelPath) {
     }
 
     {
+        j["clapGain"] = pref->clapGain;
+        j["loopbackInputDevice"] = wstring_to_utf8(pref->loopbackInputDevice);
+        j["autoChangeOutputToLoopback"] = pref->autoChangeOutputToLoopback;
+    }
+
+    {
         json jDeviceIdList = json::array();
         for (const auto &s: pref->deviceIdList) {
             jDeviceIdList.push_back(wstring_to_utf8(s));
         }
         j["deviceId"] = jDeviceIdList;
-    }
 
-    {
         json jDurationOverride = json::object();
         for (const auto &p: pref->durationOverride) {
             jDurationOverride[wstring_to_utf8(p.first)] = p.second;

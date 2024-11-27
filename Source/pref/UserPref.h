@@ -29,8 +29,14 @@
 
 struct UserPref {
     int channelCount = 2;
-    double clapGain = 0;
     spdlog::level::level_enum logLevel = spdlog::level::info;
+
+    // additional inputs
+    double clapGain = 0;
+    std::wstring loopbackInputDevice;
+    bool autoChangeOutputToLoopback = false;
+
+    // audio outputs
     std::vector<std::wstring> deviceIdList;
     std::map<std::wstring, int> durationOverride;
 };

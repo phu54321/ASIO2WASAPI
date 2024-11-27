@@ -107,19 +107,20 @@ FONT 8, "Ms Shell Dlg"
     LTEXT           "# of audio channels", 0, 7, 7, 64, 9, SS_LEFT, WS_EX_LEFT
     EDITTEXT        IDC_CHANNEL_COUNT, 96, 7, 29, 12, ES_AUTOHSCROLL | ES_NUMBER, WS_EX_LEFT
     LTEXT           "(1: mono, 2: stereo)", 0, 130, 7, 62, 9, SS_LEFT, WS_EX_LEFT
-    GROUPBOX        "Audio Inputs", 0, 7, 29, 185, 67, 0, WS_EX_LEFT
+    GROUPBOX        "Additional audio inputs", 0, 7, 29, 185, 67, 0, WS_EX_LEFT
     LTEXT           "Key clap volume (%)", 0, 14, 44, 64, 9, SS_LEFT, WS_EX_LEFT
     EDITTEXT        IDC_CLAP_GAIN, 96, 44, 29, 12, ES_AUTOHSCROLL | ES_NUMBER, WS_EX_LEFT
     LTEXT           "(0~100)", 0, 130, 44, 26, 9, SS_LEFT, WS_EX_LEFT
     AUTOCHECKBOX    "Loopback input from device", IDC_LOOPBACK_INPUT_TOGGLE, 14, 61, 103, 8, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Redirect audio", IDC_REDIRECT_AUDIO, 125, 61, 62, 8, 0, WS_EX_LEFT
     COMBOBOX        IDC_LOOPBACK_INPUT_DEVICE, 14, 73, 173, 300, WS_VSCROLL | WS_DISABLED | CBS_DROPDOWN | CBS_HASSTRINGS, WS_EX_LEFT
     GROUPBOX        "Audio outputs", 0, 7, 101, 185, 122, 0, WS_EX_LEFT
     LISTBOX         IDC_OUTPUT_DEVICE_LIST, 14, 114, 173, 55, WS_TABSTOP | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY, WS_EX_LEFT
     LTEXT           "Only the first output gets the lowest-latency mode.", 0, 14, 171, 157, 9, SS_LEFT, WS_EX_LEFT
-    PUSHBUTTON      "Add", IDB_ADD, 52, 187, 40, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "Remove", IDB_REMOVE, 94, 187, 40, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "ก่", IDB_MOVE_UP, 138, 187, 24, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "ก้", IDB_MOVE_DOWN, 163, 187, 24, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Add", IDB_OUTPUT_DEVICE_ADD, 52, 187, 40, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Remove", IDB_OUTPUT_DEVICE_REMOVE, 94, 187, 40, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "ก่", IDB_OUTPUT_DEVICE_MOVE_UP, 138, 187, 24, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "ก้", IDB_OUTPUT_DEVICE_MOVE_DOWN, 163, 187, 24, 14, 0, WS_EX_LEFT
     PUSHBUTTON      "Override output audio device latency", IDB_OUTPUT_LATENCY_OVERRIDE, 67, 203, 125, 14, 0, WS_EX_LEFT
     LTEXT           "Log level", 0, 7, 232, 30, 9, SS_LEFT, WS_EX_LEFT
     COMBOBOX        IDC_LOGLEVEL, 96, 232, 84, 62, CBS_DROPDOWN | CBS_HASSTRINGS, WS_EX_LEFT

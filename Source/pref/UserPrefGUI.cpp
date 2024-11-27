@@ -29,6 +29,7 @@
 
 #include "../res/resource.h"
 #include "../MessageWindow/MessageWindow.h"
+#include "../utils/WASAPIUtils.h"
 
 #include <windowsx.h>
 
@@ -39,8 +40,6 @@ static std::vector<std::pair<spdlog::level::level_enum, LPCTSTR >> g_errorLevels
         {spdlog::level::debug, TEXT("debug (VERBOSE)")},
         {spdlog::level::trace, TEXT("trace (VERY VERBOSE)")},
 };
-
-
 
 
 INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -54,8 +53,6 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
             SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR) prefPtr);
 
             SetDlgItemInt(hWnd, IDC_CHANNEL_COUNT, pref->channelCount, FALSE);
-            SetDlgItemInt(hWnd, IDC_CLAP_GAIN, (int) round(pref->clapGain * 100), FALSE);
-
             auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
             for (int i = 0; i < g_errorLevels.size(); i++) {
                 const auto &p = g_errorLevels[i];
@@ -65,6 +62,31 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                 }
             }
 
+            /// Additional audio inputs
+            SetDlgItemInt(hWnd, IDC_CLAP_GAIN, (int) round(pref->clapGain * 100), FALSE);
+
+            auto hLoopbackInputDeviceList = GetDlgItem(hWnd, IDC_LOOPBACK_INPUT_DEVICE);
+            for (auto &pDevice: getIMMDeviceList()) {
+                auto friendlyName = getDeviceFriendlyName(pDevice);
+                SendMessageW(hLoopbackInputDeviceList, CB_ADDSTRING, 0, (LPARAM) friendlyName.c_str());
+            }
+            if (pref->loopbackInputDevice.empty()) {
+                auto hLoopbackInputToggle = GetDlgItem(hWnd, IDC_LOOPBACK_INPUT_TOGGLE);
+                Button_SetCheck(hLoopbackInputToggle, BST_UNCHECKED);
+                auto hRedirectAudio = GetDlgItem(hWnd, IDC_REDIRECT_AUDIO);
+                EnableWindow(hRedirectAudio, FALSE);
+                ComboBox_SetCurSel(hLoopbackInputDeviceList, 0);
+            } else {
+                auto hLoopbackInputToggle = GetDlgItem(hWnd, IDC_LOOPBACK_INPUT_TOGGLE);
+                Button_SetCheck(hLoopbackInputToggle, BST_CHECKED);
+                auto hRedirectAudio = GetDlgItem(hWnd, IDC_REDIRECT_AUDIO);
+                EnableWindow(hRedirectAudio, TRUE);
+                Button_SetCheck(hRedirectAudio, pref->autoChangeOutputToLoopback ? BST_CHECKED : BST_UNCHECKED);
+                SetWindowTextW(hLoopbackInputDeviceList, pref->loopbackInputDevice.c_str());
+                EnableWindow(hLoopbackInputDeviceList, TRUE);
+            }
+
+            /// Audio outputs
             auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
             for (const auto &s: pref->deviceIdList) {
                 SendMessageW(hOutputDeviceList, LB_ADDSTRING, 0, (LPARAM) s.c_str());
@@ -101,17 +123,29 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                         if (!success) break;
                         pref->channelCount = channelCount;
 
+                        auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
+                        auto errorLevelSel = ComboBox_GetCurSel(hLogLevel);
+                        if (errorLevelSel != CB_ERR) {
+                            pref->logLevel = g_errorLevels[errorLevelSel].first;
+                        }
+
+                        ///
                         auto clapGain = GetDlgItemInt(hWnd, IDC_CLAP_GAIN, &success, FALSE) / 100.0;
                         if (!success) break;
                         if (clapGain < 0) clapGain = 0;
                         if (clapGain > 1) clapGain = 1;
                         pref->clapGain = clapGain;
 
-                        auto hLogLevel = GetDlgItem(hWnd, IDC_LOGLEVEL);
-                        auto errorLevelSel = ComboBox_GetCurSel(hLogLevel);
-                        if (errorLevelSel != CB_ERR) {
-                            pref->logLevel = g_errorLevels[errorLevelSel].first;
+                        if (IsDlgButtonChecked(hWnd, IDC_LOOPBACK_INPUT_TOGGLE) == BST_CHECKED) {
+                            auto hLoopbackInputDeviceList = GetDlgItem(hWnd, IDC_LOOPBACK_INPUT_DEVICE);
+                            pref->loopbackInputDevice = getWndText(hLoopbackInputDeviceList);
+                            pref->autoChangeOutputToLoopback = (IsDlgButtonChecked(hWnd, IDC_REDIRECT_AUDIO) == BST_CHECKED);
+                        } else {
+                            pref->loopbackInputDevice = L"";
+                            pref->autoChangeOutputToLoopback = false;
                         }
+
+                        ///
 
                         pref->deviceIdList.clear();
                         auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
@@ -137,7 +171,25 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     DestroyWindow(hWnd);
                     break;
 
-                case IDB_ADD: {
+                case IDC_LOOPBACK_INPUT_TOGGLE: {
+                    if (HIWORD(wParam) == BN_CLICKED) {
+                        auto hLoopbackInputToggle = GetDlgItem(hWnd, IDC_LOOPBACK_INPUT_TOGGLE);
+                        auto hRedirectAudio = GetDlgItem(hWnd, IDC_REDIRECT_AUDIO);
+                        auto hLoopbackInputDeviceList = GetDlgItem(hWnd, IDC_LOOPBACK_INPUT_DEVICE);
+                        auto newCheck = Button_GetCheck(hLoopbackInputToggle);
+                        if (newCheck) {
+                            EnableWindow(hRedirectAudio, TRUE);
+                            EnableWindow(hLoopbackInputDeviceList, TRUE);
+                        } else {
+                            EnableWindow(hRedirectAudio, FALSE);
+                            EnableWindow(hLoopbackInputDeviceList, FALSE);
+                        }
+                    }
+                    break;
+                }
+
+
+                case IDB_OUTPUT_DEVICE_ADD: {
                     std::wstring deviceName;
                     if (PromptDeviceName(hInstance, hWnd, &deviceName)) {
                         auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
@@ -146,7 +198,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     break;
                 }
 
-                case IDB_REMOVE: {
+                case IDB_OUTPUT_DEVICE_REMOVE: {
                     auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                     auto curSel = ListBox_GetCurSel(hOutputDeviceList);
                     if (curSel != LB_ERR) {
@@ -155,7 +207,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     break;
                 }
 
-                case IDB_MOVE_UP: {
+                case IDB_OUTPUT_DEVICE_MOVE_UP: {
                     auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                     auto curSel = ListBox_GetCurSel(hOutputDeviceList);
                     if (curSel != LB_ERR && curSel != 0) {
@@ -167,7 +219,7 @@ INT_PTR CALLBACK DlgUserPrefEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
                     break;
                 }
 
-                case IDB_MOVE_DOWN: {
+                case IDB_OUTPUT_DEVICE_MOVE_DOWN: {
                     auto hOutputDeviceList = GetDlgItem(hWnd, IDC_OUTPUT_DEVICE_LIST);
                     auto curSel = ListBox_GetCurSel(hOutputDeviceList);
                     auto listLen = ListBox_GetCount(hOutputDeviceList);
@@ -238,7 +290,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        if(hDlg && !IsWindow(hDlg)) {
+        if (hDlg && !IsWindow(hDlg)) {
             PostQuitMessage(0);
             hDlg = nullptr;
         }
