@@ -53,6 +53,7 @@ add_library(trgkASIO SHARED
         Source/utils/w32StringGetter.cpp
         Source/utils/SynchronizedClock.cpp
         Source/utils/clampSample.cpp
+        Source/utils/volumeRAII.cpp
 
         Source/MessageWindow/MessageWindow.cpp
         Source/MessageWindow/TrayHandler.cpp

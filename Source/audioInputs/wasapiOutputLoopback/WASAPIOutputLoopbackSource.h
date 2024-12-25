@@ -27,6 +27,7 @@
 #include "../../utils/WASAPIUtils.h"
 #include "../../utils/RingBuffer.h"
 #include "../../lib/r8brain_free_src/CDSPResampler.h"
+#include "../../utils/volumeRAII.h"
 #include <string>
 #include <memory>
 #include <thread>
@@ -34,7 +35,7 @@
 
 class WASAPIOutputLoopbackSource : public AudioSource {
 public:
-    WASAPIOutputLoopbackSource(const IMMDevicePtr &device, int channelCount, int sampleRate,
+    WASAPIOutputLoopbackSource(const IMMDevicePtr &pSourceDevice, int channelCount, int sampleRate,
                                bool interceptDefaultOutput);
 
     ~WASAPIOutputLoopbackSource() override;
@@ -44,13 +45,21 @@ public:
 private:
     void _fetchThreadProc();
 
+    void _volumeSyncThreadProc();
+
     std::unique_ptr<std::thread> _fetchThread;
-    volatile bool _stopFetchthread = false;
+    std::unique_ptr<std::thread> _volumeSyncThread;
+    volatile bool _stopThreads = false;
 
+    IMMDevicePtr _pSourceDevice;
+    std::wstring _pSourceDeviceId;
 
-    IMMDevicePtr _pDevice;
-    std::wstring _pDeviceId;
-    std::wstring _prevOutputDeviceId;
+    struct OutputInterceptData {
+        std::wstring _prevOutputDeviceId;
+        std::unique_ptr<VolumeRAII> _prevOutputVolume;
+        std::unique_ptr<VolumeRAII> _sourceDeviceVolume;
+    };
+    std::unique_ptr<OutputInterceptData> _interceptData;
 
     std::shared_ptr<IAudioCaptureClient> _pAudioCaptureClient;
     std::shared_ptr<IAudioClient> _pAudioClient;

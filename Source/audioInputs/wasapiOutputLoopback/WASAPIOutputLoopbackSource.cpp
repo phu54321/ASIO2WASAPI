@@ -29,16 +29,18 @@
 
 #define REFTIMES_PER_SEC  10000000
 
-WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevice, int channelCount, int sampleRate,
+WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pSourceDevice, int channelCount,
+                                                       int sampleRate,
                                                        bool interceptDefaultOutput)
-        : _channelCount(channelCount), _sampleRate(sampleRate), _pDevice(pDevice), _pDeviceId(getDeviceId(pDevice)) {
+        : _channelCount(channelCount), _sampleRate(sampleRate), _pSourceDevice(pSourceDevice),
+          _pSourceDeviceId(getDeviceId(pSourceDevice)) {
 
 
     IAudioClient *pAudioClient_ = nullptr;
 
-    HRESULT hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void **) &pAudioClient_);
+    HRESULT hr = pSourceDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void **) &pAudioClient_);
     if (FAILED(hr) || !pAudioClient_) {
-        mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->Activate failed: 0x{:08X}", _pDeviceId,
+        mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->Activate failed: 0x{:08X}", _pSourceDeviceId,
                        (uint32_t) hr);
         throw AppException("Failed to create loopback device");
     }
@@ -72,7 +74,7 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
             nullptr);
 
     if (FAILED(hr)) {
-        mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->Initialize failed: 0x{:08X}", _pDeviceId,
+        mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->Initialize failed: 0x{:08X}", _pSourceDeviceId,
                        (uint32_t) hr);
         throw AppException("IsFormatSupported failed");
     }
@@ -88,13 +90,15 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
             IID_IAudioCaptureClient,
             (void **) &pCaptureClient_);
     if (FAILED(hr)) {
-        mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->GetService failed: 0x{:08X}", _pDeviceId,
+        mainlog->error(L"{} WASAPIOutputLoopbackSource: pAudioClient->GetService failed: 0x{:08X}", _pSourceDeviceId,
                        (uint32_t) hr);
         throw AppException("GetService failed");
     }
     _pAudioCaptureClient = make_autorelease(pCaptureClient_);
 
-    mainlog->info(L"{} WASAPIOutputLoopbackSource resample: {} -> {}", _pDeviceId, waveFormat.Format.nSamplesPerSec,
+    mainlog->info(L"{} WASAPIOutputLoopbackSource resample: {} -> {}",
+                  _pSourceDeviceId,
+                  waveFormat.Format.nSamplesPerSec,
                   _sampleRate);
     for (int ch = 0; ch < _channelCount; ch++) {
         _audioBuffer.emplace_back((_bufferSize + 1024) * 2);
@@ -104,9 +108,29 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
     }
 
     if (interceptDefaultOutput) {
-        auto prevOutputDevice = getDefaultOutputDevice();
-        _prevOutputDeviceId = getDeviceId(prevOutputDevice);
-        setDefaultOutputDeviceId(_pDeviceId);
+        auto pPrevOutputDevice = getDefaultOutputDevice();
+        auto interceptData = std::make_unique<OutputInterceptData>();
+        interceptData->_prevOutputDeviceId = getDeviceId(pPrevOutputDevice);
+        interceptData->_prevOutputVolume = std::make_unique<VolumeRAII>(pPrevOutputDevice);
+        interceptData->_sourceDeviceVolume = std::make_unique<VolumeRAII>(pSourceDevice);
+
+        float sourceVolume;
+        {
+            bool sourceMuted;
+            if (interceptData->_prevOutputVolume->get(&sourceMuted, &sourceVolume)) {
+                if (sourceMuted) sourceVolume = 0.0f;
+            } else {
+                mainlog->warn(
+                        "Failed to get volume value of the intercepted output device. Silencing to prevent unwanted noise");
+                sourceVolume = 0.0f;
+            }
+        }
+        interceptData->_sourceDeviceVolume->setMute(true);
+        interceptData->_sourceDeviceVolume->setVolume(sourceVolume);
+
+        _interceptData = std::move(interceptData);
+        setDefaultOutputDeviceId(_pSourceDeviceId);
+        _volumeSyncThread = std::make_unique<std::thread>(&WASAPIOutputLoopbackSource::_volumeSyncThreadProc, this);
     }
 
     _pAudioClient->Start();
@@ -114,11 +138,13 @@ WASAPIOutputLoopbackSource::WASAPIOutputLoopbackSource(const IMMDevicePtr &pDevi
 }
 
 WASAPIOutputLoopbackSource::~WASAPIOutputLoopbackSource() {
-    _stopFetchthread = true;
+    _stopThreads = true;
     _fetchThread->join();
+    _volumeSyncThread->join();
     _pAudioClient->Stop();
-    if (!_prevOutputDeviceId.empty()) {
-        setDefaultOutputDeviceId(_prevOutputDeviceId);
+    if (_interceptData) {
+        setDefaultOutputDeviceId(_interceptData->_prevOutputDeviceId);
+        _interceptData = nullptr;
     }
 }
 
@@ -140,9 +166,9 @@ void WASAPIOutputLoopbackSource::_fetchThreadProc() {
     }
 
     // Fetch all
-    while (!_stopFetchthread) {
+    while (!_stopThreads) {
         _pAudioCaptureClient->GetNextPacketSize(&packetLength);
-        mainlog->debug(L"{} WASAPIOutputLoopbackSource::render: GetNextPacketSize {}", _pDeviceId, packetLength);
+        mainlog->debug(L"{} WASAPIOutputLoopbackSource::render: GetNextPacketSize {}", _pSourceDeviceId, packetLength);
         while (packetLength != 0) {
             _pAudioCaptureClient->GetBuffer(
                     &pData,
@@ -154,7 +180,7 @@ void WASAPIOutputLoopbackSource::_fetchThreadProc() {
                 ZoneScopedN("Buffer upgrade");
                 mainlog->warn(
                         L"{} WASAPIOutputLoopbackSource::render: buffer size inadequate: tempBuffer.size({}) < numFramesAvailable({})",
-                        _pDeviceId, audioInputBuffers.size(), numFramesAvailable);
+                        _pSourceDeviceId, audioInputBuffers.size(), numFramesAvailable);
                 for (auto &channelBuffer: audioInputBuffers) {
                     channelBuffer.resize(numFramesAvailable);
                 }
@@ -163,7 +189,8 @@ void WASAPIOutputLoopbackSource::_fetchThreadProc() {
             // Fetch data
             if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
                 ZoneScopedN("Fetch audio data - silent");
-                mainlog->debug(L"{} WASAPIOutputLoopbackSource::render fetched buffer size {} [silent]", _pDeviceId,
+                mainlog->debug(L"{} WASAPIOutputLoopbackSource::render fetched buffer size {} [silent]",
+                               _pSourceDeviceId,
                                numFramesAvailable);
                 for (int ch = 0; ch < _channelCount; ch++) {
                     std::fill(audioInputBuffers[ch].data(), audioInputBuffers[ch].data() + numFramesAvailable, 0.0);
@@ -179,7 +206,7 @@ void WASAPIOutputLoopbackSource::_fetchThreadProc() {
                         in += _channelCount;
                     }
                 }
-                mainlog->debug(L"{} WASAPIOutputLoopbackSource::render fetched buffer size {}", _pDeviceId,
+                mainlog->debug(L"{} WASAPIOutputLoopbackSource::render fetched buffer size {}", _pSourceDeviceId,
                                numFramesAvailable);
             }
 
@@ -204,7 +231,7 @@ void WASAPIOutputLoopbackSource::_fetchThreadProc() {
                             if (!_audioBuffer[ch].push(outputSamples[ch], outputLength[ch])) {
                                 mainlog->debug(
                                         L"{} WASAPIOutputLoopbackSource::render: ringbuffer[{}] overflow - capacity {}, size {}, new {}",
-                                        _pDeviceId, ch, _audioBuffer[0].capacity(), _audioBuffer[0].size(),
+                                        _pSourceDeviceId, ch, _audioBuffer[0].capacity(), _audioBuffer[0].size(),
                                         outputLength[ch]);
                             }
                         }
@@ -217,7 +244,26 @@ void WASAPIOutputLoopbackSource::_fetchThreadProc() {
             _pAudioCaptureClient->ReleaseBuffer(numFramesAvailable);
             _pAudioCaptureClient->GetNextPacketSize(&packetLength);
         }
+
         Sleep(1);
+    }
+}
+
+void WASAPIOutputLoopbackSource::_volumeSyncThreadProc() {
+    if (!_interceptData) return;
+
+    float prevSourceDeviceVolume = -1e9;
+
+    while (!_stopThreads) {
+        // Sync volume
+        float sourceDeviceVolume;
+        _interceptData->_sourceDeviceVolume->get(nullptr, &sourceDeviceVolume);
+        if (prevSourceDeviceVolume != sourceDeviceVolume) {
+            _interceptData->_prevOutputVolume->setVolume(sourceDeviceVolume);
+            _interceptData->_sourceDeviceVolume->setMute(true);
+            prevSourceDeviceVolume = sourceDeviceVolume;
+        }
+        Sleep(10);
     }
 }
 
@@ -232,14 +278,14 @@ void WASAPIOutputLoopbackSource::render(int64_t currentFrame, std::vector<std::v
     if (_audioBuffer[0].size() < outputSize) {
         mainlog->warn(
                 L"{} WASAPIOutputLoopbackSource::render: Capture not yet filled: audioBuffer.size({}), outputBuffer.size({})",
-                _pDeviceId, _audioBuffer[0].size(), outputSize);
+                _pSourceDeviceId, _audioBuffer[0].size(), outputSize);
     }
 
     if (outputSize > _tempBuffers.size()) {
         _tempBuffers.resize(outputSize);
     }
 
-    mainlog->debug(L"{} WASAPIOutputLoopbackSource::render: ringbuffer, size {}", _pDeviceId,
+    mainlog->debug(L"{} WASAPIOutputLoopbackSource::render: ringbuffer, size {}", _pSourceDeviceId,
                    _audioBuffer[0].size());
 
     {
