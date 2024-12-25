@@ -29,6 +29,8 @@
 #include "../../lib/r8brain_free_src/CDSPResampler.h"
 #include <string>
 #include <memory>
+#include <thread>
+
 
 class WASAPIOutputLoopbackSource : public AudioSource {
 public:
@@ -40,7 +42,11 @@ public:
     void render(int64_t currentFrame, std::vector<std::vector<int32_t>> *outputBuffer) override;
 
 private:
-    void _feedResampledData(int ch, double *input, UINT32 size);
+    void _fetchThreadProc();
+
+    std::unique_ptr<std::thread> _fetchThread;
+    volatile bool _stopFetchthread = false;
+
 
     IMMDevicePtr _pDevice;
     std::wstring _pDeviceId;
@@ -48,12 +54,14 @@ private:
 
     std::shared_ptr<IAudioCaptureClient> _pAudioCaptureClient;
     std::shared_ptr<IAudioClient> _pAudioClient;
-    std::vector<double> _tempBuffer;
+    std::vector<std::vector<double>> _tempBuffers;
     int _sampleRate;
     int _channelCount;
     WAVEFORMATEX *_pwfx = nullptr;
     UINT32 _bufferSize;
     std::vector<std::unique_ptr<r8b::CDSPResampler24>> _resamplers;
+
+    std::mutex _audioBufferLock;
     std::vector<RingBuffer<double>> _audioBuffer;
 };
 
